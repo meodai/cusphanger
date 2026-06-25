@@ -203,4 +203,6 @@ unclamped OKLCH color.
 
 ## Naming
 
-Package name: `oklch-palettes` (working title; confirm before publish).
+- npm package: **`cusphanger`** (lowercase required by npm).
+- Display / brand name: **CuspHanger** — a pun on "cliffhanger", and literal: palettes hang off
+  the per-hue **cusp** (the max-chroma point that caps the gamut triangle).
