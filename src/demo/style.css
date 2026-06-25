@@ -27,7 +27,28 @@ h1 { font-size: 1.4rem; margin: 0 0 0.25rem; }
 .control .row { display: flex; justify-content: space-between; opacity: 0.8; }
 .control input[type="range"] { width: 100%; }
 .control select { padding: 0.25rem; background: var(--bg); color: inherit; border: 1px solid var(--border); border-radius: 6px; }
+.output { display: grid; grid-template-columns: 1fr 400px; gap: 1.25rem; align-items: start; }
 .swatches { display: flex; flex-direction: column; gap: 2px; min-height: 320px; }
+@media (max-width: 920px) { .output { grid-template-columns: 1fr; } }
+
+/* OKLCH slice visualization */
+.slice-svg { width: 100%; height: auto; color: var(--fg); display: block; }
+.slice-svg .grid { stroke: currentColor; stroke-opacity: 0.08; stroke-width: 1; }
+.slice-svg .tick, .slice-svg .axis { fill: currentColor; fill-opacity: 0.55; font-size: 9px; }
+.slice-svg .title { fill: currentColor; fill-opacity: 0.75; font-size: 11px; font-weight: 600; }
+.slice-svg .label { fill: currentColor; fill-opacity: 0.7; font-size: 9px; }
+.slice-svg .env-fill { fill: currentColor; fill-opacity: 0.05; stroke: none; }
+.slice-svg .env-line { fill: none; stroke: currentColor; stroke-opacity: 0.55; stroke-width: 1.5; }
+.slice-svg .tri { fill: none; stroke: currentColor; stroke-opacity: 0.45; stroke-width: 1; stroke-dasharray: 4 3; }
+.slice-svg .guide { stroke: currentColor; stroke-opacity: 0.14; stroke-width: 1; }
+.slice-svg .traj { fill: none; stroke: currentColor; stroke-opacity: 0.35; stroke-width: 1; stroke-dasharray: 2 2; }
+.slice-svg .dot { stroke: var(--fg); stroke-opacity: 0.35; stroke-width: 1; }
+.slice-svg .cusp { fill: none; stroke: currentColor; stroke-opacity: 0.9; stroke-width: 1.5; }
+.slice-legend { font-size: 0.68rem; opacity: 0.65; margin: 0.4rem 0 0; line-height: 1.6; }
+.slice-legend .k { display: inline-block; width: 14px; height: 0; vertical-align: middle; margin: 0 0.15rem 0 0.5rem; border-top-width: 2px; border-top-style: solid; }
+.slice-legend .k-env { border-top-color: var(--fg); }
+.slice-legend .k-tri { border-top-style: dashed; border-top-color: var(--fg); opacity: 0.6; }
+.slice-legend .k-guide { border-top-color: var(--fg); opacity: 0.3; }
 .swatch {
   flex: 1; display: flex; align-items: center; justify-content: space-between;
   padding: 0 0.75rem; border-radius: 4px; cursor: pointer; min-height: 38px;

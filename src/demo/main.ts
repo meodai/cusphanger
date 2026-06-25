@@ -9,6 +9,7 @@ import {
 } from '../lib/index';
 import { buildControls, type FieldSpec } from './controls';
 import { renderSwatches } from './swatches';
+import { renderSlice } from './slice';
 
 type TabId = 'sequential' | 'diverging' | 'qualitative' | 'engine';
 
@@ -102,20 +103,24 @@ function render(app: HTMLElement): void {
     <nav class="tabs"></nav>
     <section class="panel">
       <div class="controls"></div>
-      <div>
+      <div class="output">
         <div class="swatches"></div>
-        <p class="hint">Click a swatch to copy its CSS. ⚠︎ marks colors outside the sRGB gamut.</p>
+        <div class="slice"></div>
       </div>
-    </section>`;
+    </section>
+    <p class="hint">Click a swatch to copy its CSS. ⚠︎ marks colors outside the sRGB gamut. The slice shows the (chroma × lightness) cross-section at the palette's most-saturated hue.</p>`;
 
   const tabsNav = app.querySelector('.tabs') as HTMLElement;
   const controlsHost = app.querySelector('.controls') as HTMLElement;
   const swatchHost = app.querySelector('.swatches') as HTMLElement;
+  const sliceHost = app.querySelector('.slice') as HTMLElement;
   let active: TabId = 'sequential';
 
   const mountTab = (tab: Tab) => {
     buildControls(controlsHost, tab.fields, 'srgb', (values, gamut) => {
-      renderSwatches(swatchHost, tab.build(values, gamut));
+      const palette = tab.build(values, gamut);
+      renderSwatches(swatchHost, palette);
+      renderSlice(sliceHost, palette, gamut);
     });
   };
 
