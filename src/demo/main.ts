@@ -132,6 +132,7 @@ const TABS: Tab[] = [
 function render(app: HTMLElement): void {
   app.innerHTML = `
     <h1>CuspHanger</h1>
+    <div class="stage">
     <p class="sub">OKLCH palettes from intuitive parameters — gamut-relative saturation, in-gamut by construction.</p>
     <div class="palette">
       <button class="palette-strip" type="button" aria-expanded="false" title="Show color details"></button>
@@ -139,21 +140,22 @@ function render(app: HTMLElement): void {
         <div class="swatches"></div>
         <p class="hint">Click a swatch to copy its CSS. ⚠︎ marks colors outside the sRGB gamut.</p>
       </div>
-    </div>
+    </div>  
     <nav class="tabs"></nav>
     <section class="panel">
-      <div class="controls"></div>
+    <div class="controls"></div>
       <div class="views">
         <div class="view-block">
+          <div class="wheel"></div>
           <div class="axis-toggle">
             <button data-axis="chroma" aria-selected="true">C radius</button>
             <button data-axis="lightness" aria-selected="false">L radius</button>
           </div>
-          <div class="wheel"></div>
         </div>
         <div class="slice"></div>
       </div>
-    </section>`;
+    </section>
+    </div>`;
 
   const tabsNav = app.querySelector('.tabs') as HTMLElement;
   const controlsHost = app.querySelector('.controls') as HTMLElement;

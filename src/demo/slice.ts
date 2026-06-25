@@ -14,7 +14,7 @@ import {
 // fraction `s = c / maxChroma` is visible).
 
 const W = 400;
-const H = 360;
+const H = 400;
 const PAD = { l: 48, r: 16, t: 26, b: 32 };
 const PLOT_W = W - PAD.l - PAD.r;
 const PLOT_H = H - PAD.t - PAD.b;
