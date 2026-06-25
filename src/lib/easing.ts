@@ -29,7 +29,6 @@ export const hump =
       const x = t / p;
       return 1 - (1 - x) * (1 - x);
     }
-    if (p === 1) return 1;
     const x = (t - p) / (1 - p);
     return 1 - x * x;
   };

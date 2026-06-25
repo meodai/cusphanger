@@ -33,6 +33,7 @@ describe('easing', () => {
     const mid = lame(2)(0.5);
     expect(mid).toBeGreaterThan(0);
     expect(mid).toBeLessThan(1);
+    expect(lame(2)(0.5)).toBeCloseTo(0.134, 2);
   });
 
   it('hump peaks in the middle and is 0 at the ends', () => {
@@ -40,5 +41,21 @@ describe('easing', () => {
     expect(h(0)).toBeCloseTo(0);
     expect(h(1)).toBeCloseTo(0);
     expect(h(0.5)).toBeCloseTo(1);
+  });
+
+  it('hump with default argument behaves like hump(0.5)', () => {
+    expect(hump()(0)).toBeCloseTo(0);
+    expect(hump()(1)).toBeCloseTo(0);
+    expect(hump()(0.5)).toBeCloseTo(1);
+  });
+
+  it('hump with peak=1 reaches 1 at t=1', () => {
+    expect(hump(1)(0)).toBeCloseTo(0);
+    expect(hump(1)(1)).toBeCloseTo(1);
+  });
+
+  it('hump with peak=0 reaches 1 at t=0', () => {
+    expect(hump(0)(0)).toBeCloseTo(1);
+    expect(hump(0)(1)).toBeCloseTo(0);
   });
 });
