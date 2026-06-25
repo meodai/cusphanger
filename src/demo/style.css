@@ -1,0 +1,40 @@
+:root {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color-scheme: light dark;
+  --bg: light-dark(#fafafa, #14161a);
+  --fg: light-dark(#16181d, #f2f3f5);
+  --panel: light-dark(#ffffff, #1d2026);
+  --border: light-dark(#e3e5e9, #2a2e36);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); }
+#app { max-width: 1000px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+h1 { font-size: 1.4rem; margin: 0 0 0.25rem; }
+.sub { opacity: 0.7; margin: 0 0 1.5rem; font-size: 0.9rem; }
+.tabs { display: flex; gap: 0.25rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.tabs button {
+  border: 1px solid var(--border); background: var(--panel); color: inherit;
+  padding: 0.4rem 0.8rem; border-radius: 999px; cursor: pointer; font-size: 0.85rem;
+}
+.tabs button[aria-selected="true"] { background: var(--fg); color: var(--bg); }
+.panel {
+  display: grid; grid-template-columns: 240px 1fr; gap: 1.5rem;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.25rem;
+}
+.controls { display: flex; flex-direction: column; gap: 0.85rem; }
+.control { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; }
+.control .row { display: flex; justify-content: space-between; opacity: 0.8; }
+.control input[type="range"] { width: 100%; }
+.control select { padding: 0.25rem; background: var(--bg); color: inherit; border: 1px solid var(--border); border-radius: 6px; }
+.swatches { display: flex; flex-direction: column; gap: 2px; min-height: 320px; }
+.swatch {
+  flex: 1; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 0.75rem; border-radius: 4px; cursor: pointer; min-height: 38px;
+  font-variant-numeric: tabular-nums; font-size: 0.72rem;
+}
+.swatch .meta { display: flex; gap: 0.75rem; align-items: center; }
+.swatch .badge { padding: 0.05rem 0.35rem; border-radius: 999px; font-size: 0.65rem; background: rgba(0,0,0,0.18); }
+.swatch .warn { font-weight: 700; }
+.hint { font-size: 0.72rem; opacity: 0.6; margin-top: 0.75rem; }
+@media (max-width: 720px) { .panel { grid-template-columns: 1fr; } }
