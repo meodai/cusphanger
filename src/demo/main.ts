@@ -132,8 +132,8 @@ const TABS: Tab[] = [
 function render(app: HTMLElement): void {
   app.innerHTML = `
     <h1>CuspHanger</h1>
-    <div class="stage">
     <p class="sub">OKLCH palettes from intuitive parameters — gamut-relative saturation, in-gamut by construction.</p>
+    <div class="stage">
     <div class="palette">
       <button class="palette-strip" type="button" aria-expanded="false" title="Show color details"></button>
       <div class="palette-detail" hidden>
