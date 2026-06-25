@@ -2,6 +2,7 @@ import {
   maxChromaAt,
   cusp,
   sharedCuspChroma,
+  toPaletteColor,
   type PaletteColor,
   type Gamut,
   type ChromaMode,
@@ -21,6 +22,10 @@ const PLOT_H = H - PAD.t - PAD.b;
 const f = (n: number) => n.toFixed(2);
 const Y = (L: number) => PAD.t + (1 - L) * PLOT_H;
 const fmtPts = (pts: Array<[number, number]>) => pts.map(([x, y]) => `${f(x)},${f(y)}`).join(' ');
+
+// per-(gamut, mode, scale, hue, side) colored background, so non-hue slider
+// changes don't recompute the gamut fill.
+const sliceBgCache = new Map<string, string>();
 
 const angDiff = (a: number, b: number): number => {
   const d = Math.abs((((a - b) % 360) + 360) % 360);
@@ -86,16 +91,40 @@ export function renderSlice(
     );
   }
 
-  // background per side: envelope + triangle + cusp + reference line + chroma ticks
+  // background per side: colored gamut fill + envelope + triangle + cusp + ref + ticks
   const background = (s: Side): string => {
+    const key = `${gamut}|${chromaMode}|${xMax.toFixed(4)}|${s.hue.toFixed(1)}|${s.sign}`;
+    const hit = sliceBgCache.get(key);
+    if (hit) return hit;
+
     const peak = cusp(s.hue, gamut);
+
     const env: Array<[number, number]> = [];
-    for (let i = 0; i <= 96; i++) {
-      const L = i / 96;
-      env.push([s.X(maxChromaAt(s.hue, L, gamut)), Y(L)]);
-    }
-    const envFill = `M ${f(s.X(0))},${f(Y(0))} L ${fmtPts(env)} L ${f(s.X(0))},${f(Y(1))} Z`;
+    for (let i = 0; i <= 96; i++) env.push([s.X(maxChromaAt(s.hue, i / 96, gamut)), Y(i / 96)]);
     const envLine = `M ${fmtPts(env)}`;
+    const envPoly = `M ${f(s.X(0))},${f(Y(0))} L ${fmtPts(env)} L ${f(s.X(0))},${f(Y(1))} Z`;
+
+    // colored fill: one row per lightness (neutral -> cusp-edge), drawn full
+    // width and clipped to the smooth envelope so the stepped edges vanish.
+    const ROWS = 56;
+    const idBase = `sl-${gamut === 'display-p3' ? 'p' : 's'}-${Math.round(s.hue)}-${s.sign > 0 ? 'r' : 'l'}`;
+    const outer = s.X(xMax);
+    let grads = '';
+    let rects = '';
+    for (let i = 0; i < ROWS; i++) {
+      const Lm = (i + 0.5) / ROWS;
+      const maxC = maxChromaAt(s.hue, Lm, gamut);
+      if (maxC <= 0) continue;
+      const x0 = s.X(0);
+      const xE = s.X(maxC);
+      const cNeut = toPaletteColor({ l: Lm, c: 0, h: s.hue }, gamut).css;
+      const cEdge = toPaletteColor({ l: Lm, c: maxC, h: s.hue }, gamut).css;
+      const gid = `${idBase}-${i}`;
+      grads += `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${f(x0)}" y1="0" x2="${f(xE)}" y2="0"><stop offset="0%" stop-color="${cNeut}"/><stop offset="100%" stop-color="${cEdge}"/></linearGradient>`;
+      rects += `<rect x="${f(Math.min(x0, outer))}" y="${f(Y((i + 1) / ROWS))}" width="${f(Math.abs(outer - x0))}" height="${f(Y(i / ROWS) - Y((i + 1) / ROWS) + 0.6)}" fill="url(#${gid})"/>`;
+    }
+    const clipId = `${idBase}-clip`;
+    const fill = `${grads}<clipPath id="${clipId}"><path d="${envPoly}"/></clipPath><g clip-path="url(#${clipId})">${rects}</g>`;
     const tri = `M ${f(s.X(0))},${f(Y(0))} L ${f(s.X(peak.c))},${f(Y(peak.l))} L ${f(s.X(0))},${f(Y(1))}`;
 
     const anchor = s.sign > 0 ? 'end' : 'start';
@@ -114,7 +143,10 @@ export function renderSlice(
     for (let c = cStep; c <= xMax + 1e-9; c += cStep) {
       cTicks += `<text x="${f(s.X(c))}" y="${f(H - PAD.b + 13)}" class="tick" text-anchor="middle">${c.toFixed(2)}</text>`;
     }
-    return `${cTicks}<path d="${envFill}" class="env-fill"/><path d="${tri}" class="tri"/><path d="${envLine}" class="env-line"/>${refLine}${cuspMark}`;
+
+    const str = `${fill}<path d="${tri}" class="tri"/><path d="${envLine}" class="env-line"/>${refLine}${cuspMark}${cTicks}`;
+    sliceBgCache.set(key, str);
+    return str;
   };
 
   const bg = sides.map(background).join('');
@@ -130,7 +162,7 @@ export function renderSlice(
     guides += `<line x1="${f(s.x0)}" y1="${f(Y(l))}" x2="${f(s.X(maxC))}" y2="${f(Y(l))}" class="guide"/>`;
     const x = s.X(c);
     path.push([x, Y(l)]);
-    dots += `<circle cx="${f(x)}" cy="${f(Y(l))}" r="5.5" fill="${col.css}" class="dot"/>`;
+    dots += `<circle cx="${f(x)}" cy="${f(Y(l))}" r="4" class="dot"/>`;
   });
   const trajectory = path.length > 1 ? `<polyline points="${fmtPts(path)}" class="traj"/>` : '';
 

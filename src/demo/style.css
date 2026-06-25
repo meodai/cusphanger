@@ -333,9 +333,9 @@ position: relative;
   stroke-dasharray: 2 2;
 }
 .slice-svg .dot {
-  stroke: var(--fg);
-  stroke-opacity: 0.4;
-  stroke-width: 1;
+  fill: var(--bg);
+  stroke: currentColor;
+  stroke-width: 1.5;
 }
 .slice-svg .cusp {
   fill: none;
