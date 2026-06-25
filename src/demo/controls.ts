@@ -9,20 +9,39 @@ export interface FieldSpec {
   value: number;
 }
 
+// A per-tab dropdown of named choices (e.g. easing functions). The selected
+// string is passed back to the tab so it can map it to a value/function.
+export interface ChoiceSpec {
+  key: string;
+  label: string;
+  options: string[];
+  value: string;
+}
+
+export interface ControlValues {
+  values: Record<string, number>;
+  choices: Record<string, string>;
+  gamut: Gamut;
+  chromaMode: ChromaMode;
+}
+
 export function buildControls(
   host: HTMLElement,
   fields: FieldSpec[],
+  choiceFields: ChoiceSpec[],
   gamut: Gamut,
   chromaMode: ChromaMode,
-  onChange: (values: Record<string, number>, gamut: Gamut, chromaMode: ChromaMode) => void,
+  onChange: (v: ControlValues) => void,
 ): void {
   host.innerHTML = '';
   const state: Record<string, number> = {};
+  const choices: Record<string, string> = {};
   let gamutState = gamut;
   let chromaState = chromaMode;
   for (const f of fields) state[f.key] = f.value;
+  for (const c of choiceFields) choices[c.key] = c.value;
 
-  const emit = () => onChange({ ...state }, gamutState, chromaState);
+  const emit = () => onChange({ values: { ...state }, choices: { ...choices }, gamut: gamutState, chromaMode: chromaState });
 
   for (const f of fields) {
     const wrap = document.createElement('label');
@@ -47,7 +66,13 @@ export function buildControls(
     host.appendChild(wrap);
   }
 
-  const addSelect = <T extends string>(label: string, options: readonly T[], current: T, onSet: (v: T) => void) => {
+  const addSelect = (
+    label: string,
+    options: readonly string[],
+    current: string,
+    onSet: (v: string) => void,
+    describe?: Record<string, string>,
+  ) => {
     const wrap = document.createElement('label');
     wrap.className = 'control';
     wrap.innerHTML = `<span class="row"><span>${label}</span></span>`;
@@ -59,16 +84,37 @@ export function buildControls(
       if (o === current) opt.selected = true;
       select.appendChild(opt);
     }
+    wrap.appendChild(select);
+
+    let hint: HTMLElement | undefined;
+    if (describe) {
+      hint = document.createElement('small');
+      hint.className = 'control__hint';
+      hint.textContent = describe[current] ?? '';
+      wrap.appendChild(hint);
+    }
+
     select.addEventListener('change', () => {
-      onSet(select.value as T);
+      const v = select.value;
+      onSet(v);
+      if (hint && describe) hint.textContent = describe[v] ?? '';
       emit();
     });
-    wrap.appendChild(select);
     host.appendChild(wrap);
   };
 
-  addSelect('chroma mode', ['envelope', 'cusp', 'shared'] as const, chromaState, (v) => (chromaState = v));
-  addSelect('gamut', ['srgb', 'display-p3'] as const, gamutState, (v) => (gamutState = v));
+  for (const c of choiceFields) {
+    addSelect(c.label, c.options, c.value, (v) => (choices[c.key] = v));
+  }
+
+  const chromaHints: Record<ChromaMode, string> = {
+    envelope: 'fraction of the max chroma at each lightness — chroma fades toward the light and dark ends.',
+    cusp: "fraction of this hue's peak (cusp) chroma, clamped to gamut — roughly constant chroma per hue.",
+    shared: 'fraction of the highest chroma every hue can reach — uniform colorfulness across all hues.',
+  };
+
+  addSelect('chroma mode', ['envelope', 'cusp', 'shared'], chromaState, (v) => (chromaState = v as ChromaMode), chromaHints);
+  addSelect('gamut', ['srgb', 'display-p3'], gamutState, (v) => (gamutState = v as Gamut));
 
   emit();
 }

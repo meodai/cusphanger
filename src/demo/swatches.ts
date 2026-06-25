@@ -6,6 +6,13 @@ function textOn(hex: string): string {
   return wcag('#000000', hex) >= wcag('#ffffff', hex) ? '#000000' : '#ffffff';
 }
 
+// Compact full-width color band (no labels) — click expands the detail view.
+export function renderStrip(host: HTMLElement, palette: PaletteColor[]): void {
+  host.innerHTML = palette
+    .map((c) => `<span class="palette-strip__cell" style="background:${c.css}"></span>`)
+    .join('');
+}
+
 export function renderSwatches(host: HTMLElement, palette: PaletteColor[]): void {
   host.innerHTML = '';
   for (const c of palette) {

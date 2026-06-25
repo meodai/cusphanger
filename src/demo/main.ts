@@ -4,13 +4,31 @@ import {
   qualitative,
   generatePalette,
   linear,
+  power,
+  sine,
+  lame,
+  hump,
+  type Easing,
   type PaletteColor,
   type Gamut,
   type ChromaMode,
 } from '../lib/index';
-import { buildControls, type FieldSpec } from './controls';
-import { renderSwatches } from './swatches';
+import { buildControls, type FieldSpec, type ChoiceSpec } from './controls';
+import { renderSwatches, renderStrip } from './swatches';
 import { renderSlice } from './slice';
+import { renderWheel, type WheelAxis } from './wheel';
+
+// Named easings exposed in the Engine tab. power/lame/hump are parameterized;
+// we surface sensible presets.
+const EASINGS: Record<string, Easing> = {
+  linear,
+  'ease-in': power(2),
+  'ease-out': power(0.5),
+  sine,
+  lamé: lame(2),
+  hump: hump(),
+};
+const EASING_NAMES = Object.keys(EASINGS);
 
 type TabId = 'sequential' | 'diverging' | 'qualitative' | 'engine';
 
@@ -18,7 +36,13 @@ interface Tab {
   id: TabId;
   label: string;
   fields: FieldSpec[];
-  build: (v: Record<string, number>, gamut: Gamut, chromaMode: ChromaMode) => PaletteColor[];
+  choices?: ChoiceSpec[];
+  build: (
+    v: Record<string, number>,
+    c: Record<string, string>,
+    gamut: Gamut,
+    chromaMode: ChromaMode,
+  ) => PaletteColor[];
 }
 
 const TABS: Tab[] = [
@@ -33,7 +57,7 @@ const TABS: Tab[] = [
       { key: 'lightnessLow', label: 'lightnessLow', min: 0, max: 0.5, step: 0.01, value: 0.2 },
       { key: 'hueShift', label: 'hueShift', min: -180, max: 180, step: 1, value: 0 },
     ],
-    build: (v, gamut, chromaMode) =>
+    build: (v, _c, gamut, chromaMode) =>
       sequential({
         hue: v.hue!, count: v.count!, saturation: v.saturation!,
         lightnessHigh: v.lightnessHigh!, lightnessLow: v.lightnessLow!,
@@ -51,7 +75,7 @@ const TABS: Tab[] = [
       { key: 'centerLightness', label: 'centerLightness', min: 0.6, max: 1, step: 0.01, value: 0.95 },
       { key: 'lightnessLow', label: 'lightnessLow', min: 0.1, max: 0.6, step: 0.01, value: 0.35 },
     ],
-    build: (v, gamut, chromaMode) =>
+    build: (v, _c, gamut, chromaMode) =>
       diverging({
         hueLeft: v.hueLeft!, hueRight: v.hueRight!, count: v.count!,
         saturation: v.saturation!, centerLightness: v.centerLightness!,
@@ -68,7 +92,7 @@ const TABS: Tab[] = [
       { key: 'lightness', label: 'lightness', min: 0.3, max: 0.9, step: 0.01, value: 0.7 },
       { key: 'saturation', label: 'saturation', min: 0, max: 1, step: 0.01, value: 0.7 },
     ],
-    build: (v, gamut, chromaMode) =>
+    build: (v, _c, gamut, chromaMode) =>
       qualitative({
         count: v.count!, hueRange: [v.hueFrom!, v.hueTo!],
         lightness: v.lightness!, saturation: v.saturation!, chromaMode, gamut,
@@ -86,12 +110,20 @@ const TABS: Tab[] = [
       { key: 'satStart', label: 'saturationStart', min: 0, max: 1, step: 0.01, value: 0.85 },
       { key: 'satEnd', label: 'saturationEnd', min: 0, max: 1, step: 0.01, value: 0.85 },
     ],
-    build: (v, gamut) =>
+    choices: [
+      { key: 'hueEasing', label: 'hue easing', options: EASING_NAMES, value: 'linear' },
+      { key: 'lightnessEasing', label: 'lightness easing', options: EASING_NAMES, value: 'linear' },
+      { key: 'saturationEasing', label: 'saturation easing', options: EASING_NAMES, value: 'linear' },
+    ],
+    build: (v, c, gamut, chromaMode) =>
       generatePalette({
         total: v.total!, hueStart: v.hueStart!, hueCycles: v.hueCycles!,
-        hueEasing: linear,
+        hueEasing: EASINGS[c.hueEasing!],
         lightnessRange: [v.lightHigh!, v.lightLow!],
+        lightnessEasing: EASINGS[c.lightnessEasing!],
         saturationRange: [v.satStart!, v.satEnd!],
+        saturationEasing: EASINGS[c.saturationEasing!],
+        chromaMode,
         gamut,
       }),
   },
@@ -101,28 +133,74 @@ function render(app: HTMLElement): void {
   app.innerHTML = `
     <h1>CuspHanger</h1>
     <p class="sub">OKLCH palettes from intuitive parameters — gamut-relative saturation, in-gamut by construction.</p>
+    <div class="palette">
+      <button class="palette-strip" type="button" aria-expanded="false" title="Show color details"></button>
+      <div class="palette-detail" hidden>
+        <div class="swatches"></div>
+        <p class="hint">Click a swatch to copy its CSS. ⚠︎ marks colors outside the sRGB gamut.</p>
+      </div>
+    </div>
     <nav class="tabs"></nav>
     <section class="panel">
       <div class="controls"></div>
-      <div class="output">
-        <div class="swatches"></div>
+      <div class="views">
+        <div class="view-block">
+          <div class="axis-toggle">
+            <button data-axis="chroma" aria-selected="true">C radius</button>
+            <button data-axis="lightness" aria-selected="false">L radius</button>
+          </div>
+          <div class="wheel"></div>
+        </div>
         <div class="slice"></div>
       </div>
-    </section>
-    <p class="hint">Click a swatch to copy its CSS. ⚠︎ marks colors outside the sRGB gamut. The slice shows the (chroma × lightness) cross-section at the palette's most-saturated hue.</p>`;
+    </section>`;
 
   const tabsNav = app.querySelector('.tabs') as HTMLElement;
   const controlsHost = app.querySelector('.controls') as HTMLElement;
   const swatchHost = app.querySelector('.swatches') as HTMLElement;
   const sliceHost = app.querySelector('.slice') as HTMLElement;
+  const wheelHost = app.querySelector('.wheel') as HTMLElement;
+  const stripHost = app.querySelector('.palette-strip') as HTMLButtonElement;
+  const detailHost = app.querySelector('.palette-detail') as HTMLElement;
   let active: TabId = 'sequential';
 
-  const mountTab = (tab: Tab) => {
-    buildControls(controlsHost, tab.fields, 'srgb', 'envelope', (values, gamut, chromaMode) => {
-      const palette = tab.build(values, gamut, chromaMode);
-      renderSwatches(swatchHost, palette);
-      renderSlice(sliceHost, palette, gamut, chromaMode);
+  stripHost.addEventListener('click', () => {
+    const open = detailHost.hasAttribute('hidden');
+    detailHost.toggleAttribute('hidden', !open);
+    stripHost.setAttribute('aria-expanded', String(open));
+  });
+
+  // wheel radial axis + the latest palette, so the toggle can redraw without recomputing
+  let wheelAxis: WheelAxis = 'chroma';
+  let lastPalette: PaletteColor[] = [];
+  let lastGamut: Gamut = 'srgb';
+
+  const axisBtns = Array.from(app.querySelectorAll<HTMLButtonElement>('.axis-toggle button'));
+  for (const btn of axisBtns) {
+    btn.addEventListener('click', () => {
+      wheelAxis = btn.dataset.axis as WheelAxis;
+      for (const b of axisBtns) b.setAttribute('aria-selected', String(b === btn));
+      renderWheel(wheelHost, lastPalette, lastGamut, wheelAxis);
     });
+  }
+
+  const mountTab = (tab: Tab) => {
+    buildControls(
+      controlsHost,
+      tab.fields,
+      tab.choices ?? [],
+      'srgb',
+      'envelope',
+      ({ values, choices, gamut, chromaMode }) => {
+        const palette = tab.build(values, choices, gamut, chromaMode);
+        lastPalette = palette;
+        lastGamut = gamut;
+        renderStrip(stripHost, palette);
+        renderSwatches(swatchHost, palette);
+        renderWheel(wheelHost, palette, gamut, wheelAxis);
+        renderSlice(sliceHost, palette, gamut, chromaMode);
+      },
+    );
   };
 
   const renderTabs = () => {

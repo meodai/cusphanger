@@ -34,7 +34,7 @@ h1 { font-size: 2rem; font-weight: 300; letter-spacing: -0.05em; margin: 0 0 0.1
 .sub { opacity: 0.7; margin: 0 0 1.75rem; font-size: 0.9rem; font-weight: 300; }
 
 /* tabs — bold framed strip, inverted on select */
-.tabs { display: flex; border: 2px solid currentColor; background: var(--bg); margin-bottom: 1.5rem; }
+.tabs { display: flex; border: 2px solid currentColor; border-bottom: 0; background: var(--bg); margin-bottom: 0; }
 .tabs button {
   flex: 1; font: inherit; font-size: 0.78rem; letter-spacing: 0.02em; text-transform: lowercase;
   padding: 0.6rem 0.8rem; background: var(--bg); color: inherit; border: 0; cursor: pointer;
@@ -43,6 +43,19 @@ h1 { font-size: 2rem; font-weight: 300; letter-spacing: -0.05em; margin: 0 0 0.1
 .tabs button + button { border-left: 1px solid var(--line); }
 .tabs button:hover { background: var(--line); }
 .tabs button[aria-selected="true"] { background: var(--fg); color: var(--bg); }
+
+/* full-width palette strip + expandable detail */
+.palette { margin-bottom: 1.5rem; }
+.palette-strip {
+  display: flex; width: 100%; height: 56px; padding: 0; margin: 0;
+  border: 2px solid currentColor; background: var(--bg); color: inherit; font: inherit;
+  cursor: pointer;
+}
+.palette-strip__cell { flex: 1; min-width: 0; }
+.palette-detail { border: 2px solid currentColor; border-top: 0; }
+.palette-detail[hidden] { display: none; }
+.palette-detail .swatches { border: 0; min-height: 0; }
+.palette-detail .hint { margin: 0; padding: 0.75rem; border-top: 1px solid var(--line); }
 
 /* panel */
 .panel {
@@ -74,10 +87,12 @@ h1 { font-size: 2rem; font-weight: 300; letter-spacing: -0.05em; margin: 0 0 0.1
   font: inherit; font-size: 0.8rem; padding: 0.35rem 0.5rem; border-radius: 0;
   background: var(--bg); color: inherit; border: 2px solid currentColor;
 }
+.control__hint {
+  display: block; margin-top: 0.4rem; font-size: 0.68rem; line-height: 1.4;
+  font-weight: 300; opacity: 0.6; border-left: 2px solid var(--line); padding-left: 0.5rem;
+}
 
-/* output: swatches + slice */
-.output { display: grid; grid-template-columns: 1fr 400px; gap: 1.5rem; align-items: start; }
-@media (max-width: 920px) { .output { grid-template-columns: 1fr; } .panel { grid-template-columns: 1fr; } }
+@media (max-width: 920px) { .panel { grid-template-columns: 1fr; } }
 
 .swatches { display: flex; flex-direction: column; gap: 0; min-height: 360px; border: 2px solid currentColor; }
 .swatch {
@@ -92,7 +107,7 @@ h1 { font-size: 2rem; font-weight: 300; letter-spacing: -0.05em; margin: 0 0 0.1
 .hint { font-size: 0.72rem; opacity: 0.6; margin: 1.25rem 0 0; font-weight: 300; }
 
 /* OKLCH slice visualization */
-.slice-svg { width: 100%; height: auto; color: var(--fg); display: block; border: 2px solid currentColor; }
+.slice-svg { width: 100%; height: auto; color: var(--fg); display: block; }
 .slice-svg .grid { stroke: currentColor; stroke-opacity: 0.1; stroke-width: 1; }
 .slice-svg .tick, .slice-svg .axis { fill: currentColor; fill-opacity: 0.55; font-size: 9px; }
 .slice-svg .title { fill: currentColor; fill-opacity: 0.85; font-size: 11px; font-weight: 400; }
@@ -110,3 +125,24 @@ h1 { font-size: 2rem; font-weight: 300; letter-spacing: -0.05em; margin: 0 0 0.1
 .slice-legend .k-env { border-top-color: currentColor; }
 .slice-legend .k-tri { border-top-style: dashed; border-top-color: currentColor; opacity: 0.6; }
 .slice-legend .k-guide { border-top-color: currentColor; opacity: 0.35; }
+.slice-legend .k-shared { border-top-style: dashed; border-top-color: currentColor; opacity: 0.6; }
+
+/* top view (hue wheel) */
+.views { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.75rem; align-items: start; }
+.axis-toggle { display: flex; width: max-content; border: 2px solid currentColor; margin-bottom: 0.75rem; }
+.axis-toggle button {
+  font: inherit; font-size: 0.68rem; padding: 0.3rem 0.6rem; cursor: pointer;
+  background: var(--bg); color: inherit; border: 0;
+}
+.axis-toggle button + button { border-left: 1px solid var(--line); }
+.axis-toggle button[aria-selected="true"] { background: var(--fg); color: var(--bg); }
+.wheel-ring { fill: none; stroke: currentColor; stroke-opacity: 0.12; stroke-width: 1; }
+.wheel-svg { width: 100%; height: auto; color: var(--fg); display: block; }
+.wheel-grid-dot { fill: currentColor; fill-opacity: 0.12; }
+.wheel-fade-in { stop-color: var(--bg); stop-opacity: 1; }
+.wheel-fade-out { stop-color: var(--bg); stop-opacity: 0; }
+.wheel-boundary { fill: none; stroke: currentColor; stroke-opacity: 0.7; stroke-width: 1; }
+.wheel-shared { fill: none; stroke: currentColor; stroke-opacity: 0.45; stroke-width: 1; stroke-dasharray: 4 4; }
+.wheel-traj { stroke-width: 2; stroke-opacity: 0.95; }
+.wheel-dot { fill: var(--bg); stroke: currentColor; stroke-width: 1.5; }
+.wheel-tag { fill: currentColor; fill-opacity: 0.7; font-size: 11px; font-weight: 400; }
