@@ -4,6 +4,17 @@ export type { Easing };
 
 export type Gamut = 'srgb' | 'display-p3';
 
+// How the saturation value `s` is interpreted:
+// - 'envelope': fraction of the max in-gamut chroma at each lightness
+//   (C = s * maxChromaAt(hue, L)). Chroma fades toward the light/dark ends.
+// - 'cusp': fraction of the hue's single cusp chroma, clamped to stay in gamut
+//   (C = min(s * cuspChroma(hue), maxChromaAt(hue, L))). Roughly constant chroma
+//   per hue, but different hues reach different peaks.
+// - 'shared': fraction of the highest chroma common to ALL hues (the minimum of
+//   every hue's cusp chroma), clamped to stay in gamut. s=1 is the same absolute
+//   chroma for every hue, so a multi-hue palette has uniform colorfulness.
+export type ChromaMode = 'envelope' | 'cusp' | 'shared';
+
 export interface Oklch {
   l: number; // 0..1
   c: number; // >= 0
@@ -28,6 +39,7 @@ export interface PaletteOptions {
   lightnessEasing?: Easing;            // default linear
   saturationRange?: [number, number];  // gamut-relative s. default [0.9, 0.9]
   saturationEasing?: Easing;           // non-monotonic allowed. default linear
+  chromaMode?: ChromaMode;             // saturation reference. default 'envelope'
   gamut?: Gamut;                       // default 'srgb'
 }
 
@@ -38,6 +50,7 @@ export interface SequentialOptions {
   lightnessHigh?: number; // lightest. default 0.95
   lightnessLow?: number;  // darkest. default 0.2
   hueShift?: number;      // degrees, light->dark hue rotation. default 0
+  chromaMode?: ChromaMode; // saturation reference. default 'envelope'
   gamut?: Gamut;
 }
 
@@ -48,6 +61,7 @@ export interface DivergingOptions {
   saturation?: number;      // default 0.9
   centerLightness?: number; // neutral midpoint lightness. default 0.95
   lightnessLow?: number;    // dark ends. default 0.35
+  chromaMode?: ChromaMode;  // saturation reference. default 'envelope'
   gamut?: Gamut;
 }
 
@@ -56,5 +70,6 @@ export interface QualitativeOptions {
   hueRange?: [number, number]; // colors spread evenly within. default [0, 360]
   lightness?: number;     // shared lightness. default 0.7
   saturation?: number;    // shared gamut-relative saturation. default 0.7
+  chromaMode?: ChromaMode; // saturation reference. default 'envelope'
   gamut?: Gamut;
 }

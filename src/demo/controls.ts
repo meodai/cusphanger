@@ -1,3 +1,5 @@
+import type { Gamut, ChromaMode } from '../lib/index';
+
 export interface FieldSpec {
   key: string;
   label: string;
@@ -10,15 +12,17 @@ export interface FieldSpec {
 export function buildControls(
   host: HTMLElement,
   fields: FieldSpec[],
-  gamut: 'srgb' | 'display-p3',
-  onChange: (values: Record<string, number>, gamut: 'srgb' | 'display-p3') => void,
+  gamut: Gamut,
+  chromaMode: ChromaMode,
+  onChange: (values: Record<string, number>, gamut: Gamut, chromaMode: ChromaMode) => void,
 ): void {
   host.innerHTML = '';
   const state: Record<string, number> = {};
   let gamutState = gamut;
+  let chromaState = chromaMode;
   for (const f of fields) state[f.key] = f.value;
 
-  const emit = () => onChange({ ...state }, gamutState);
+  const emit = () => onChange({ ...state }, gamutState, chromaState);
 
   for (const f of fields) {
     const wrap = document.createElement('label');
@@ -43,23 +47,28 @@ export function buildControls(
     host.appendChild(wrap);
   }
 
-  const gWrap = document.createElement('label');
-  gWrap.className = 'control';
-  gWrap.innerHTML = '<span class="row"><span>gamut</span></span>';
-  const select = document.createElement('select');
-  for (const g of ['srgb', 'display-p3'] as const) {
-    const opt = document.createElement('option');
-    opt.value = g;
-    opt.textContent = g;
-    if (g === gamut) opt.selected = true;
-    select.appendChild(opt);
-  }
-  select.addEventListener('change', () => {
-    gamutState = select.value as 'srgb' | 'display-p3';
-    emit();
-  });
-  gWrap.appendChild(select);
-  host.appendChild(gWrap);
+  const addSelect = <T extends string>(label: string, options: readonly T[], current: T, onSet: (v: T) => void) => {
+    const wrap = document.createElement('label');
+    wrap.className = 'control';
+    wrap.innerHTML = `<span class="row"><span>${label}</span></span>`;
+    const select = document.createElement('select');
+    for (const o of options) {
+      const opt = document.createElement('option');
+      opt.value = o;
+      opt.textContent = o;
+      if (o === current) opt.selected = true;
+      select.appendChild(opt);
+    }
+    select.addEventListener('change', () => {
+      onSet(select.value as T);
+      emit();
+    });
+    wrap.appendChild(select);
+    host.appendChild(wrap);
+  };
+
+  addSelect('chroma mode', ['envelope', 'cusp', 'shared'] as const, chromaState, (v) => (chromaState = v));
+  addSelect('gamut', ['srgb', 'display-p3'] as const, gamutState, (v) => (gamutState = v));
 
   emit();
 }

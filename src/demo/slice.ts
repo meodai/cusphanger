@@ -1,4 +1,11 @@
-import { maxChromaAt, cusp, type PaletteColor, type Gamut } from '../lib/index';
+import {
+  maxChromaAt,
+  cusp,
+  sharedCuspChroma,
+  type PaletteColor,
+  type Gamut,
+  type ChromaMode,
+} from '../lib/index';
 
 // Side view of the OKLCH gamut slice (chroma x lightness) for one hue:
 // the real maxChroma envelope, the triangle model, the cusp, and where each
@@ -27,7 +34,12 @@ function niceStep(max: number): number {
 const fmtPts = (pts: Array<[number, number]>) =>
   pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
 
-export function renderSlice(host: HTMLElement, palette: PaletteColor[], gamut: Gamut): void {
+export function renderSlice(
+  host: HTMLElement,
+  palette: PaletteColor[],
+  gamut: Gamut,
+  chromaMode: ChromaMode = 'envelope',
+): void {
   if (!palette.length) {
     host.innerHTML = '';
     return;
@@ -88,6 +100,18 @@ export function renderSlice(host: HTMLElement, palette: PaletteColor[], gamut: G
     <circle cx="${X(peak.c).toFixed(2)}" cy="${Y(peak.l).toFixed(2)}" r="4" class="cusp"/>
     <text x="${(X(peak.c) - 8).toFixed(2)}" y="${(Y(peak.l) - 7).toFixed(2)}" class="label" text-anchor="end">cusp · L ${peak.l.toFixed(2)} C ${peak.c.toFixed(3)}</text>`;
 
+  // For cusp/shared modes, s targets a hue-global chroma — draw it as a vertical
+  // reference line so the dots' position relative to it shows the s fraction.
+  let refLine = '';
+  if (chromaMode !== 'envelope') {
+    const refC = chromaMode === 'shared' ? sharedCuspChroma(gamut) : peak.c;
+    const x = X(refC).toFixed(2);
+    const label = chromaMode === 'shared' ? `shared C ${refC.toFixed(3)}` : 'cusp C (target)';
+    refLine = `
+      <line x1="${x}" y1="${PAD.t}" x2="${x}" y2="${(H - PAD.b).toFixed(2)}" class="ref"/>
+      <text x="${(Number(x) + 4).toFixed(2)}" y="${(PAD.t + 10).toFixed(2)}" class="label">${label}</text>`;
+  }
+
   host.innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" class="slice-svg" role="img"
          aria-label="OKLCH chroma-lightness slice at hue ${hue.toFixed(0)} degrees">
@@ -96,6 +120,7 @@ export function renderSlice(host: HTMLElement, palette: PaletteColor[], gamut: G
       <path d="${envFill}" class="env-fill"/>
       <path d="${tri}" class="tri"/>
       <path d="${envLine}" class="env-line"/>
+      ${refLine}
       ${guides}
       ${trajectory}
       ${dots}

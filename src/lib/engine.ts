@@ -14,6 +14,7 @@ export function generatePalette(o: PaletteOptions): PaletteColor[] {
     lightnessEasing = linear,
     saturationRange = [0.9, 0.9],
     saturationEasing = linear,
+    chromaMode = 'envelope',
     gamut = 'srgb',
   } = o;
 
@@ -24,7 +25,7 @@ export function generatePalette(o: PaletteOptions): PaletteColor[] {
     const hue = ((rawHue % 360) + 360) % 360;
     const l = lerp(lightnessRange[0], lightnessRange[1], lightnessEasing(t));
     const s = clamp01(lerp(saturationRange[0], saturationRange[1], saturationEasing(t)));
-    out.push(toPaletteColor(relativeToOklch(s, l, hue, gamut), gamut));
+    out.push(toPaletteColor(relativeToOklch(s, l, hue, gamut, chromaMode), gamut));
   }
   return out;
 }

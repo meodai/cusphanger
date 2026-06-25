@@ -16,6 +16,7 @@ export function sequential(o: SequentialOptions): PaletteColor[] {
     lightnessHigh = 0.95,
     lightnessLow = 0.2,
     hueShift = 0,
+    chromaMode = 'envelope',
     gamut = 'srgb',
   } = o;
   return generatePalette({
@@ -24,6 +25,7 @@ export function sequential(o: SequentialOptions): PaletteColor[] {
     hueCycles: hueShift / 360,
     lightnessRange: [lightnessHigh, lightnessLow],
     saturationRange: [saturation, saturation],
+    chromaMode,
     gamut,
   });
 }
@@ -36,6 +38,7 @@ export function diverging(o: DivergingOptions): PaletteColor[] {
     saturation = 0.9,
     centerLightness = 0.95,
     lightnessLow = 0.35,
+    chromaMode = 'envelope',
     gamut = 'srgb',
   } = o;
   const isOdd = count % 2 === 1;
@@ -48,12 +51,13 @@ export function diverging(o: DivergingOptions): PaletteColor[] {
       hueStart: hue,
       lightnessRange: [lightnessLow, centerLightness],
       saturationRange: [saturation, 0],
+      chromaMode,
       gamut,
     });
 
   const leftSide = ramp(hueLeft).slice(0, side); // dark -> toward center (ascending L)
   const rightSide = ramp(hueRight).slice(0, side); // dark -> toward center (ascending L)
-  const center = toPaletteColor(relativeToOklch(0, centerLightness, hueLeft, gamut), gamut);
+  const center = toPaletteColor(relativeToOklch(0, centerLightness, hueLeft, gamut, chromaMode), gamut);
 
   return [
     ...leftSide,
@@ -63,7 +67,14 @@ export function diverging(o: DivergingOptions): PaletteColor[] {
 }
 
 export function qualitative(o: QualitativeOptions): PaletteColor[] {
-  const { count, hueRange = [0, 360], lightness = 0.7, saturation = 0.7, gamut = 'srgb' } = o;
+  const {
+    count,
+    hueRange = [0, 360],
+    lightness = 0.7,
+    saturation = 0.7,
+    chromaMode = 'envelope',
+    gamut = 'srgb',
+  } = o;
   const [h0, h1] = hueRange;
   const span = h1 - h0;
   const fullCircle = Math.abs(((span % 360) + 360) % 360) < 1e-9 && span !== 0;
@@ -71,7 +82,7 @@ export function qualitative(o: QualitativeOptions): PaletteColor[] {
   for (let i = 0; i < count; i++) {
     const frac = fullCircle ? i / count : count <= 1 ? 0 : i / (count - 1);
     const hue = (((h0 + span * frac) % 360) + 360) % 360;
-    out.push(toPaletteColor(relativeToOklch(saturation, lightness, hue, gamut), gamut));
+    out.push(toPaletteColor(relativeToOklch(saturation, lightness, hue, gamut, chromaMode), gamut));
   }
   return out;
 }

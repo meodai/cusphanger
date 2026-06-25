@@ -6,6 +6,7 @@ import {
   linear,
   type PaletteColor,
   type Gamut,
+  type ChromaMode,
 } from '../lib/index';
 import { buildControls, type FieldSpec } from './controls';
 import { renderSwatches } from './swatches';
@@ -17,7 +18,7 @@ interface Tab {
   id: TabId;
   label: string;
   fields: FieldSpec[];
-  build: (v: Record<string, number>, gamut: Gamut) => PaletteColor[];
+  build: (v: Record<string, number>, gamut: Gamut, chromaMode: ChromaMode) => PaletteColor[];
 }
 
 const TABS: Tab[] = [
@@ -32,11 +33,11 @@ const TABS: Tab[] = [
       { key: 'lightnessLow', label: 'lightnessLow', min: 0, max: 0.5, step: 0.01, value: 0.2 },
       { key: 'hueShift', label: 'hueShift', min: -180, max: 180, step: 1, value: 0 },
     ],
-    build: (v, gamut) =>
+    build: (v, gamut, chromaMode) =>
       sequential({
         hue: v.hue!, count: v.count!, saturation: v.saturation!,
         lightnessHigh: v.lightnessHigh!, lightnessLow: v.lightnessLow!,
-        hueShift: v.hueShift!, gamut,
+        hueShift: v.hueShift!, chromaMode, gamut,
       }),
   },
   {
@@ -50,11 +51,11 @@ const TABS: Tab[] = [
       { key: 'centerLightness', label: 'centerLightness', min: 0.6, max: 1, step: 0.01, value: 0.95 },
       { key: 'lightnessLow', label: 'lightnessLow', min: 0.1, max: 0.6, step: 0.01, value: 0.35 },
     ],
-    build: (v, gamut) =>
+    build: (v, gamut, chromaMode) =>
       diverging({
         hueLeft: v.hueLeft!, hueRight: v.hueRight!, count: v.count!,
         saturation: v.saturation!, centerLightness: v.centerLightness!,
-        lightnessLow: v.lightnessLow!, gamut,
+        lightnessLow: v.lightnessLow!, chromaMode, gamut,
       }),
   },
   {
@@ -67,10 +68,10 @@ const TABS: Tab[] = [
       { key: 'lightness', label: 'lightness', min: 0.3, max: 0.9, step: 0.01, value: 0.7 },
       { key: 'saturation', label: 'saturation', min: 0, max: 1, step: 0.01, value: 0.7 },
     ],
-    build: (v, gamut) =>
+    build: (v, gamut, chromaMode) =>
       qualitative({
         count: v.count!, hueRange: [v.hueFrom!, v.hueTo!],
-        lightness: v.lightness!, saturation: v.saturation!, gamut,
+        lightness: v.lightness!, saturation: v.saturation!, chromaMode, gamut,
       }),
   },
   {
@@ -117,10 +118,10 @@ function render(app: HTMLElement): void {
   let active: TabId = 'sequential';
 
   const mountTab = (tab: Tab) => {
-    buildControls(controlsHost, tab.fields, 'srgb', (values, gamut) => {
-      const palette = tab.build(values, gamut);
+    buildControls(controlsHost, tab.fields, 'srgb', 'envelope', (values, gamut, chromaMode) => {
+      const palette = tab.build(values, gamut, chromaMode);
       renderSwatches(swatchHost, palette);
-      renderSlice(sliceHost, palette, gamut);
+      renderSlice(sliceHost, palette, gamut, chromaMode);
     });
   };
 
