@@ -1,13 +1,13 @@
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
-import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   plugins: [dts({ include: ['src/lib'], rollupTypes: true })],
   build: {
     outDir: 'dist',
     lib: {
-      entry: resolve(__dirname, 'src/lib/index.ts'),
+      entry: fileURLToPath(new URL('./src/lib/index.ts', import.meta.url)),
       name: 'CuspHanger',
       fileName: 'cusphanger',
     },
