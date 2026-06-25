@@ -66,6 +66,30 @@ h1 {
   font-weight: 300;
 }
 
+.about {
+  margin-top: 3.5rem;
+  max-width: 68ch;
+  font-weight: 300;
+  font-size: 0.9rem;
+  opacity: 0.7;
+  line-height: 1.6;
+}
+.about p {
+  margin: 0 0 0.9rem;
+}
+.about em {
+  font-style: normal;
+  font-weight: 700;
+}
+.about a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
+.about .cite {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
 /* tabs — bold framed strip, inverted on select */
 .tabs {
   position: relative;
@@ -284,6 +308,11 @@ position: relative;
   stroke: currentColor;
   stroke-opacity: 0.1;
   stroke-width: 1;
+}
+.slice-svg .axis-center {
+  stroke: currentColor;
+  stroke-opacity: 0.5;
+  stroke-width: 1.5;
 }
 .slice-svg .tick,
 .slice-svg .axis {

@@ -56,6 +56,7 @@ export function renderSlice(
   palette: PaletteColor[],
   gamut: Gamut,
   chromaMode: ChromaMode = 'envelope',
+  forceMirror = false,
 ): void {
   if (!palette.length) {
     host.innerHTML = '';
@@ -64,7 +65,7 @@ export function renderSlice(
 
   const startHue = palette[0]!.oklch.h;
   const endHue = palette[palette.length - 1]!.oklch.h;
-  const mirror = angDiff(startHue, endHue) > 1;
+  const mirror = forceMirror || angDiff(startHue, endHue) > 1;
 
   let sides: Side[];
   let pointSide: number[];
@@ -86,14 +87,17 @@ export function renderSlice(
       { hue: startHue, x0: cx, sign: -1, X: (c) => cx - (c / xMax) * halfW },
       { hue: endHue, x0: cx, sign: 1, X: (c) => cx + (c / xMax) * halfW },
     ];
-    pointSide = palette.map((col) =>
-      angDiff(col.oklch.h, startHue) <= angDiff(col.oklch.h, endHue) ? 0 : 1,
-    );
+    // first half -> left flap (start hue arm), second half -> right flap.
+    // robust when both hues are equal (e.g. a symmetric diverging palette).
+    pointSide = palette.map((_, i) => (i < palette.length / 2 ? 0 : 1));
   }
 
   // background per side: colored gamut fill + envelope + triangle + cusp + ref + ticks
   const background = (s: Side): string => {
-    const key = `${gamut}|${chromaMode}|${xMax.toFixed(4)}|${s.hue.toFixed(1)}|${s.sign}`;
+    // key MUST encode the geometry (single vs mirror, anchor) — single-mode and
+    // mirror-flap backgrounds can share gamut/mode/xMax/hue/sign yet differ in
+    // layout, so omitting this collides them and stacks the flaps.
+    const key = `${gamut}|${chromaMode}|${mirror}|${s.x0}|${s.sign}|${xMax.toFixed(4)}|${s.hue.toFixed(1)}`;
     const hit = sliceBgCache.get(key);
     if (hit) return hit;
 
@@ -102,29 +106,31 @@ export function renderSlice(
     const env: Array<[number, number]> = [];
     for (let i = 0; i <= 96; i++) env.push([s.X(maxChromaAt(s.hue, i / 96, gamut)), Y(i / 96)]);
     const envLine = `M ${fmtPts(env)}`;
-    const envPoly = `M ${f(s.X(0))},${f(Y(0))} L ${fmtPts(env)} L ${f(s.X(0))},${f(Y(1))} Z`;
 
-    // colored fill: one row per lightness (neutral -> cusp-edge), drawn full
-    // width and clipped to the smooth envelope so the stepped edges vanish.
-    const ROWS = 56;
+    // colored fill: per-lightness trapezoids from the center axis (neutral) out
+    // to the gamut envelope (cusp-edge color). Each trapezoid follows the curve
+    // (no stepped edges) and pins its inner edge to the center axis, so the two
+    // sides always meet cleanly at the center.
+    const ROWS = 64;
     const idBase = `sl-${gamut === 'display-p3' ? 'p' : 's'}-${Math.round(s.hue)}-${s.sign > 0 ? 'r' : 'l'}`;
-    const outer = s.X(xMax);
+    const x0 = s.X(0);
     let grads = '';
-    let rects = '';
+    let polys = '';
     for (let i = 0; i < ROWS; i++) {
-      const Lm = (i + 0.5) / ROWS;
+      const L0 = i / ROWS;
+      const L1 = (i + 1) / ROWS;
+      const Lm = (L0 + L1) / 2;
       const maxC = maxChromaAt(s.hue, Lm, gamut);
       if (maxC <= 0) continue;
-      const x0 = s.X(0);
-      const xE = s.X(maxC);
+      const xE0 = s.X(maxChromaAt(s.hue, L0, gamut));
+      const xE1 = s.X(maxChromaAt(s.hue, L1, gamut));
       const cNeut = toPaletteColor({ l: Lm, c: 0, h: s.hue }, gamut).css;
       const cEdge = toPaletteColor({ l: Lm, c: maxC, h: s.hue }, gamut).css;
       const gid = `${idBase}-${i}`;
-      grads += `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${f(x0)}" y1="0" x2="${f(xE)}" y2="0"><stop offset="0%" stop-color="${cNeut}"/><stop offset="100%" stop-color="${cEdge}"/></linearGradient>`;
-      rects += `<rect x="${f(Math.min(x0, outer))}" y="${f(Y((i + 1) / ROWS))}" width="${f(Math.abs(outer - x0))}" height="${f(Y(i / ROWS) - Y((i + 1) / ROWS) + 0.6)}" fill="url(#${gid})"/>`;
+      grads += `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${f(x0)}" y1="0" x2="${f((xE0 + xE1) / 2)}" y2="0"><stop offset="0%" stop-color="${cNeut}"/><stop offset="100%" stop-color="${cEdge}"/></linearGradient>`;
+      polys += `<polygon points="${f(x0)},${f(Y(L0))} ${f(xE0)},${f(Y(L0))} ${f(xE1)},${f(Y(L1))} ${f(x0)},${f(Y(L1))}" fill="url(#${gid})"/>`;
     }
-    const clipId = `${idBase}-clip`;
-    const fill = `${grads}<clipPath id="${clipId}"><path d="${envPoly}"/></clipPath><g clip-path="url(#${clipId})">${rects}</g>`;
+    const fill = `${grads}${polys}`;
     const tri = `M ${f(s.X(0))},${f(Y(0))} L ${f(s.X(peak.c))},${f(Y(peak.l))} L ${f(s.X(0))},${f(Y(1))}`;
 
     const anchor = s.sign > 0 ? 'end' : 'start';
@@ -174,7 +180,7 @@ export function renderSlice(
     })
     .join('');
   const axisLine = mirror
-    ? `<line x1="${f(W / 2)}" y1="${PAD.t}" x2="${f(W / 2)}" y2="${f(H - PAD.b)}" class="grid"/>`
+    ? `<line x1="${f(W / 2)}" y1="${PAD.t}" x2="${f(W / 2)}" y2="${f(H - PAD.b)}" class="axis-center"/>`
     : '';
 
   const titleEls = mirror

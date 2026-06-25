@@ -43,29 +43,6 @@ export function buildControls(
 
   const emit = () => onChange({ values: { ...state }, choices: { ...choices }, gamut: gamutState, chromaMode: chromaState });
 
-  for (const f of fields) {
-    const wrap = document.createElement('label');
-    wrap.className = 'control';
-    const valueLabel = document.createElement('span');
-    valueLabel.textContent = String(f.value);
-    wrap.innerHTML = `<span class="row"><span>${f.label}</span></span>`;
-    wrap.querySelector('.row')!.appendChild(valueLabel);
-
-    const input = document.createElement('input');
-    input.type = 'range';
-    input.min = String(f.min);
-    input.max = String(f.max);
-    input.step = String(f.step);
-    input.value = String(f.value);
-    input.addEventListener('input', () => {
-      state[f.key] = Number(input.value);
-      valueLabel.textContent = input.value;
-      emit();
-    });
-    wrap.appendChild(input);
-    host.appendChild(wrap);
-  }
-
   const addSelect = (
     label: string,
     options: readonly string[],
@@ -103,18 +80,44 @@ export function buildControls(
     host.appendChild(wrap);
   };
 
-  for (const c of choiceFields) {
-    addSelect(c.label, c.options, c.value, (v) => (choices[c.key] = v));
-  }
-
   const chromaHints: Record<ChromaMode, string> = {
     envelope: 'fraction of the max chroma at each lightness — chroma fades toward the light and dark ends.',
     cusp: "fraction of this hue's peak (cusp) chroma, clamped to gamut — roughly constant chroma per hue.",
     shared: 'fraction of the highest chroma every hue can reach — uniform colorfulness across all hues.',
   };
 
+  // chroma mode + gamut first
   addSelect('chroma mode', ['envelope', 'cusp', 'shared'], chromaState, (v) => (chromaState = v as ChromaMode), chromaHints);
   addSelect('gamut', ['srgb', 'display-p3'], gamutState, (v) => (gamutState = v as Gamut));
+
+  // numeric parameters
+  for (const f of fields) {
+    const wrap = document.createElement('label');
+    wrap.className = 'control';
+    const valueLabel = document.createElement('span');
+    valueLabel.textContent = String(f.value);
+    wrap.innerHTML = `<span class="row"><span>${f.label}</span></span>`;
+    wrap.querySelector('.row')!.appendChild(valueLabel);
+
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = String(f.min);
+    input.max = String(f.max);
+    input.step = String(f.step);
+    input.value = String(f.value);
+    input.addEventListener('input', () => {
+      state[f.key] = Number(input.value);
+      valueLabel.textContent = input.value;
+      emit();
+    });
+    wrap.appendChild(input);
+    host.appendChild(wrap);
+  }
+
+  // per-tab choice fields (e.g. easings)
+  for (const c of choiceFields) {
+    addSelect(c.label, c.options, c.value, (v) => (choices[c.key] = v));
+  }
 
   emit();
 }
