@@ -84,10 +84,11 @@ export function buildControls(
     envelope: 'fraction of the max chroma at each lightness — chroma fades toward the light and dark ends.',
     cusp: "fraction of this hue's peak (cusp) chroma, clamped to gamut — roughly constant chroma per hue.",
     shared: 'fraction of the highest chroma every hue can reach — uniform colorfulness across all hues.',
+    absolute: 'raw chroma, same for every hue, NOT gamut-clamped (RampenSau-style) — clips out of gamut (⚠). For comparison.',
   };
 
   // chroma mode + gamut first
-  addSelect('chroma mode', ['envelope', 'cusp', 'shared'], chromaState, (v) => (chromaState = v as ChromaMode), chromaHints);
+  addSelect('chroma mode', ['envelope', 'cusp', 'shared', 'absolute'], chromaState, (v) => (chromaState = v as ChromaMode), chromaHints);
   addSelect('gamut', ['srgb', 'display-p3'], gamutState, (v) => (gamutState = v as Gamut));
 
   // numeric parameters

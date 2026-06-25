@@ -176,7 +176,9 @@ function render(app: HTMLElement): void {
       <a href="https://doi.org/10.1111/j.1467-8659.2008.01203.x" target="_blank" rel="noopener">“Generating
       Color Palettes using Intuitive Parameters”</a> (Computer Graphics Forum 27:3, 2008),
       re-expressed in OKLCH, with per-channel trajectory controls inspired by
-      <a href="https://github.com/meodai/rampensau" target="_blank" rel="noopener">RampenSau</a>.</p>
+      <a href="https://github.com/meodai/rampensau" target="_blank" rel="noopener">RampenSau</a>.
+      Also inspired by <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener">Matt
+      DesLauriers's OKLCH take</a> on the same paper.</p>
     </section>`;
 
   const tabsNav = app.querySelector('.tabs') as HTMLElement;

@@ -2,6 +2,7 @@ import {
   maxChromaAt,
   cusp,
   sharedCuspChroma,
+  maxCuspChroma,
   toPaletteColor,
   type PaletteColor,
   type Gamut,
@@ -67,19 +68,23 @@ export function renderSlice(
   const endHue = palette[palette.length - 1]!.oklch.h;
   const mirror = forceMirror || angDiff(startHue, endHue) > 1;
 
+  // include the palette's own max chroma so out-of-gamut points ('absolute'
+  // mode) still fit inside the plot instead of falling off the edge.
+  const maxPC = palette.reduce((m, c) => Math.max(m, c.oklch.c), 0);
+
   let sides: Side[];
   let pointSide: number[];
   let xMax: number;
 
   if (!mirror) {
     const hue = representativeHue(palette);
-    xMax = Math.max(cusp(hue, gamut).c * 1.18, 0.05);
+    xMax = Math.max(cusp(hue, gamut).c * 1.18, maxPC * 1.06, 0.05);
     sides = [{ hue, x0: PAD.l, sign: 1, X: (c) => PAD.l + (c / xMax) * PLOT_W }];
     pointSide = palette.map(() => 0);
   } else {
     const peakS = cusp(startHue, gamut);
     const peakE = cusp(endHue, gamut);
-    xMax = Math.max(peakS.c, peakE.c, 0.04) * 1.18;
+    xMax = Math.max(peakS.c, peakE.c, maxPC, 0.04) * 1.18;
     const sp = 26;
     const cx = W / 2;
     const halfW = (W - 2 * sp) / 2;
@@ -139,7 +144,12 @@ export function renderSlice(
 
     let refLine = '';
     if (chromaMode !== 'envelope') {
-      const refC = chromaMode === 'shared' ? sharedCuspChroma(gamut) : peak.c;
+      const refC =
+        chromaMode === 'shared'
+          ? sharedCuspChroma(gamut)
+          : chromaMode === 'absolute'
+            ? maxCuspChroma(gamut)
+            : peak.c;
       const x = s.X(refC);
       refLine = `<line x1="${f(x)}" y1="${PAD.t}" x2="${f(x)}" y2="${f(H - PAD.b)}" class="ref"/>`;
     }

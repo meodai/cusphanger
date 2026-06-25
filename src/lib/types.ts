@@ -13,7 +13,12 @@ export type Gamut = 'srgb' | 'display-p3';
 // - 'shared': fraction of the highest chroma common to ALL hues (the minimum of
 //   every hue's cusp chroma), clamped to stay in gamut. s=1 is the same absolute
 //   chroma for every hue, so a multi-hue palette has uniform colorfulness.
-export type ChromaMode = 'envelope' | 'cusp' | 'shared';
+// - 'absolute': fraction of the max cusp chroma, applied as a raw chroma for
+//   every hue and lightness and NOT clamped to the gamut — like RampenSau. The
+//   out-of-gamut result is left for the renderer/browser to gamut-map, so it can
+//   look different across browsers and displays. Included as a baseline that
+//   shows why the three gamut-aware modes are the better techniques.
+export type ChromaMode = 'envelope' | 'cusp' | 'shared' | 'absolute';
 
 export interface Oklch {
   l: number; // 0..1

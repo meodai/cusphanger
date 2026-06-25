@@ -1,4 +1,4 @@
-import { maxChromaAt, cusp, sharedCuspChroma } from './gamut';
+import { maxChromaAt, cusp, sharedCuspChroma, maxCuspChroma } from './gamut';
 import type { Gamut, Oklch, ChromaMode } from './types';
 
 // The chroma `s=1` targets, before clamping to the per-lightness gamut boundary.
@@ -8,6 +8,8 @@ function referenceChroma(hue: number, l: number, gamut: Gamut, chromaMode: Chrom
       return cusp(hue, gamut).c;
     case 'shared':
       return sharedCuspChroma(gamut);
+    case 'absolute':
+      return maxCuspChroma(gamut);
     default:
       return maxChromaAt(hue, l, gamut);
   }
@@ -22,9 +24,13 @@ export function relativeToOklch(
 ): Oklch {
   const h = ((hue % 360) + 360) % 360;
   const ref = referenceChroma(h, l, gamut, chromaMode);
-  // 'envelope' already rides the per-lightness boundary; 'cusp'/'shared' aim at
-  // a hue-global target and must be clamped to that boundary to stay in gamut.
-  const c = chromaMode === 'envelope' ? s * ref : Math.min(s * ref, maxChromaAt(h, l, gamut));
+  // 'cusp'/'shared' aim at a hue-global target and are clamped to the boundary
+  // to stay in gamut. 'envelope' already rides the boundary. 'absolute' is the
+  // raw, unclamped RampenSau-style chroma and may clip out of gamut.
+  const c =
+    chromaMode === 'cusp' || chromaMode === 'shared'
+      ? Math.min(s * ref, maxChromaAt(h, l, gamut))
+      : s * ref;
   return { l, c, h };
 }
 

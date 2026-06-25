@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { inGamut } from 'culori';
 import { relativeToOklch, oklchToRelative } from './space';
-import { maxChromaAt, cusp, sharedCuspChroma } from './gamut';
+import { maxChromaAt, cusp, sharedCuspChroma, maxCuspChroma } from './gamut';
 
 describe('relativeToOklch', () => {
   it('s=1 lands at the gamut max chroma', () => {
@@ -67,5 +67,21 @@ describe("relativeToOklch chromaMode 'shared'", () => {
     for (const hue of [0, 60, 120, 180, 240, 300]) {
       expect(cusp(hue, 'srgb').c + 1e-9).toBeGreaterThanOrEqual(shared);
     }
+  });
+});
+
+describe("relativeToOklch chromaMode 'absolute'", () => {
+  it('applies a raw chroma (max cusp) the same for every hue, unclamped', () => {
+    const maxC = maxCuspChroma('srgb');
+    for (const hue of [60, 180, 300]) {
+      expect(relativeToOklch(1, 0.7, hue, 'srgb', 'absolute').c).toBeCloseTo(maxC, 6);
+    }
+  });
+
+  it('can exceed the per-(hue,L) gamut max (clips out of gamut)', () => {
+    const hue = 90; // yellow-green: a low-cusp hue
+    const c = relativeToOklch(1, 0.7, hue, 'srgb', 'absolute').c;
+    expect(c).toBeGreaterThan(maxChromaAt(hue, 0.7, 'srgb'));
+    expect(inGamut('rgb')({ mode: 'oklch', l: 0.7, c, h: hue })).toBe(false);
   });
 });

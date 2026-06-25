@@ -85,14 +85,15 @@ function buildBg(gamut: Gamut, axis: WheelAxis): WheelBg {
       const cLo = toPaletteColor({ l: 0.04, c: 0, h: a.hue }, gamut).css;
       const cCusp = toPaletteColor({ l: a.l, c: a.c, h: a.hue }, gamut).css;
       const cHi = toPaletteColor({ l: 0.99, c: 0, h: a.hue }, gamut).css;
+      // white (L=1) in the center, dark (L=0) at the rim
       defs += `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${CT}" cy="${CT}" r="${R}">
-        <stop offset="0%" stop-color="${cLo}"/>
-        <stop offset="${(a.l * 100).toFixed(1)}%" stop-color="${cCusp}"/>
-        <stop offset="100%" stop-color="${cHi}"/></radialGradient>`;
+        <stop offset="0%" stop-color="${cHi}"/>
+        <stop offset="${((1 - a.l) * 100).toFixed(1)}%" stop-color="${cCusp}"/>
+        <stop offset="100%" stop-color="${cLo}"/></radialGradient>`;
       const [ax, ay] = pt(a.hue, R);
       const [bx, by] = pt(b.hue === 0 ? 360 : b.hue, R);
       wedges += `<path d="M ${CT},${CT} L ${f(ax)},${f(ay)} L ${f(bx)},${f(by)} Z" fill="url(#${id})"/>`;
-      const [cx, cy] = pt(a.hue, a.l * R);
+      const [cx, cy] = pt(a.hue, (1 - a.l) * R);
       contour += `${i === 0 ? 'M' : 'L'} ${f(cx)},${f(cy)} `;
     }
     const rings = [0.25, 0.5, 0.75]
@@ -103,7 +104,7 @@ function buildBg(gamut: Gamut, axis: WheelAxis): WheelBg {
       <g>${wedges}</g>
       ${rings}
       <path d="${contour}Z" class="wheel-boundary"/>`;
-    legend = `radius = lightness (0 center → 1 rim) · boundary = per-hue cusp lightness · dots = palette`;
+    legend = `radius = lightness (white center → dark rim) · boundary = per-hue cusp lightness · dots = palette`;
   }
 
   const bg: WheelBg = { svg, maxCusp, shared, legend };
@@ -126,7 +127,7 @@ export function renderWheel(
   const radius =
     axis === 'chroma'
       ? (col: PaletteColor) => (col.oklch.c / bg.maxCusp) * R
-      : (col: PaletteColor) => col.oklch.l * R;
+      : (col: PaletteColor) => (1 - col.oklch.l) * R;
   const pts: Array<[number, number]> = palette.map((col) => pt(col.oklch.h, radius(col)));
 
   let traj = '';

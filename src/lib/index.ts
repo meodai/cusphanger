@@ -1,6 +1,6 @@
 export * from './types';
 export { lerp, clamp01, linear, power, sine, lame, hump } from './easing';
-export { maxChromaAt, cusp, sharedCuspChroma } from './gamut';
+export { maxChromaAt, cusp, sharedCuspChroma, maxCuspChroma } from './gamut';
 export { relativeToOklch, oklchToRelative } from './space';
 export { toPaletteColor } from './color';
 export { generatePalette } from './engine';
