@@ -180,8 +180,8 @@ function render(app: HTMLElement): void {
         <div class="view-block">
           <div class="wheel"></div>
           <div class="axis-toggle">
-            <button data-axis="chroma" aria-selected="true">C radius</button>
-            <button data-axis="lightness" aria-selected="false">L radius</button>
+            <button data-axis="chroma" aria-selected="true">C</button>
+            <button data-axis="lightness" aria-selected="false">L</button>
           </div>
         </div>
         <div class="slice"></div>

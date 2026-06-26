@@ -534,17 +534,22 @@ position: relative;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.75rem;
   align-items: start;
+}
 
+.view-block {
+  position: relative;
 }
 .axis-toggle {
   display: flex;
   width: max-content;
-  border: 2px solid currentColor;
-  margin: 0.75rem auto 0;
+  border: 1px solid currentColor;
+  position: absolute;
+  bottom: 3rem;
+  left: 0;
 }
 .axis-toggle button {
   font: inherit;
-  font-size: 0.68rem;
+  font-size: 0.6rem;
   padding: 0.3rem 0.6rem;
   cursor: pointer;
   background: var(--bg);
