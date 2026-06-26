@@ -66,6 +66,35 @@ h1 {
   font-weight: 300;
 }
 
+/* header: intro on the left, global controls (chroma mode + gamut) on the right */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.5rem 2rem;
+  margin-bottom: 3.5rem;
+}
+.header__intro {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+.header .sub {
+  margin: 0;
+}
+.header-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+.header-controls .control {
+  margin-top: 0;
+  min-width: 9rem;
+}
+.header-controls .control__hint {
+  max-width: 15rem;
+}
+
 .about {
   margin-top: 3.5rem;
   max-width: 68ch;
@@ -381,6 +410,24 @@ position: relative;
   fill: currentColor;
   fill-opacity: 0.55;
   font-size: 9px;
+}
+/* background chrome — grid, tick values, text labels, titles — only on hover.
+   The gamut shape and its internal lines (envelope, triangle, guides, axis,
+   trajectory, dots, cusp) stay visible. */
+.slice-svg .grid,
+.slice-svg .tick,
+.slice-svg .label,
+.slice-svg .title,
+.slice-svg .axis {
+  opacity: 0;
+  transition: opacity 0.15s linear;
+}
+.slice-svg:hover .grid,
+.slice-svg:hover .tick,
+.slice-svg:hover .label,
+.slice-svg:hover .title,
+.slice-svg:hover .axis {
+  opacity: 1;
 }
 .slice-svg .title {
   fill: currentColor;

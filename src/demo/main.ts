@@ -30,6 +30,13 @@ const EASINGS: Record<string, Easing> = {
 };
 const EASING_NAMES = Object.keys(EASINGS);
 
+const chromaHints: Record<ChromaMode, string> = {
+  envelope: 'fraction of the max chroma at each lightness — chroma fades toward the light and dark ends.',
+  cusp: "fraction of this hue's peak (cusp) chroma, clamped to gamut — roughly constant chroma per hue.",
+  shared: 'fraction of the highest chroma every hue can reach — uniform colorfulness across all hues.',
+  absolute: 'raw chroma, same for every hue, NOT gamut-clamped (RampenSau-style) — clips out of gamut (⚠). For comparison.',
+};
+
 type TabId = 'sequential' | 'diverging' | 'qualitative' | 'engine';
 
 interface Tab {
@@ -133,8 +140,31 @@ const TABS: Tab[] = [
 
 function render(app: HTMLElement): void {
   app.innerHTML = `
-    <h1>CuspHanger</h1>
-    <p class="sub">Balanced color palettes from a few simple controls — consistent across every hue, and always true to what shows on screen.</p>
+    <header class="header">
+      <div class="header__intro">
+        <h1>CuspHanger</h1>
+        <p class="sub">Balanced color palettes from a few simple controls — consistent across every hue, and always true to what shows on screen.</p>
+      </div>
+      <div class="header-controls">
+        <label class="control control--select">
+          <span class="row"><span>chroma mode</span></span>
+          <select class="js-chroma">
+            <option value="envelope">envelope</option>
+            <option value="cusp">cusp</option>
+            <option value="shared">shared</option>
+            <option value="absolute">absolute</option>
+          </select>
+          <small class="control__hint js-chroma-hint"></small>
+        </label>
+        <label class="control control--select">
+          <span class="row"><span>gamut</span></span>
+          <select class="js-gamut">
+            <option value="srgb">srgb</option>
+            <option value="display-p3">display-p3</option>
+          </select>
+        </label>
+      </div>
+    </header>
     <div class="stage">
     <div class="palette">
       <button class="palette-strip" type="button" aria-expanded="false" title="Show color details"></button>
@@ -183,14 +213,15 @@ function render(app: HTMLElement): void {
         is a wheel — hue as angle, chroma or lightness as radius — and the <strong>side view</strong>
         is the chroma × lightness slice (real gamut vs. the paper's triangle model), mirroring into a
         butterfly when a palette spans two hues. The generated palette is plotted in both.</p>
-        <p class="cite">Method after Wijffelaars, Vliegen, van Wijk &amp; van der Linden,
-        <a href="https://doi.org/10.1111/j.1467-8659.2008.01203.x" target="_blank" rel="noopener">“Generating
-        Color Palettes using Intuitive Parameters”</a> (Computer Graphics Forum 27:3, 2008),
-        re-expressed in OKLCH, with per-channel trajectory controls inspired by
-        <a href="https://github.com/meodai/rampensau" target="_blank" rel="noopener">RampenSau</a>.
-        Also inspired by <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener">Matt
-        DesLauriers's OKLCH take</a> on the same paper.</p>
       </details>
+
+      <p class="cite">Method after Wijffelaars, Vliegen, van Wijk &amp; van der Linden,
+      <a href="https://doi.org/10.1111/j.1467-8659.2008.01203.x" target="_blank" rel="noopener">“Generating
+      Color Palettes using Intuitive Parameters”</a> (Computer Graphics Forum 27:3, 2008),
+      re-expressed in OKLCH, with per-channel trajectory controls inspired by
+      <a href="https://github.com/meodai/rampensau" target="_blank" rel="noopener">RampenSau</a>.
+      Also inspired by <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener">Matt
+      DesLauriers's OKLCH take</a> on the same paper.</p>
     </section>`;
 
   const tabsNav = app.querySelector('.tabs') as HTMLElement;
@@ -200,45 +231,63 @@ function render(app: HTMLElement): void {
   const wheelHost = app.querySelector('.wheel') as HTMLElement;
   const stripHost = app.querySelector('.palette-strip') as HTMLButtonElement;
   const detailHost = app.querySelector('.palette-detail') as HTMLElement;
-  let active: TabId = 'sequential';
-
   stripHost.addEventListener('click', () => {
     const open = detailHost.hasAttribute('hidden');
     detailHost.toggleAttribute('hidden', !open);
     stripHost.setAttribute('aria-expanded', String(open));
   });
 
-  // wheel radial axis + the latest palette, so the toggle can redraw without recomputing
+  // global state: active tab, the persistent header controls, latest per-tab
+  // control values, wheel axis, and the latest palette (for the wheel toggle).
+  let activeTab: Tab = TABS[0]!;
+  let gamutState: Gamut = 'srgb';
+  let chromaState: ChromaMode = 'envelope';
   let wheelAxis: WheelAxis = 'chroma';
+  let lastValues: Record<string, number> = {};
+  let lastChoices: Record<string, string> = {};
   let lastPalette: PaletteColor[] = [];
-  let lastGamut: Gamut = 'srgb';
 
+  const renderActive = () => {
+    const palette = activeTab.build(lastValues, lastChoices, gamutState, chromaState);
+    lastPalette = palette;
+    renderStrip(stripHost, palette);
+    renderSwatches(swatchHost, palette);
+    renderWheel(wheelHost, palette, gamutState, wheelAxis);
+    renderSlice(sliceHost, palette, gamutState, chromaState, activeTab.forceMirror ?? false);
+  };
+
+  // header controls: chroma mode + gamut (global, persistent across tabs)
+  const chromaSel = app.querySelector('.js-chroma') as HTMLSelectElement;
+  const gamutSel = app.querySelector('.js-gamut') as HTMLSelectElement;
+  const chromaHintEl = app.querySelector('.js-chroma-hint') as HTMLElement;
+  chromaHintEl.textContent = chromaHints[chromaState];
+  chromaSel.addEventListener('change', () => {
+    chromaState = chromaSel.value as ChromaMode;
+    chromaHintEl.textContent = chromaHints[chromaState];
+    renderActive();
+  });
+  gamutSel.addEventListener('change', () => {
+    gamutState = gamutSel.value as Gamut;
+    renderActive();
+  });
+
+  // wheel radial-axis toggle
   const axisBtns = Array.from(app.querySelectorAll<HTMLButtonElement>('.axis-toggle button'));
   for (const btn of axisBtns) {
     btn.addEventListener('click', () => {
       wheelAxis = btn.dataset.axis as WheelAxis;
       for (const b of axisBtns) b.setAttribute('aria-selected', String(b === btn));
-      renderWheel(wheelHost, lastPalette, lastGamut, wheelAxis);
+      renderWheel(wheelHost, lastPalette, gamutState, wheelAxis);
     });
   }
 
   const mountTab = (tab: Tab) => {
-    buildControls(
-      controlsHost,
-      tab.fields,
-      tab.choices ?? [],
-      'srgb',
-      'envelope',
-      ({ values, choices, gamut, chromaMode }) => {
-        const palette = tab.build(values, choices, gamut, chromaMode);
-        lastPalette = palette;
-        lastGamut = gamut;
-        renderStrip(stripHost, palette);
-        renderSwatches(swatchHost, palette);
-        renderWheel(wheelHost, palette, gamut, wheelAxis);
-        renderSlice(sliceHost, palette, gamut, chromaMode, tab.forceMirror ?? false);
-      },
-    );
+    activeTab = tab;
+    buildControls(controlsHost, tab.fields, tab.choices ?? [], ({ values, choices }) => {
+      lastValues = values;
+      lastChoices = choices;
+      renderActive();
+    });
   };
 
   const renderTabs = () => {
@@ -246,11 +295,10 @@ function render(app: HTMLElement): void {
     for (const tab of TABS) {
       const b = document.createElement('button');
       b.textContent = tab.label;
-      b.setAttribute('aria-selected', String(tab.id === active));
+      b.setAttribute('aria-selected', String(tab.id === activeTab.id));
       b.addEventListener('click', () => {
-        active = tab.id;
-        renderTabs();
         mountTab(tab);
+        renderTabs();
       });
       tabsNav.appendChild(b);
     }

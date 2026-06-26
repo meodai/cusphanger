@@ -1,5 +1,3 @@
-import type { Gamut, ChromaMode } from '../lib/index';
-
 export interface FieldSpec {
   key: string;
   label: string;
@@ -21,27 +19,21 @@ export interface ChoiceSpec {
 export interface ControlValues {
   values: Record<string, number>;
   choices: Record<string, string>;
-  gamut: Gamut;
-  chromaMode: ChromaMode;
 }
 
 export function buildControls(
   host: HTMLElement,
   fields: FieldSpec[],
   choiceFields: ChoiceSpec[],
-  gamut: Gamut,
-  chromaMode: ChromaMode,
   onChange: (v: ControlValues) => void,
 ): void {
   host.innerHTML = '';
   const state: Record<string, number> = {};
   const choices: Record<string, string> = {};
-  let gamutState = gamut;
-  let chromaState = chromaMode;
   for (const f of fields) state[f.key] = f.value;
   for (const c of choiceFields) choices[c.key] = c.value;
 
-  const emit = () => onChange({ values: { ...state }, choices: { ...choices }, gamut: gamutState, chromaMode: chromaState });
+  const emit = () => onChange({ values: { ...state }, choices: { ...choices } });
 
   // the shared `.control` wrapper with a `.row` holding the label; returns the
   // row so callers can append a value readout / select / etc.
@@ -123,17 +115,6 @@ export function buildControls(
     });
     host.appendChild(wrap);
   };
-
-  const chromaHints: Record<ChromaMode, string> = {
-    envelope: 'fraction of the max chroma at each lightness — chroma fades toward the light and dark ends.',
-    cusp: "fraction of this hue's peak (cusp) chroma, clamped to gamut — roughly constant chroma per hue.",
-    shared: 'fraction of the highest chroma every hue can reach — uniform colorfulness across all hues.',
-    absolute: 'raw chroma, same for every hue, NOT gamut-clamped (RampenSau-style) — clips out of gamut (⚠). For comparison.',
-  };
-
-  // chroma mode + gamut first
-  addSelect('chroma mode', ['envelope', 'cusp', 'shared', 'absolute'], chromaState, (v) => (chromaState = v as ChromaMode), chromaHints);
-  addSelect('gamut', ['srgb', 'display-p3'], gamutState, (v) => (gamutState = v as Gamut));
 
   // numeric parameters
   for (const f of fields) addRange(f, (v) => (state[f.key] = v));
