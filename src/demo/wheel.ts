@@ -6,11 +6,12 @@ import {
   type Gamut,
 } from '../lib/index';
 
-// Top view: hue = angle, and the radius is either chroma or lightness.
-// - 'chroma' (down the L axis): boundary = per-hue cusp chroma (peaks & valleys);
-//   the dashed inscribed circle is the 'shared' chroma (min of cusps).
-// - 'lightness' (down the C axis): dark center -> light rim, fill is the most
-//   saturated color at each (hue, L); the contour is each hue's cusp lightness.
+// Top view: hue = angle, the radius is either chroma or lightness, and `flip`
+// inverts the radial direction (what sits at the center vs. the rim).
+// - 'chroma': neutral↔colorful between center and rim; boundary = per-hue cusp
+//   chroma (peaks & valleys); dashed circle = the 'shared' chroma (min of cusps).
+// - 'lightness': white↔dark between center and rim; fill is the most saturated
+//   color at each (hue, L); the contour is each hue's cusp lightness.
 
 export type WheelAxis = 'chroma' | 'lightness';
 
@@ -29,16 +30,18 @@ const f = (n: number) => n.toFixed(2);
 interface WheelBg {
   svg: string;
   maxCusp: number;
-  shared: number;
   legend: string;
 }
 
 const bgCache = new Map<string, WheelBg>();
 
-function buildBg(gamut: Gamut, axis: WheelAxis): WheelBg {
-  const key = `${gamut}:${axis}`;
+function buildBg(gamut: Gamut, axis: WheelAxis, flip: boolean): WheelBg {
+  const key = `${gamut}:${axis}:${flip}`;
   const cached = bgCache.get(key);
   if (cached) return cached;
+
+  // t in [0,1]; t=0 sits at the center unless flipped
+  const rad = (t: number) => (flip ? 1 - t : t) * R;
 
   const shared = sharedCuspChroma(gamut);
   const peaks: Array<{ hue: number; c: number; l: number }> = [];
@@ -48,52 +51,62 @@ function buildBg(gamut: Gamut, axis: WheelAxis): WheelBg {
     peaks.push({ hue: h, c: p.c, l: p.l });
     if (p.c > maxCusp) maxCusp = p.c;
   }
+  const bHue = (i: number) => {
+    const b = peaks[(i + 1) % peaks.length]!;
+    return b.hue === 0 ? 360 : b.hue;
+  };
 
   let svg: string;
   let legend: string;
 
   if (axis === 'chroma') {
-    const rad = (c: number) => (c / maxCusp) * R;
+    const r0 = rad(0); // the neutral (c=0) radius
     let wedges = '';
     let boundary = '';
     for (let i = 0; i < peaks.length; i++) {
       const a = peaks[i]!;
       const b = peaks[(i + 1) % peaks.length]!;
-      const [ax, ay] = pt(a.hue, rad(a.c));
-      const [bx, by] = pt(b.hue === 0 ? 360 : b.hue, rad(b.c));
+      const [a0x, a0y] = pt(a.hue, r0);
+      const [a1x, a1y] = pt(a.hue, rad(a.c / maxCusp));
+      const [b1x, b1y] = pt(bHue(i), rad(b.c / maxCusp));
+      const [b0x, b0y] = pt(bHue(i), r0);
       const fill = toPaletteColor({ l: a.l, c: a.c, h: a.hue }, gamut).css;
-      wedges += `<path d="M ${CT},${CT} L ${f(ax)},${f(ay)} L ${f(bx)},${f(by)} Z" fill="${fill}"/>`;
-      boundary += `${i === 0 ? 'M' : 'L'} ${f(ax)},${f(ay)} `;
+      wedges += `<path d="M ${f(a0x)},${f(a0y)} L ${f(a1x)},${f(a1y)} L ${f(b1x)},${f(b1y)} L ${f(b0x)},${f(b0y)} Z" fill="${fill}"/>`;
+      boundary += `${i === 0 ? 'M' : 'L'} ${f(a1x)},${f(a1y)} `;
     }
+    // fade the neutral end toward the page background
+    const fadeStops = flip
+      ? `<stop offset="54%" class="wheel-fade-out"/><stop offset="100%" class="wheel-fade-in"/>`
+      : `<stop offset="0%" class="wheel-fade-in"/><stop offset="46%" class="wheel-fade-out"/>`;
     svg = `
       <rect width="${SIZE}" height="${SIZE}" fill="url(#wheelDots)"/>
       <g>${wedges}</g>
-      <circle cx="${CT}" cy="${CT}" r="${R}" fill="url(#wheelFade)"/>
+      <radialGradient id="wheelFadeBg" cx="50%" cy="50%" r="50%">${fadeStops}</radialGradient>
+      <circle cx="${CT}" cy="${CT}" r="${R}" fill="url(#wheelFadeBg)"/>
       <path d="${boundary}Z" class="wheel-boundary"/>
-      <circle cx="${CT}" cy="${CT}" r="${f(rad(shared))}" class="wheel-shared"/>`;
-    legend = `boundary = per-hue cusp chroma (peaks &amp; valleys) · <span class="k k-shared"></span> shared chroma C ${shared.toFixed(3)} · dots = palette`;
+      <circle cx="${CT}" cy="${CT}" r="${f(rad(shared / maxCusp))}" class="wheel-shared"/>`;
+    legend = `boundary = per-hue cusp chroma · ${flip ? 'colorful center → neutral rim' : 'neutral center → colorful rim'} · <span class="k k-shared"></span> shared chroma C ${shared.toFixed(3)} · dots = palette`;
   } else {
-    // radius = lightness (0 center -> 1 rim). Per-hue radial gradient black->cusp->white.
     const tag = gamut === 'display-p3' ? 'p3' : 'srgb';
     let defs = '';
     let wedges = '';
     let contour = '';
     for (let i = 0; i < peaks.length; i++) {
       const a = peaks[i]!;
-      const b = peaks[(i + 1) % peaks.length]!;
-      const id = `wl-${tag}-${a.hue}`;
+      const id = `wl-${tag}-${flip ? 'f' : 'n'}-${a.hue}`;
       const cLo = toPaletteColor({ l: 0.04, c: 0, h: a.hue }, gamut).css;
       const cCusp = toPaletteColor({ l: a.l, c: a.c, h: a.hue }, gamut).css;
       const cHi = toPaletteColor({ l: 0.99, c: 0, h: a.hue }, gamut).css;
-      // white (L=1) in the center, dark (L=0) at the rim
+      const tCusp = 1 - a.l; // position of the cusp (white-at-center default)
+      const cuspOff = ((rad(tCusp) / R) * 100).toFixed(1);
       defs += `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${CT}" cy="${CT}" r="${R}">
-        <stop offset="0%" stop-color="${cHi}"/>
-        <stop offset="${((1 - a.l) * 100).toFixed(1)}%" stop-color="${cCusp}"/>
-        <stop offset="100%" stop-color="${cLo}"/></radialGradient>`;
+        <stop offset="0%" stop-color="${flip ? cLo : cHi}"/>
+        <stop offset="${cuspOff}%" stop-color="${cCusp}"/>
+        <stop offset="100%" stop-color="${flip ? cHi : cLo}"/></radialGradient>`;
       const [ax, ay] = pt(a.hue, R);
-      const [bx, by] = pt(b.hue === 0 ? 360 : b.hue, R);
+      const [bx, by] = pt(bHue(i), R);
       wedges += `<path d="M ${CT},${CT} L ${f(ax)},${f(ay)} L ${f(bx)},${f(by)} Z" fill="url(#${id})"/>`;
-      const [cx, cy] = pt(a.hue, (1 - a.l) * R);
+      const [cx, cy] = pt(a.hue, rad(tCusp));
       contour += `${i === 0 ? 'M' : 'L'} ${f(cx)},${f(cy)} `;
     }
     const rings = [0.25, 0.5, 0.75]
@@ -104,10 +117,10 @@ function buildBg(gamut: Gamut, axis: WheelAxis): WheelBg {
       <g>${wedges}</g>
       ${rings}
       <path d="${contour}Z" class="wheel-boundary"/>`;
-    legend = `radius = lightness (white center → dark rim) · boundary = per-hue cusp lightness · dots = palette`;
+    legend = `radius = lightness (${flip ? 'dark center → white rim' : 'white center → dark rim'}) · boundary = per-hue cusp lightness · dots = palette`;
   }
 
-  const bg: WheelBg = { svg, maxCusp, shared, legend };
+  const bg: WheelBg = { svg, maxCusp, legend };
   bgCache.set(key, bg);
   return bg;
 }
@@ -117,17 +130,19 @@ export function renderWheel(
   palette: PaletteColor[],
   gamut: Gamut,
   axis: WheelAxis = 'chroma',
+  flip = false,
 ): void {
   if (!palette.length) {
     host.innerHTML = '';
     return;
   }
 
-  const bg = buildBg(gamut, axis);
+  const bg = buildBg(gamut, axis, flip);
+  const rad = (t: number) => (flip ? 1 - t : t) * R;
   const radius =
     axis === 'chroma'
-      ? (col: PaletteColor) => (col.oklch.c / bg.maxCusp) * R
-      : (col: PaletteColor) => (1 - col.oklch.l) * R;
+      ? (col: PaletteColor) => rad(col.oklch.c / bg.maxCusp)
+      : (col: PaletteColor) => rad(1 - col.oklch.l);
   const pts: Array<[number, number]> = palette.map((col) => pt(col.oklch.h, radius(col)));
 
   let traj = '';
@@ -145,10 +160,6 @@ export function renderWheel(
         <pattern id="wheelDots" width="22" height="22" patternUnits="userSpaceOnUse">
           <circle cx="2" cy="2" r="1" class="wheel-grid-dot"/>
         </pattern>
-        <radialGradient id="wheelFade" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" class="wheel-fade-in"/>
-          <stop offset="46%" class="wheel-fade-out"/>
-        </radialGradient>
       </defs>
       ${bg.svg}
       ${traj}

@@ -243,6 +243,7 @@ function render(app: HTMLElement): void {
   let gamutState: Gamut = 'srgb';
   let chromaState: ChromaMode = 'envelope';
   let wheelAxis: WheelAxis = 'chroma';
+  const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
   let lastValues: Record<string, number> = {};
   let lastChoices: Record<string, string> = {};
   let lastPalette: PaletteColor[] = [];
@@ -252,7 +253,7 @@ function render(app: HTMLElement): void {
     lastPalette = palette;
     renderStrip(stripHost, palette);
     renderSwatches(swatchHost, palette);
-    renderWheel(wheelHost, palette, gamutState, wheelAxis);
+    renderWheel(wheelHost, palette, gamutState, wheelAxis, wheelFlip[wheelAxis]);
     renderSlice(sliceHost, palette, gamutState, chromaState, activeTab.forceMirror ?? false);
   };
 
@@ -275,9 +276,16 @@ function render(app: HTMLElement): void {
   const axisBtns = Array.from(app.querySelectorAll<HTMLButtonElement>('.axis-toggle button'));
   for (const btn of axisBtns) {
     btn.addEventListener('click', () => {
-      wheelAxis = btn.dataset.axis as WheelAxis;
-      for (const b of axisBtns) b.setAttribute('aria-selected', String(b === btn));
-      renderWheel(wheelHost, lastPalette, gamutState, wheelAxis);
+      const a = btn.dataset.axis as WheelAxis;
+      // re-clicking the active axis flips its radial direction; otherwise switch
+      if (a === wheelAxis) wheelFlip[a] = !wheelFlip[a];
+      else wheelAxis = a;
+      for (const b of axisBtns) {
+        const ba = b.dataset.axis as WheelAxis;
+        b.setAttribute('aria-selected', String(ba === wheelAxis));
+        b.toggleAttribute('data-flipped', ba === wheelAxis && wheelFlip[ba]);
+      }
+      renderWheel(wheelHost, lastPalette, gamutState, wheelAxis, wheelFlip[wheelAxis]);
     });
   }
 
