@@ -134,7 +134,7 @@ const TABS: Tab[] = [
 function render(app: HTMLElement): void {
   app.innerHTML = `
     <h1>CuspHanger</h1>
-    <p class="sub">OKLCH palettes from intuitive parameters — gamut-relative saturation, in-gamut by construction.</p>
+    <p class="sub">Balanced color palettes from a few simple controls — consistent across every hue, and always true to what shows on screen.</p>
     <div class="stage">
     <div class="palette">
       <button class="palette-strip" type="button" aria-expanded="false" title="Show color details"></button>
@@ -159,26 +159,38 @@ function render(app: HTMLElement): void {
     </section>
     </div>
     <section class="about">
-      <p>CuspHanger builds OKLCH color palettes from a few intuitive parameters. For any hue, the
-      displayable colors form a triangle in the chroma–lightness plane that peaks at the
-      <em>cusp</em> — the most saturated color that hue can reach. Saturation here is
-      <em>gamut-relative</em>: a value of 1 always rides the gamut boundary, so palettes stay
-      in-gamut by construction and read evenly across hues.</p>
-      <p>Three <strong>chroma modes</strong> change what saturation is measured against —
-      <em>envelope</em> (the boundary at each lightness), <em>cusp</em> (each hue's single peak),
-      and <em>shared</em> (the highest chroma every hue can reach: the largest circle that fits
-      inside the gamut, giving uniform colorfulness across hues).</p>
-      <p>The two diagrams show the same gamut from different angles. The <strong>top view</strong>
-      is a wheel — hue as angle, chroma or lightness as radius — and the <strong>side view</strong>
-      is the chroma × lightness slice, mirroring into a butterfly when a palette spans two hues.
-      The generated palette is plotted in both.</p>
-      <p class="cite">Method after Wijffelaars, Vliegen, van Wijk &amp; van der Linden,
-      <a href="https://doi.org/10.1111/j.1467-8659.2008.01203.x" target="_blank" rel="noopener">“Generating
-      Color Palettes using Intuitive Parameters”</a> (Computer Graphics Forum 27:3, 2008),
-      re-expressed in OKLCH, with per-channel trajectory controls inspired by
-      <a href="https://github.com/meodai/rampensau" target="_blank" rel="noopener">RampenSau</a>.
-      Also inspired by <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener">Matt
-      DesLauriers's OKLCH take</a> on the same paper.</p>
+      <p>Choose a base color, how vivid you want it, and a light-to-dark range — CuspHanger turns
+      those few choices into a complete palette. The colors stay evenly balanced from light to dark
+      and from one hue to the next, never turn muddy, and always display correctly, so the palette
+      you design is the one people actually see.</p>
+      <p>It works for smooth gradients (<strong>sequential</strong>), scales that fan out from a
+      neutral middle (<strong>diverging</strong>), and sets of distinct category colors
+      (<strong>qualitative</strong>) — and it can target wide-gamut displays, not just standard ones.</p>
+
+      <details class="about__nerd">
+        <summary>the technical version, for color nerds</summary>
+        <p>OKLCH palettes from intuitive parameters — gamut-relative saturation, in-gamut by
+        construction. For any hue, the displayable colors form a triangle in the chroma–lightness
+        plane that peaks at the <em>cusp</em> — the most saturated color that hue can reach.
+        Saturation is <em>gamut-relative</em>: a value of 1 always rides the gamut boundary, so
+        palettes stay in-gamut by construction and read evenly across hues.</p>
+        <p>Four <strong>chroma modes</strong> change what saturation is measured against —
+        <em>envelope</em> (the boundary at each lightness), <em>cusp</em> (each hue's single peak),
+        <em>shared</em> (the highest chroma every hue can reach: the largest circle that fits inside
+        the gamut, for uniform colorfulness across hues), and <em>absolute</em> (a raw,
+        unclamped chroma à la RampenSau that clips out of gamut — a baseline for comparison).</p>
+        <p>The two diagrams show the same gamut from different angles. The <strong>top view</strong>
+        is a wheel — hue as angle, chroma or lightness as radius — and the <strong>side view</strong>
+        is the chroma × lightness slice (real gamut vs. the paper's triangle model), mirroring into a
+        butterfly when a palette spans two hues. The generated palette is plotted in both.</p>
+        <p class="cite">Method after Wijffelaars, Vliegen, van Wijk &amp; van der Linden,
+        <a href="https://doi.org/10.1111/j.1467-8659.2008.01203.x" target="_blank" rel="noopener">“Generating
+        Color Palettes using Intuitive Parameters”</a> (Computer Graphics Forum 27:3, 2008),
+        re-expressed in OKLCH, with per-channel trajectory controls inspired by
+        <a href="https://github.com/meodai/rampensau" target="_blank" rel="noopener">RampenSau</a>.
+        Also inspired by <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener">Matt
+        DesLauriers's OKLCH take</a> on the same paper.</p>
+      </details>
     </section>`;
 
   const tabsNav = app.querySelector('.tabs') as HTMLElement;

@@ -89,6 +89,26 @@ h1 {
   font-size: 0.8rem;
   opacity: 0.85;
 }
+.about__nerd {
+  margin-top: 1.25rem;
+}
+.about__nerd summary {
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+.about__nerd summary::-webkit-details-marker {
+  display: none;
+}
+.about__nerd summary::before {
+  content: '▸ ';
+}
+.about__nerd[open] summary {
+  margin-bottom: 0.9rem;
+}
+.about__nerd[open] summary::before {
+  content: '▾ ';
+}
 
 /* tabs — bold framed strip, inverted on select */
 .tabs {
