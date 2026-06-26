@@ -17,7 +17,6 @@ import {
 const W = 400;
 const H = 400;
 const PAD = { l: 48, r: 16, t: 26, b: 32 };
-const PLOT_W = W - PAD.l - PAD.r;
 const PLOT_H = H - PAD.t - PAD.b;
 
 const f = (n: number) => n.toFixed(2);
@@ -75,12 +74,23 @@ export function renderSlice(
   let sides: Side[];
   let pointSide: number[];
   let xMax: number;
+  let triModel = ''; // single-hue: the paper's triangle model, mirrored right
 
   if (!mirror) {
     const hue = representativeHue(palette);
-    xMax = Math.max(cusp(hue, gamut).c * 1.18, maxPC * 1.06, 0.05);
-    sides = [{ hue, x0: PAD.l, sign: 1, X: (c) => PAD.l + (c / xMax) * PLOT_W }];
+    xMax = Math.max(cusp(hue, gamut).c, maxPC, 0.04) * 1.18;
+    const cx = W / 2;
+    const halfW = (W - 2 * 26) / 2;
+    // real gamut on the left; the paper's straight-line triangle model mirrored
+    // on the right, with its cusp tip — the approximation next to reality.
+    sides = [{ hue, x0: cx, sign: -1, X: (c) => cx - (c / xMax) * halfW }];
     pointSide = palette.map(() => 0);
+    const peak = cusp(hue, gamut);
+    const tx = cx + (peak.c / xMax) * halfW;
+    const ty = Y(peak.l);
+    triModel = `<path d="M ${f(cx)},${f(Y(0))} L ${f(tx)},${f(ty)} L ${f(cx)},${f(Y(1))} Z" class="tri-model"/>
+      <circle cx="${f(tx)}" cy="${f(ty)}" r="4" class="cusp"/>
+      <text x="${f(tx + 7)}" y="${f(ty - 6)}" class="label" text-anchor="start">cusp ${peak.c.toFixed(3)}</text>`;
   } else {
     const peakS = cusp(startHue, gamut);
     const peakE = cusp(endHue, gamut);
@@ -98,11 +108,11 @@ export function renderSlice(
   }
 
   // background per side: colored gamut fill + envelope + triangle + cusp + ref + ticks
-  const background = (s: Side): string => {
+  const background = (s: Side, drawTri: boolean): string => {
     // key MUST encode the geometry (single vs mirror, anchor) — single-mode and
     // mirror-flap backgrounds can share gamut/mode/xMax/hue/sign yet differ in
     // layout, so omitting this collides them and stacks the flaps.
-    const key = `${gamut}|${chromaMode}|${mirror}|${s.x0}|${s.sign}|${xMax.toFixed(4)}|${s.hue.toFixed(1)}`;
+    const key = `${gamut}|${chromaMode}|${mirror}|${drawTri}|${s.x0}|${s.sign}|${xMax.toFixed(4)}|${s.hue.toFixed(1)}`;
     const hit = sliceBgCache.get(key);
     if (hit) return hit;
 
@@ -160,12 +170,14 @@ export function renderSlice(
       cTicks += `<text x="${f(s.X(c))}" y="${f(H - PAD.b + 13)}" class="tick" text-anchor="middle">${c.toFixed(2)}</text>`;
     }
 
-    const str = `${fill}<path d="${tri}" class="tri"/><path d="${envLine}" class="env-line"/>${refLine}${cuspMark}${cTicks}`;
+    const triEl = drawTri ? `<path d="${tri}" class="tri"/>` : '';
+    const str = `${fill}${triEl}<path d="${envLine}" class="env-line"/>${refLine}${cuspMark}${cTicks}`;
     sliceBgCache.set(key, str);
     return str;
   };
 
-  const bg = sides.map(background).join('');
+  // single-hue shows the triangle separately (right), so skip the left overlay
+  const bg = sides.map((s) => background(s, mirror)).join('');
 
   // foreground: per-point guide + dot, and a trajectory across all points
   let guides = '';
@@ -189,18 +201,17 @@ export function renderSlice(
         <text x="${PAD.l - 8}" y="${f(y + 3)}" class="tick" text-anchor="end">${L}</text>`;
     })
     .join('');
-  const axisLine = mirror
-    ? `<line x1="${f(W / 2)}" y1="${PAD.t}" x2="${f(W / 2)}" y2="${f(H - PAD.b)}" class="axis-center"/>`
-    : '';
+  const axisLine = `<line x1="${f(W / 2)}" y1="${PAD.t}" x2="${f(W / 2)}" y2="${f(H - PAD.b)}" class="axis-center"/>`;
 
   const titleEls = mirror
     ? `<text x="${PAD.l}" y="16" class="title" text-anchor="start">◂ start ${startHue.toFixed(0)}°</text>
        <text x="${W - PAD.r}" y="16" class="title" text-anchor="end">end ${endHue.toFixed(0)}° ▸</text>`
-    : `<text x="${PAD.l}" y="16" class="title">OKLCH slice · hue ${sides[0]!.hue.toFixed(0)}° · ${gamut}</text>`;
+    : `<text x="${PAD.l}" y="16" class="title" text-anchor="start">◂ actual · hue ${sides[0]!.hue.toFixed(0)}°</text>
+       <text x="${W - PAD.r}" y="16" class="title" text-anchor="end">triangle model ▸</text>`;
 
   const legend = mirror
     ? `<span class="k k-env"></span> gamut envelope · <span class="k k-tri"></span> triangle · left = start hue, right = end hue`
-    : `<span class="k k-env"></span> real gamut envelope <span class="k k-tri"></span> triangle model <span class="k k-guide"></span> max chroma at L · dots = palette (C = s · maxChroma)`;
+    : `<span class="k k-env"></span> real gamut (left) · <span class="k k-tri"></span> paper triangle model with cusp tip (right) · dots = palette`;
 
   host.innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" class="slice-svg" role="img"
@@ -209,6 +220,7 @@ export function renderSlice(
       ${lTicks}
       ${axisLine}
       ${bg}
+      ${triModel}
       ${guides}
       ${trajectory}
       ${dots}

@@ -349,6 +349,13 @@ position: relative;
   stroke-width: 1;
   stroke-dasharray: 4 3;
 }
+.slice-svg .tri-model {
+  fill: currentColor;
+  fill-opacity: 0.04;
+  stroke: currentColor;
+  stroke-opacity: 0.55;
+  stroke-width: 1;
+}
 .slice-svg .guide {
   stroke: currentColor;
   stroke-opacity: 0.16;

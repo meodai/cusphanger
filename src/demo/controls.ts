@@ -43,6 +43,34 @@ export function buildControls(
 
   const emit = () => onChange({ values: { ...state }, choices: { ...choices }, gamut: gamutState, chromaMode: chromaState });
 
+  // a labelled range slider with a live value readout
+  const addRange = (fld: FieldSpec, onSet: (v: number) => void) => {
+    const wrap = document.createElement('label');
+    wrap.classList.add('control');
+    const valueLabel = document.createElement('span');
+    valueLabel.textContent = String(fld.value);
+    wrap.innerHTML = `<span class="row"><span>${fld.label}</span></span>`;
+    wrap.querySelector('.row')!.appendChild(valueLabel);
+    wrap.style.setProperty('--valueRel', String((fld.value - fld.min) / (fld.max - fld.min)));
+
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = String(fld.min);
+    input.max = String(fld.max);
+    input.step = String(fld.step);
+    input.value = String(fld.value);
+    
+    input.addEventListener('input', () => {
+      const v = Number(input.value);
+      onSet(v);
+      valueLabel.textContent = input.value;
+      wrap.style.setProperty('--valueRel', String((v - fld.min) / (fld.max - fld.min)));
+      emit();
+    });
+    wrap.appendChild(input);
+    host.appendChild(wrap);
+  };
+
   const addSelect = (
     label: string,
     options: readonly string[],
@@ -92,28 +120,7 @@ export function buildControls(
   addSelect('gamut', ['srgb', 'display-p3'], gamutState, (v) => (gamutState = v as Gamut));
 
   // numeric parameters
-  for (const f of fields) {
-    const wrap = document.createElement('label');
-    wrap.className = 'control';
-    const valueLabel = document.createElement('span');
-    valueLabel.textContent = String(f.value);
-    wrap.innerHTML = `<span class="row"><span>${f.label}</span></span>`;
-    wrap.querySelector('.row')!.appendChild(valueLabel);
-
-    const input = document.createElement('input');
-    input.type = 'range';
-    input.min = String(f.min);
-    input.max = String(f.max);
-    input.step = String(f.step);
-    input.value = String(f.value);
-    input.addEventListener('input', () => {
-      state[f.key] = Number(input.value);
-      valueLabel.textContent = input.value;
-      emit();
-    });
-    wrap.appendChild(input);
-    host.appendChild(wrap);
-  }
+  for (const f of fields) addRange(f, (v) => (state[f.key] = v));
 
   // per-tab choice fields (e.g. easings)
   for (const c of choiceFields) {
