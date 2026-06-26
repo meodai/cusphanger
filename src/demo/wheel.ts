@@ -164,7 +164,7 @@ export function renderWheel(
       ${bg.svg}
       ${traj}
       ${dots}
-      <text x="14" y="20" class="wheel-tag">${gamut === 'display-p3' ? 'P3' : 'sRGB'}</text>
+      ${gamut === 'display-p3' ? `<text x="14" y="20" class="wheel-tag">P3</text>` : ''}
     </svg>
     <p class="slice-legend">${bg.legend}</p>`;
 }
