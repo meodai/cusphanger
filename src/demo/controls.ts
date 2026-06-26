@@ -79,7 +79,7 @@ export function buildControls(
     describe?: Record<string, string>,
   ) => {
     const wrap = document.createElement('label');
-    wrap.className = 'control';
+    wrap.classList.add('control');
     wrap.innerHTML = `<span class="row"><span>${label}</span></span>`;
     const select = document.createElement('select');
     for (const o of options) {
@@ -94,7 +94,7 @@ export function buildControls(
     let hint: HTMLElement | undefined;
     if (describe) {
       hint = document.createElement('small');
-      hint.className = 'control__hint';
+      hint.classList.add('control__hint');
       hint.textContent = describe[current] ?? '';
       wrap.appendChild(hint);
     }
