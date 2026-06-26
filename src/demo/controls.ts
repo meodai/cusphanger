@@ -43,31 +43,49 @@ export function buildControls(
 
   const emit = () => onChange({ values: { ...state }, choices: { ...choices }, gamut: gamutState, chromaMode: chromaState });
 
+  // the shared `.control` wrapper with a `.row` holding the label; returns the
+  // row so callers can append a value readout / select / etc.
+  const makeControl = (labelText: string, controlType?: string) => {
+    const wrap = document.createElement('label');
+    const classes = ['control', 'control--' + (controlType ?? 'select')];
+    wrap.classList.add(...classes);
+    const row = document.createElement('span');
+    row.classList.add('row');
+    const labelEl = document.createElement('span');
+    labelEl.textContent = labelText;
+    row.appendChild(labelEl);
+    wrap.appendChild(row);
+    return { wrap, row };
+  };
+
   // a labelled range slider with a live value readout
   const addRange = (fld: FieldSpec, onSet: (v: number) => void) => {
-    const wrap = document.createElement('label');
-    wrap.classList.add('control');
-    const valueLabel = document.createElement('span');
-    valueLabel.textContent = String(fld.value);
-    wrap.innerHTML = `<span class="row"><span>${fld.label}</span></span>`;
-    wrap.querySelector('.row')!.appendChild(valueLabel);
-    wrap.style.setProperty('--valueRel', String((fld.value - fld.min) / (fld.max - fld.min)));
-
+    const { wrap, row } = makeControl(fld.label, 'range');
     const input = document.createElement('input');
     input.type = 'range';
     input.min = String(fld.min);
     input.max = String(fld.max);
     input.step = String(fld.step);
     input.value = String(fld.value);
-    
+
+    wrap.prepend(input); // before the row, regardless of makeControl's order
+
+    const valueLabel = document.createElement('span');
+    valueLabel.textContent = String(fld.value);
+    valueLabel.classList.add('control__value');
+    row.appendChild(valueLabel);
+
+    const rel = (v: number) => String((v - fld.min) / (fld.max - fld.min));
+    wrap.style.setProperty('--valueRel', rel(fld.value));
+
     input.addEventListener('input', () => {
       const v = Number(input.value);
       onSet(v);
       valueLabel.textContent = input.value;
-      wrap.style.setProperty('--valueRel', String((v - fld.min) / (fld.max - fld.min)));
+      wrap.style.setProperty('--valueRel', rel(v));
       emit();
     });
-    wrap.appendChild(input);
+
     host.appendChild(wrap);
   };
 
@@ -78,9 +96,7 @@ export function buildControls(
     onSet: (v: string) => void,
     describe?: Record<string, string>,
   ) => {
-    const wrap = document.createElement('label');
-    wrap.classList.add('control');
-    wrap.innerHTML = `<span class="row"><span>${label}</span></span>`;
+    const { wrap } = makeControl(label);
     const select = document.createElement('select');
     for (const o of options) {
       const opt = document.createElement('option');
