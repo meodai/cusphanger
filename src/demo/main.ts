@@ -1,17 +1,27 @@
 import { sequential, diverging, type PaletteColor, type Gamut } from '../lib/index';
-import { buildControls, type FieldSpec } from './controls';
+import { buildControls, type FieldSpec, type ChoiceSpec } from './controls';
 import { renderSwatches, renderStrip } from './swatches';
 import { renderSlice } from './slice';
 import { renderWheel, type WheelAxis } from './wheel';
 
-type TabId = 'sequential' | 'diverging';
+// hue-trajectory easings for the Ramp tab (RampenSau-style hue cycling).
+const HUE_EASINGS: Record<string, (t: number) => number> = {
+  linear: (t) => t,
+  'ease-in': (t) => t * t,
+  'ease-out': (t) => 1 - (1 - t) * (1 - t),
+  sine: (t) => 0.5 - 0.5 * Math.cos(Math.PI * t),
+};
+const HUE_EASING_NAMES = Object.keys(HUE_EASINGS);
+
+type TabId = 'sequential' | 'diverging' | 'ramp';
 
 interface Tab {
   id: TabId;
   label: string;
   fields: FieldSpec[];
+  choices?: ChoiceSpec[];
   forceMirror?: boolean; // always show both slice flaps (e.g. diverging)
-  build: (v: Record<string, number>, gamut: Gamut) => PaletteColor[];
+  build: (v: Record<string, number>, c: Record<string, string>, gamut: Gamut) => PaletteColor[];
 }
 
 const TABS: Tab[] = [
@@ -25,12 +35,11 @@ const TABS: Tab[] = [
       { key: 'b', label: 'brightness (b)', min: 0, max: 1, step: 0.01, value: 0.75 },
       { key: 'c', label: 'contrast (c)', min: 0, max: 1, step: 0.01, value: 0.88 },
       { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
-      { key: 'hCycles', label: 'hCycles (ext.)', min: -2, max: 2, step: 0.05, value: 0 },
     ],
-    build: (v, gamut) =>
+    build: (v, _c, gamut) =>
       sequential({
         hStart: v.hStart!, total: v.total!, saturation: v.s!,
-        brightness: v.b!, contrast: v.c!, coolWarm: v.w!, hCycles: v.hCycles!, gamut,
+        brightness: v.b!, contrast: v.c!, coolWarm: v.w!, gamut,
       }),
   },
   {
@@ -46,10 +55,34 @@ const TABS: Tab[] = [
       { key: 'c', label: 'contrast (c)', min: 0, max: 1, step: 0.01, value: 0.88 },
       { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
     ],
-    build: (v, gamut) =>
+    build: (v, _c, gamut) =>
       diverging({
         hStart: v.hStart!, hEnd: v.hEnd!, total: v.total!,
         saturation: v.s!, brightness: v.b!, contrast: v.c!, coolWarm: v.w!, gamut,
+      }),
+  },
+  {
+    id: 'ramp',
+    label: 'Ramp',
+    fields: [
+      { key: 'hStart', label: 'hStart (h)', min: 0, max: 360, step: 1, value: 260 },
+      { key: 'total', label: 'total (N)', min: 2, max: 24, step: 1, value: 9 },
+      { key: 'hCycles', label: 'hCycles', min: -2, max: 2, step: 0.05, value: 0.3 },
+      { key: 'hStartCenter', label: 'hStartCenter', min: 0, max: 1, step: 0.01, value: 0.5 },
+      { key: 's', label: 'saturation (s)', min: 0, max: 1, step: 0.01, value: 0.7 },
+      { key: 'b', label: 'brightness (b)', min: 0, max: 1, step: 0.01, value: 0.75 },
+      { key: 'c', label: 'contrast (c)', min: 0, max: 1, step: 0.01, value: 0.88 },
+      { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
+    ],
+    choices: [{ key: 'hEasing', label: 'hue easing', options: HUE_EASING_NAMES, value: 'linear' }],
+    // the paper's sequential + a RampenSau-style hue trajectory (each color is
+    // the paper's ramp for its own rotated hue).
+    build: (v, c, gamut) =>
+      sequential({
+        hStart: v.hStart!, total: v.total!, saturation: v.s!,
+        brightness: v.b!, contrast: v.c!, coolWarm: v.w!,
+        hCycles: v.hCycles!, hStartCenter: v.hStartCenter!, hEasing: HUE_EASINGS[c.hEasing!],
+        gamut,
       }),
   },
 ];
@@ -148,10 +181,11 @@ function render(app: HTMLElement): void {
   let wheelAxis: WheelAxis = 'chroma';
   const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
   let lastValues: Record<string, number> = {};
+  let lastChoices: Record<string, string> = {};
   let lastPalette: PaletteColor[] = [];
 
   const renderActive = () => {
-    const palette = activeTab.build(lastValues, gamutState);
+    const palette = activeTab.build(lastValues, lastChoices, gamutState);
     lastPalette = palette;
     renderStrip(stripHost, palette);
     renderSwatches(swatchHost, palette);
@@ -184,8 +218,9 @@ function render(app: HTMLElement): void {
 
   const mountTab = (tab: Tab) => {
     activeTab = tab;
-    buildControls(controlsHost, tab.fields, [], ({ values }) => {
+    buildControls(controlsHost, tab.fields, tab.choices ?? [], ({ values, choices }) => {
       lastValues = values;
+      lastChoices = choices;
       renderActive();
     });
   };
