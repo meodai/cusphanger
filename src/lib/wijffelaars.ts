@@ -110,6 +110,7 @@ function tForLightness(l: number, tri: Tri): number {
 }
 
 // Single-hue (or cool/warm multi-hue) sequential palette, dark → light.
+// With hCycles ≠ 0, each color is the paper's ramp for its own rotated hue.
 export function sequential(o: SequentialOptions): PaletteColor[] {
   const {
     hStart,
@@ -117,14 +118,20 @@ export function sequential(o: SequentialOptions): PaletteColor[] {
     saturation: s = 0.6,
     brightness: b = 0.75,
     coolWarm: w = 0,
+    hCycles = 0,
+    hStartCenter = 0.5,
+    hEasing = (t) => t,
     gamut = 'srgb',
   } = o;
   const c = o.contrast ?? Math.min(0.88, 0.34 + 0.06 * N);
-  const tri = buildTriangle(hStart, s, w, gamut);
+  // single hue -> build the triangle once; only rebuild per color when hCycles ≠ 0
+  const baseTri = hCycles === 0 ? buildTriangle(hStart, s, w, gamut) : null;
 
   const out: PaletteColor[] = [];
   for (let i = 0; i < N; i++) {
     const t = N <= 1 ? 0 : i / (N - 1);
+    const tri =
+      baseTri ?? buildTriangle(hStart + 360 * hCycles * (hEasing(t) - hStartCenter), s, w, gamut);
     const targetL = Math.min(tri.p2.l, Math.max(tri.p0.l, lightnessAt(t, b, c)));
     const col = cSeq(tForLightness(targetL, tri), tri);
     const h = ((col.h % 360) + 360) % 360;

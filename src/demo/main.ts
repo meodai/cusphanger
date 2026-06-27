@@ -25,11 +25,12 @@ const TABS: Tab[] = [
       { key: 'b', label: 'brightness (b)', min: 0, max: 1, step: 0.01, value: 0.75 },
       { key: 'c', label: 'contrast (c)', min: 0, max: 1, step: 0.01, value: 0.88 },
       { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
+      { key: 'hCycles', label: 'hCycles (ext.)', min: -2, max: 2, step: 0.05, value: 0 },
     ],
     build: (v, gamut) =>
       sequential({
         hStart: v.hStart!, total: v.total!, saturation: v.s!,
-        brightness: v.b!, contrast: v.c!, coolWarm: v.w!, gamut,
+        brightness: v.b!, contrast: v.c!, coolWarm: v.w!, hCycles: v.hCycles!, gamut,
       }),
   },
   {

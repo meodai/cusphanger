@@ -24,7 +24,13 @@ export interface SequentialOptions {
   saturation?: number; // s — Bézier tension (0 = gray ramp, 1 = through the cusp). default 0.6
   brightness?: number; // b — start of the lightness curve. default 0.75
   contrast?: number; // c — lightness span. default min(0.88, 0.34 + 0.06·total)
-  coolWarm?: number; // w — multi-hue shift toward yellow. default 0
+  coolWarm?: number; // w — the paper's multi-hue shift of the light end toward yellow. default 0
+  // RampenSau-style hue trajectory (an EXTENSION beyond the paper): each color is
+  // the paper's single-hue ramp for its own rotated hue, so it stays faithful.
+  // hCycles = 0 collapses to the single-hue model.
+  hCycles?: number; // hue rotations across the ramp. default 0
+  hStartCenter?: number; // where hStart sits in the ramp (0..1). default 0.5
+  hEasing?: (t: number) => number; // hue easing. default linear
   gamut?: Gamut;
 }
 

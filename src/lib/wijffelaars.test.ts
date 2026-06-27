@@ -44,4 +44,19 @@ describe('sequential (paper, Table 1)', () => {
     const first = (n: number) => sequential({ hStart: 260, total: n })[0]!.oklch.l;
     expect(first(13)).toBeLessThan(first(3));
   });
+
+  it('hCycles = 0 collapses to a single hue (matches the paper exactly)', () => {
+    const base = sequential({ hStart: 260, total: 9 });
+    const withCycles0 = sequential({ hStart: 260, total: 9, hCycles: 0 });
+    expect(base.every((c) => Math.abs(c.oklch.h - 260) < 1e-9 || c.oklch.c < 1e-9)).toBe(true);
+    // identical output to omitting hCycles
+    expect(withCycles0.map((c) => c.hex)).toEqual(base.map((c) => c.hex));
+  });
+
+  it('hCycles rotates the hue across the ramp (each color in its own hue)', () => {
+    const p = sequential({ hStart: 0, total: 9, hCycles: 1, saturation: 0.9 });
+    const hues = p.filter((c) => c.oklch.c > 0.02).map((c) => c.oklch.h);
+    const spread = Math.max(...hues) - Math.min(...hues);
+    expect(spread).toBeGreaterThan(180); // a full cycle visits a wide hue range
+  });
 });
