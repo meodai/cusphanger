@@ -601,12 +601,29 @@ position: relative;
   stroke-opacity: 0.7;
   stroke-width: 1;
 }
-.wheel-shared {
+.wheel-cusp-ring {
   fill: none;
   stroke: currentColor;
-  stroke-opacity: 0.45;
   stroke-width: 1;
-  stroke-dasharray: 4 4;
+}
+/* 'min' = the equal-colorfulness ceiling, drawn most prominently */
+.wheel-cusp-min,
+.wheel-cusp {
+  stroke-opacity: 0.55;
+  stroke-dasharray: 5 4;
+}
+.wheel-cusp-avg {
+  stroke-opacity: 0.3;
+  stroke-dasharray: 2 4;
+}
+.wheel-cusp-max {
+  stroke-opacity: 0.3;
+  stroke-dasharray: 1 4;
+}
+.wheel-cusp-label {
+  fill: currentColor;
+  fill-opacity: 0.5;
+  font-size: 9px;
 }
 .wheel-traj {
   stroke-width: 2;

@@ -145,6 +145,36 @@ export function renderWheel(
   }
   const dots = pts.map(([x, y]) => `<circle cx="${f(x)}" cy="${f(y)}" r="4" class="wheel-dot"/>`).join('');
 
+  // chroma view: rings at the min / avg / max cusp chroma of the palette's hues —
+  // the three triangleMode levels. 'min' is the largest circle every hue can
+  // reach (the equal-colorfulness ceiling); dots stay inside it in 'min' mode.
+  let cuspRings = '';
+  let ringNote = '';
+  if (axis === 'chroma') {
+    const cusps = palette.map((col) => cusp(col.oklch.h, gamut).c);
+    const minC = Math.min(...cusps);
+    const maxC = Math.max(...cusps);
+    const avgC = cusps.reduce((a, b) => a + b, 0) / cusps.length;
+    const rings: Array<[string, number]> =
+      maxC - minC < 1e-3 ? [['cusp', minC]] : [
+        ['min', minC],
+        ['avg', avgC],
+        ['max', maxC],
+      ];
+    cuspRings = rings
+      .map(([name, c]) => {
+        const r = rad(c / bg.maxCusp);
+        const [lx, ly] = pt(90, r); // label at 12 o'clock
+        return (
+          `<circle cx="${CT}" cy="${CT}" r="${f(r)}" class="wheel-cusp-ring wheel-cusp-${name}"/>` +
+          `<text x="${f(lx)}" y="${f(ly - 3)}" class="wheel-cusp-label" text-anchor="middle">${name}</text>`
+        );
+      })
+      .join('');
+    ringNote =
+      rings.length > 1 ? " · rings = min/avg/max reachable chroma of the palette's hues" : '';
+  }
+
   host.innerHTML = `
     <svg viewBox="0 0 ${SIZE} ${SIZE}" class="wheel-svg" role="img"
          aria-label="Top view of all hues, ${axis} as radius, ${gamut}">
@@ -154,9 +184,10 @@ export function renderWheel(
         </pattern>
       </defs>
       ${bg.svg}
+      ${cuspRings}
       ${traj}
       ${dots}
       ${gamut === 'display-p3' ? `<text x="14" y="20" class="wheel-tag">P3</text>` : ''}
     </svg>
-    <p class="slice-legend">${bg.legend}</p>`;
+    <p class="slice-legend">${bg.legend}${ringNote}</p>`;
 }
