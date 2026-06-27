@@ -50,39 +50,3 @@ export function cusp(hue: number, gamut: Gamut = 'srgb'): { l: number; c: number
   cuspCache.set(key, best);
   return best;
 }
-
-const sharedCache = new Map<Gamut, number>();
-
-// The highest chroma every hue can reach: the minimum of all per-hue cusp
-// chromas. If green's cusp is 0.30 but blue's is 0.13, the highest chroma both
-// can display is 0.13. Used by the 'shared' chroma mode for hue-uniform
-// colorfulness. Sampled every 1 degree of hue.
-export function sharedCuspChroma(gamut: Gamut = 'srgb'): number {
-  const cached = sharedCache.get(gamut);
-  if (cached !== undefined) return cached;
-  let min = Infinity;
-  for (let h = 0; h < 360; h++) {
-    const c = cusp(h, gamut).c;
-    if (c < min) min = c;
-  }
-  const value = min === Infinity ? 0 : min;
-  sharedCache.set(gamut, value);
-  return value;
-}
-
-const maxCuspCache = new Map<Gamut, number>();
-
-// The largest cusp chroma across all hues — the most colorful point the gamut
-// reaches anywhere. The fixed, raw chroma scale for the 'absolute' chroma mode
-// (RampenSau-style); the max counterpart to sharedCuspChroma's min.
-export function maxCuspChroma(gamut: Gamut = 'srgb'): number {
-  const cached = maxCuspCache.get(gamut);
-  if (cached !== undefined) return cached;
-  let max = 0;
-  for (let h = 0; h < 360; h++) {
-    const c = cusp(h, gamut).c;
-    if (c > max) max = c;
-  }
-  maxCuspCache.set(gamut, max);
-  return max;
-}

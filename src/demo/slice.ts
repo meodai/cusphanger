@@ -1,12 +1,9 @@
 import {
   maxChromaAt,
   cusp,
-  sharedCuspChroma,
-  maxCuspChroma,
   toPaletteColor,
   type PaletteColor,
   type Gamut,
-  type ChromaMode,
 } from '../lib/index';
 
 // Side view of the OKLCH gamut slice (chroma x lightness). With a single hue it
@@ -55,7 +52,6 @@ export function renderSlice(
   host: HTMLElement,
   palette: PaletteColor[],
   gamut: Gamut,
-  chromaMode: ChromaMode = 'envelope',
   forceMirror = false,
 ): void {
   if (!palette.length) {
@@ -112,7 +108,7 @@ export function renderSlice(
     // key MUST encode the geometry (single vs mirror, anchor) — single-mode and
     // mirror-flap backgrounds can share gamut/mode/xMax/hue/sign yet differ in
     // layout, so omitting this collides them and stacks the flaps.
-    const key = `${gamut}|${chromaMode}|${mirror}|${drawTri}|${s.x0}|${s.sign}|${xMax.toFixed(4)}|${s.hue.toFixed(1)}`;
+    const key = `${gamut}|${mirror}|${drawTri}|${s.x0}|${s.sign}|${xMax.toFixed(4)}|${s.hue.toFixed(1)}`;
     const hit = sliceBgCache.get(key);
     if (hit) return hit;
 
@@ -152,18 +148,6 @@ export function renderSlice(
     const cuspMark = `<circle cx="${f(s.X(peak.c))}" cy="${f(Y(peak.l))}" r="4" class="cusp"/>
       <text x="${f(s.X(peak.c) - s.sign * 8)}" y="${f(Y(peak.l) - 7)}" class="label" text-anchor="${anchor}">cusp ${peak.c.toFixed(3)}</text>`;
 
-    let refLine = '';
-    if (chromaMode !== 'envelope') {
-      const refC =
-        chromaMode === 'shared'
-          ? sharedCuspChroma(gamut)
-          : chromaMode === 'absolute'
-            ? maxCuspChroma(gamut)
-            : peak.c;
-      const x = s.X(refC);
-      refLine = `<line x1="${f(x)}" y1="${PAD.t}" x2="${f(x)}" y2="${f(H - PAD.b)}" class="ref"/>`;
-    }
-
     const cStep = niceStep(xMax);
     let cTicks = '';
     for (let c = cStep; c <= xMax + 1e-9; c += cStep) {
@@ -171,7 +155,7 @@ export function renderSlice(
     }
 
     const triEl = drawTri ? `<path d="${tri}" class="tri"/>` : '';
-    const str = `${fill}${triEl}<path d="${envLine}" class="env-line"/>${refLine}${cuspMark}${cTicks}`;
+    const str = `${fill}${triEl}<path d="${envLine}" class="env-line"/>${cuspMark}${cTicks}`;
     sliceBgCache.set(key, str);
     return str;
   };

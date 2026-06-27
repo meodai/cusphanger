@@ -1,56 +1,17 @@
-import {
-  sequential,
-  diverging,
-  qualitative,
-  generatePalette,
-  linear,
-  power,
-  sine,
-  lame,
-  hump,
-  type Easing,
-  type PaletteColor,
-  type Gamut,
-  type ChromaMode,
-} from '../lib/index';
-import { buildControls, type FieldSpec, type ChoiceSpec } from './controls';
+import { sequential, diverging, type PaletteColor, type Gamut } from '../lib/index';
+import { buildControls, type FieldSpec } from './controls';
 import { renderSwatches, renderStrip } from './swatches';
 import { renderSlice } from './slice';
 import { renderWheel, type WheelAxis } from './wheel';
 
-// Named easings exposed in the Engine tab. power/lame/hump are parameterized;
-// we surface sensible presets.
-const EASINGS: Record<string, Easing> = {
-  linear,
-  'ease-in': power(2),
-  'ease-out': power(0.5),
-  sine,
-  lamé: lame(2),
-  hump: hump(),
-};
-const EASING_NAMES = Object.keys(EASINGS);
-
-const chromaHints: Record<ChromaMode, string> = {
-  envelope: 'fraction of the max chroma at each lightness — chroma fades toward the light and dark ends.',
-  cusp: "fraction of this hue's peak (cusp) chroma, clamped to gamut — roughly constant chroma per hue.",
-  shared: 'fraction of the highest chroma every hue can reach — uniform colorfulness across all hues.',
-  absolute: 'raw chroma, same for every hue, NOT gamut-clamped (RampenSau-style) — clips out of gamut (⚠). For comparison.',
-};
-
-type TabId = 'sequential' | 'diverging' | 'qualitative' | 'engine';
+type TabId = 'sequential' | 'diverging';
 
 interface Tab {
   id: TabId;
   label: string;
   fields: FieldSpec[];
-  choices?: ChoiceSpec[];
   forceMirror?: boolean; // always show both slice flaps (e.g. diverging)
-  build: (
-    v: Record<string, number>,
-    c: Record<string, string>,
-    gamut: Gamut,
-    chromaMode: ChromaMode,
-  ) => PaletteColor[];
+  build: (v: Record<string, number>, gamut: Gamut) => PaletteColor[];
 }
 
 const TABS: Tab[] = [
@@ -58,18 +19,17 @@ const TABS: Tab[] = [
     id: 'sequential',
     label: 'Sequential',
     fields: [
-      { key: 'hue', label: 'hue', min: 0, max: 360, step: 1, value: 260 },
-      { key: 'count', label: 'count', min: 2, max: 15, step: 1, value: 9 },
-      { key: 'saturation', label: 'saturation', min: 0, max: 1, step: 0.01, value: 0.9 },
-      { key: 'lightnessHigh', label: 'lightnessHigh', min: 0.5, max: 1, step: 0.01, value: 0.95 },
-      { key: 'lightnessLow', label: 'lightnessLow', min: 0, max: 0.5, step: 0.01, value: 0.2 },
-      { key: 'hueShift', label: 'hueShift', min: -180, max: 180, step: 1, value: 0 },
+      { key: 'hStart', label: 'hStart (h)', min: 0, max: 360, step: 1, value: 260 },
+      { key: 'total', label: 'total (N)', min: 2, max: 15, step: 1, value: 9 },
+      { key: 's', label: 'saturation (s)', min: 0, max: 1, step: 0.01, value: 0.6 },
+      { key: 'b', label: 'brightness (b)', min: 0, max: 1, step: 0.01, value: 0.75 },
+      { key: 'c', label: 'contrast (c)', min: 0, max: 1, step: 0.01, value: 0.88 },
+      { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
     ],
-    build: (v, _c, gamut, chromaMode) =>
+    build: (v, gamut) =>
       sequential({
-        hue: v.hue!, count: v.count!, saturation: v.saturation!,
-        lightnessHigh: v.lightnessHigh!, lightnessLow: v.lightnessLow!,
-        hueShift: v.hueShift!, chromaMode, gamut,
+        hStart: v.hStart!, total: v.total!, saturation: v.s!,
+        brightness: v.b!, contrast: v.c!, coolWarm: v.w!, gamut,
       }),
   },
   {
@@ -77,63 +37,18 @@ const TABS: Tab[] = [
     label: 'Diverging',
     forceMirror: true,
     fields: [
-      { key: 'hueLeft', label: 'hueLeft', min: 0, max: 360, step: 1, value: 250 },
-      { key: 'hueRight', label: 'hueRight', min: 0, max: 360, step: 1, value: 30 },
-      { key: 'count', label: 'count', min: 3, max: 15, step: 1, value: 9 },
-      { key: 'saturation', label: 'saturation', min: 0, max: 1, step: 0.01, value: 0.9 },
-      { key: 'centerLightness', label: 'centerLightness', min: 0.6, max: 1, step: 0.01, value: 0.95 },
-      { key: 'lightnessLow', label: 'lightnessLow', min: 0.1, max: 0.6, step: 0.01, value: 0.35 },
+      { key: 'hStart', label: 'hStart (left)', min: 0, max: 360, step: 1, value: 250 },
+      { key: 'hEnd', label: 'hEnd (right)', min: 0, max: 360, step: 1, value: 30 },
+      { key: 'total', label: 'total (N)', min: 3, max: 15, step: 1, value: 9 },
+      { key: 's', label: 'saturation (s)', min: 0, max: 1, step: 0.01, value: 0.6 },
+      { key: 'b', label: 'brightness (b)', min: 0, max: 1, step: 0.01, value: 0.75 },
+      { key: 'c', label: 'contrast (c)', min: 0, max: 1, step: 0.01, value: 0.88 },
+      { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
     ],
-    build: (v, _c, gamut, chromaMode) =>
+    build: (v, gamut) =>
       diverging({
-        hueLeft: v.hueLeft!, hueRight: v.hueRight!, count: v.count!,
-        saturation: v.saturation!, centerLightness: v.centerLightness!,
-        lightnessLow: v.lightnessLow!, chromaMode, gamut,
-      }),
-  },
-  {
-    id: 'qualitative',
-    label: 'Qualitative',
-    fields: [
-      { key: 'count', label: 'count', min: 2, max: 16, step: 1, value: 8 },
-      { key: 'hueFrom', label: 'hueFrom', min: 0, max: 360, step: 1, value: 0 },
-      { key: 'hueTo', label: 'hueTo', min: 0, max: 360, step: 1, value: 360 },
-      { key: 'lightness', label: 'lightness', min: 0.3, max: 0.9, step: 0.01, value: 0.7 },
-      { key: 'saturation', label: 'saturation', min: 0, max: 1, step: 0.01, value: 0.7 },
-    ],
-    build: (v, _c, gamut, chromaMode) =>
-      qualitative({
-        count: v.count!, hueRange: [v.hueFrom!, v.hueTo!],
-        lightness: v.lightness!, saturation: v.saturation!, chromaMode, gamut,
-      }),
-  },
-  {
-    id: 'engine',
-    label: 'Engine',
-    fields: [
-      { key: 'total', label: 'total', min: 2, max: 16, step: 1, value: 9 },
-      { key: 'hueStart', label: 'hueStart', min: 0, max: 360, step: 1, value: 200 },
-      { key: 'hueCycles', label: 'hueCycles', min: -2, max: 2, step: 0.05, value: 0.3 },
-      { key: 'lightHigh', label: 'lightnessStart', min: 0, max: 1, step: 0.01, value: 0.9 },
-      { key: 'lightLow', label: 'lightnessEnd', min: 0, max: 1, step: 0.01, value: 0.25 },
-      { key: 'satStart', label: 'saturationStart', min: 0, max: 1, step: 0.01, value: 0.85 },
-      { key: 'satEnd', label: 'saturationEnd', min: 0, max: 1, step: 0.01, value: 0.85 },
-    ],
-    choices: [
-      { key: 'hueEasing', label: 'hue easing', options: EASING_NAMES, value: 'linear' },
-      { key: 'lightnessEasing', label: 'lightness easing', options: EASING_NAMES, value: 'linear' },
-      { key: 'saturationEasing', label: 'saturation easing', options: EASING_NAMES, value: 'linear' },
-    ],
-    build: (v, c, gamut, chromaMode) =>
-      generatePalette({
-        total: v.total!, hueStart: v.hueStart!, hueCycles: v.hueCycles!,
-        hueEasing: EASINGS[c.hueEasing!],
-        lightnessRange: [v.lightHigh!, v.lightLow!],
-        lightnessEasing: EASINGS[c.lightnessEasing!],
-        saturationRange: [v.satStart!, v.satEnd!],
-        saturationEasing: EASINGS[c.saturationEasing!],
-        chromaMode,
-        gamut,
+        hStart: v.hStart!, hEnd: v.hEnd!, total: v.total!,
+        saturation: v.s!, brightness: v.b!, contrast: v.c!, coolWarm: v.w!, gamut,
       }),
   },
 ];
@@ -146,16 +61,6 @@ function render(app: HTMLElement): void {
         <p class="sub">Balanced color palettes from a few simple controls — consistent across every hue, and always true to what shows on screen.</p>
       </div>
       <div class="header-controls">
-        <label class="control control--select">
-          <span class="row"><span>chroma mode</span></span>
-          <select class="js-chroma">
-            <option value="envelope">envelope</option>
-            <option value="cusp">cusp</option>
-            <option value="shared">shared</option>
-            <option value="absolute">absolute</option>
-          </select>
-          <small class="control__hint js-chroma-hint"></small>
-        </label>
         <label class="control control--select">
           <span class="row"><span>gamut</span></span>
           <select class="js-gamut">
@@ -172,7 +77,7 @@ function render(app: HTMLElement): void {
         <div class="swatches"></div>
         <p class="hint">Click a swatch to copy its CSS. ⚠︎ marks colors outside the sRGB gamut.</p>
       </div>
-    </div>  
+    </div>
     <nav class="tabs"></nav>
     <section class="panel">
     <div class="controls"></div>
@@ -193,34 +98,32 @@ function render(app: HTMLElement): void {
       those few choices into a complete palette. The colors stay evenly balanced from light to dark
       and from one hue to the next, never turn muddy, and always display correctly, so the palette
       you design is the one people actually see.</p>
-      <p>It works for smooth gradients (<strong>sequential</strong>), scales that fan out from a
-      neutral middle (<strong>diverging</strong>), and sets of distinct category colors
-      (<strong>qualitative</strong>) — and it can target wide-gamut displays, not just standard ones.</p>
+      <p>It works for smooth gradients (<strong>sequential</strong>) and scales that fan out from a
+      neutral middle (<strong>diverging</strong>) — and it can target wide-gamut displays, not just
+      standard ones.</p>
 
       <details class="about__nerd">
         <summary>the technical version, for color nerds</summary>
-        <p>OKLCH palettes from intuitive parameters — gamut-relative saturation, in-gamut by
-        construction. For any hue, the displayable colors form a triangle in the chroma–lightness
-        plane that peaks at the <em>cusp</em> — the most saturated color that hue can reach.
-        Saturation is <em>gamut-relative</em>: a value of 1 always rides the gamut boundary, so
-        palettes stay in-gamut by construction and read evenly across hues.</p>
-        <p>Four <strong>chroma modes</strong> change what saturation is measured against —
-        <em>envelope</em> (the boundary at each lightness), <em>cusp</em> (each hue's single peak),
-        <em>shared</em> (the highest chroma every hue can reach: the largest circle that fits inside
-        the gamut, for uniform colorfulness across hues), and <em>absolute</em> (a raw,
-        unclamped chroma à la RampenSau that clips out of gamut — a baseline for comparison).</p>
+        <p>A faithful OKLCH port of the paper. For any hue, the displayable colors form a triangle in
+        the chroma–lightness plane with corners at black, white, and the <em>cusp</em> (the paper's
+        MSC — the most saturated color that hue can reach). A palette is a quadratic-Bézier path
+        through that triangle.</p>
+        <p>The knobs are the paper's: <em>saturation</em> (s) is the curve's tension — 0 gives a gray
+        ramp, 1 bends the path through the cusp; <em>brightness</em> (b) and <em>contrast</em> (c)
+        shape the lightness sampling; <em>cool/warm</em> (w) pulls the light end toward yellow.
+        Diverging joins two sequential palettes through a shared neutral.</p>
         <p>The two diagrams show the same gamut from different angles. The <strong>top view</strong>
-        is a wheel — hue as angle, chroma or lightness as radius — and the <strong>side view</strong>
-        is the chroma × lightness slice (real gamut vs. the paper's triangle model), mirroring into a
-        butterfly when a palette spans two hues. The generated palette is plotted in both.</p>
+        is a wheel — hue as angle, chroma or lightness as radius (click the active axis again to flip
+        it). The <strong>side view</strong> is the chroma × lightness slice: the real OKLCH gamut on
+        the left vs. the paper's straight-edged triangle model with its cusp tip on the right,
+        mirroring into a butterfly when a palette spans two hues. The generated palette is plotted in
+        both.</p>
       </details>
 
-      <p class="cite">Method after Wijffelaars, Vliegen, van Wijk &amp; van der Linden,
-      <a href="https://doi.org/10.1111/j.1467-8659.2008.01203.x" target="_blank" rel="noopener">“Generating
-      Color Palettes using Intuitive Parameters”</a> (Computer Graphics Forum 27:3, 2008),
-      re-expressed in OKLCH, with per-channel trajectory controls inspired by
-      <a href="https://github.com/meodai/rampensau" target="_blank" rel="noopener">RampenSau</a>.
-      Also inspired by <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener">Matt
+      <p class="cite">A faithful OKLCH implementation of Wijffelaars, Vliegen, van Wijk &amp; van der
+      Linden, <a href="https://doi.org/10.1111/j.1467-8659.2008.01203.x" target="_blank" rel="noopener">“Generating
+      Color Palettes using Intuitive Parameters”</a> (Computer Graphics Forum 27:3, 2008). Also
+      inspired by <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener">Matt
       DesLauriers's OKLCH take</a> on the same paper.</p>
     </section>`;
 
@@ -237,47 +140,36 @@ function render(app: HTMLElement): void {
     stripHost.setAttribute('aria-expanded', String(open));
   });
 
-  // global state: active tab, the persistent header controls, latest per-tab
-  // control values, wheel axis, and the latest palette (for the wheel toggle).
+  // global state: active tab, the (persistent) gamut, the latest control values,
+  // the wheel axis/flip, and the latest palette (so the wheel toggle can redraw).
   let activeTab: Tab = TABS[0]!;
   let gamutState: Gamut = 'srgb';
-  let chromaState: ChromaMode = 'envelope';
   let wheelAxis: WheelAxis = 'chroma';
   const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
   let lastValues: Record<string, number> = {};
-  let lastChoices: Record<string, string> = {};
   let lastPalette: PaletteColor[] = [];
 
   const renderActive = () => {
-    const palette = activeTab.build(lastValues, lastChoices, gamutState, chromaState);
+    const palette = activeTab.build(lastValues, gamutState);
     lastPalette = palette;
     renderStrip(stripHost, palette);
     renderSwatches(swatchHost, palette);
     renderWheel(wheelHost, palette, gamutState, wheelAxis, wheelFlip[wheelAxis]);
-    renderSlice(sliceHost, palette, gamutState, chromaState, activeTab.forceMirror ?? false);
+    renderSlice(sliceHost, palette, gamutState, activeTab.forceMirror ?? false);
   };
 
-  // header controls: chroma mode + gamut (global, persistent across tabs)
-  const chromaSel = app.querySelector('.js-chroma') as HTMLSelectElement;
+  // header control: gamut (global, persistent across tabs)
   const gamutSel = app.querySelector('.js-gamut') as HTMLSelectElement;
-  const chromaHintEl = app.querySelector('.js-chroma-hint') as HTMLElement;
-  chromaHintEl.textContent = chromaHints[chromaState];
-  chromaSel.addEventListener('change', () => {
-    chromaState = chromaSel.value as ChromaMode;
-    chromaHintEl.textContent = chromaHints[chromaState];
-    renderActive();
-  });
   gamutSel.addEventListener('change', () => {
     gamutState = gamutSel.value as Gamut;
     renderActive();
   });
 
-  // wheel radial-axis toggle
+  // wheel radial-axis toggle (re-click the active axis to flip its direction)
   const axisBtns = Array.from(app.querySelectorAll<HTMLButtonElement>('.axis-toggle button'));
   for (const btn of axisBtns) {
     btn.addEventListener('click', () => {
       const a = btn.dataset.axis as WheelAxis;
-      // re-clicking the active axis flips its radial direction; otherwise switch
       if (a === wheelAxis) wheelFlip[a] = !wheelFlip[a];
       else wheelAxis = a;
       for (const b of axisBtns) {
@@ -291,9 +183,8 @@ function render(app: HTMLElement): void {
 
   const mountTab = (tab: Tab) => {
     activeTab = tab;
-    buildControls(controlsHost, tab.fields, tab.choices ?? [], ({ values, choices }) => {
+    buildControls(controlsHost, tab.fields, [], ({ values }) => {
       lastValues = values;
-      lastChoices = choices;
       renderActive();
     });
   };

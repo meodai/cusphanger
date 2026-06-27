@@ -1,10 +1,17 @@
-import { inGamut, toGamut, formatHex, formatCss } from 'culori';
+import { inGamut, toGamut, formatHex, formatCss, converter } from 'culori';
 import type { Gamut, Oklch, PaletteColor } from './types';
 
 const inSrgb = inGamut('rgb');
 const inP3 = inGamut('p3');
 const toSrgb = toGamut('rgb');
 const toP3 = toGamut('p3');
+const toOklch = converter('oklch');
+
+// OKLCH of any CSS color string (e.g. the 'bright point' yellow in the paper).
+export function oklchOf(css: string): Oklch {
+  const o = toOklch(css) as { l?: number; c?: number; h?: number };
+  return { l: o.l ?? 0, c: o.c ?? 0, h: o.h ?? 0 };
+}
 
 export function toPaletteColor(color: Oklch, gamut: Gamut = 'srgb'): PaletteColor {
   const oklch = { mode: 'oklch' as const, l: color.l, c: color.c, h: color.h };

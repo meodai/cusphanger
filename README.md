@@ -1,17 +1,26 @@
 # CuspHanger
 
-OKLCH color-palette generator with intuitive parameters — sequential, diverging, and qualitative
-palettes built on a unified trajectory engine with **gamut-relative saturation**.
+A faithful OKLCH implementation of Wijffelaars, Vliegen, van Wijk & van der Linden,
+*"Generating Color Palettes using Intuitive Parameters"*
+([Computer Graphics Forum 27:3, 2008](https://doi.org/10.1111/j.1467-8659.2008.01203.x)).
 
-Inspired by Wijffelaars et al., *"Generating Color Palettes using Intuitive Parameters"* (2008),
-re-expressed in OKLCH, with per-channel trajectory ergonomics à la
-[RampenSau](https://github.com/meodai/rampensau).
+The paper generates **sequential** and **diverging** palettes from a few intuitive parameters by
+walking a quadratic-Bézier path through the gamut triangle (black · cusp · white) of a hue. It was
+written for CIELUV; this is that exact model re-expressed in **OKLCH**, so it can also target
+Display-P3.
 
-## Why "gamut-relative saturation"?
+## How it works
 
-`saturation` is a fraction (0–1) of the **maximum in-gamut chroma** at each hue and lightness, so a
-single saturation knob stays meaningful across every hue and lightness, output is in-gamut by
-construction, and chroma automatically peaks at the gamut **cusp**.
+For a fixed hue, the displayable colors approximate a triangle in the chroma–lightness plane with
+corners at black, white, and the **cusp** — the most saturated color that hue can reach (the paper's
+*MSC*). A palette is a quadratic-Bézier path through that triangle, sampled at perceptual lightness
+steps. The cusp / triangle being an inner approximation of the gamut keeps the result displayable.
+
+The knobs are the paper's:
+
+- **`saturation` (s)** — the curve's tension. `0` is a gray ramp; `1` bends the path through the cusp.
+- **`brightness` (b)** and **`contrast` (c)** — shape the lightness sampling (`L(t)`).
+- **`coolWarm` (w)** — multi-hue shift that pulls the light end toward yellow (Table 2).
 
 ## Install
 
@@ -22,22 +31,24 @@ npm install cusphanger
 ## Usage
 
 ```ts
-import { sequential, diverging, qualitative, generatePalette } from 'cusphanger';
+import { sequential, diverging } from 'cusphanger';
 
-sequential({ hue: 260, count: 9 });
-diverging({ hueLeft: 250, hueRight: 30, count: 9 });
-qualitative({ count: 8 });
+// single-hue sequential (paper, Table 1)
+sequential({ hStart: 260, total: 9, saturation: 0.6, brightness: 0.75, contrast: 0.88 });
 
-// Power-user trajectory engine:
-generatePalette({
-  total: 9,
-  hueStart: 200,
-  hueCycles: 0.3,
-  lightnessRange: [0.9, 0.25],
-  saturationRange: [0.85, 0.85],
-  gamut: 'display-p3',
-});
+// cool/warm multi-hue (Table 2)
+sequential({ hStart: 260, total: 9, coolWarm: 0.15 });
+
+// diverging — two sequentials joined through a shared neutral
+diverging({ hStart: 250, hEnd: 30, total: 9 });
+
+// Display-P3 target
+sequential({ hStart: 260, total: 9, gamut: 'display-p3' });
 ```
+
+Option names follow RampenSau's conventions where they correspond (`total`, `hStart`/`hEnd`); the
+paper-specific knobs keep their own names. Defaults follow the paper: `saturation = 0.6`,
+`brightness = 0.75`, `contrast = min(0.88, 0.34 + 0.06·total)`, `coolWarm = 0`.
 
 Each color is returned as:
 
@@ -46,6 +57,8 @@ Each color is returned as:
 ```
 
 `css` is `oklch(...)` for the sRGB target and `color(display-p3 ...)` for the P3 target.
+
+Also exported: `cusp(hue, gamut)` (the MSC), `maxChromaAt(hue, l, gamut)`, `toPaletteColor`, `oklchOf`.
 
 ## Develop
 

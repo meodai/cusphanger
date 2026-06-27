@@ -1,15 +1,9 @@
-import {
-  cusp,
-  sharedCuspChroma,
-  toPaletteColor,
-  type PaletteColor,
-  type Gamut,
-} from '../lib/index';
+import { cusp, toPaletteColor, type PaletteColor, type Gamut } from '../lib/index';
 
 // Top view: hue = angle, the radius is either chroma or lightness, and `flip`
 // inverts the radial direction (what sits at the center vs. the rim).
 // - 'chroma': neutral↔colorful between center and rim; boundary = per-hue cusp
-//   chroma (peaks & valleys); dashed circle = the 'shared' chroma (min of cusps).
+//   chroma (peaks & valleys).
 // - 'lightness': white↔dark between center and rim; fill is the most saturated
 //   color at each (hue, L); the contour is each hue's cusp lightness.
 
@@ -43,7 +37,6 @@ function buildBg(gamut: Gamut, axis: WheelAxis, flip: boolean): WheelBg {
   // t in [0,1]; t=0 sits at the center unless flipped
   const rad = (t: number) => (flip ? 1 - t : t) * R;
 
-  const shared = sharedCuspChroma(gamut);
   const peaks: Array<{ hue: number; c: number; l: number }> = [];
   let maxCusp = 0;
   for (let h = 0; h < 360; h += STEP) {
@@ -83,9 +76,8 @@ function buildBg(gamut: Gamut, axis: WheelAxis, flip: boolean): WheelBg {
       <g>${wedges}</g>
       <radialGradient id="wheelFadeBg" cx="50%" cy="50%" r="50%">${fadeStops}</radialGradient>
       <circle cx="${CT}" cy="${CT}" r="${R}" fill="url(#wheelFadeBg)"/>
-      <path d="${boundary}Z" class="wheel-boundary"/>
-      <circle cx="${CT}" cy="${CT}" r="${f(rad(shared / maxCusp))}" class="wheel-shared"/>`;
-    legend = `boundary = per-hue cusp chroma · ${flip ? 'colorful center → neutral rim' : 'neutral center → colorful rim'} · <span class="k k-shared"></span> shared chroma C ${shared.toFixed(3)} · dots = palette`;
+      <path d="${boundary}Z" class="wheel-boundary"/>`;
+    legend = `boundary = per-hue cusp chroma (peaks &amp; valleys) · ${flip ? 'colorful center → neutral rim' : 'neutral center → colorful rim'} · dots = palette`;
   } else {
     const tag = gamut === 'display-p3' ? 'p3' : 'srgb';
     let defs = '';
