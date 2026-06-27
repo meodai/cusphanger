@@ -59,4 +59,28 @@ describe('sequential (paper, Table 1)', () => {
     const spread = Math.max(...hues) - Math.min(...hues);
     expect(spread).toBeGreaterThan(180); // a full cycle visits a wide hue range
   });
+
+  it('cool/warm still warms the light end in a shared triangle mode', () => {
+    const opts = { hStart: 264, total: 9, triangleMode: 'min' } as const; // blue base
+    const cold = sequential({ ...opts, coolWarm: 0 });
+    const warm = sequential({ ...opts, coolWarm: 0.6 });
+    // without warmth the hue stays at the base; with it, the light colors shift
+    // toward yellow (a lower hue than blue 264)
+    expect(cold.every((c) => Math.abs(c.oklch.h - 264) < 1 || c.oklch.c < 1e-6)).toBe(true);
+    expect(warm[warm.length - 2]!.oklch.h).toBeLessThan(240);
+  });
+
+  it("triangleMode 'min' evens colorfulness (caps chroma below perHue)", () => {
+    const opts = { hStart: 0, total: 12, hCycles: 1, saturation: 0.95 } as const;
+    const perHue = sequential(opts);
+    const min = sequential({ ...opts, triangleMode: 'min' });
+    const maxC = (p: ReturnType<typeof sequential>) => Math.max(...p.map((x) => x.oklch.c));
+    // a multi-hue ramp visits both low- and high-cusp hues; 'min' holds every
+    // color to the least-colorful one, so its peak chroma is clearly lower.
+    expect(maxC(min)).toBeLessThan(maxC(perHue));
+    // and every color stays in gamut
+    expect(
+      min.every((x) => inSrgb({ mode: 'oklch', l: x.oklch.l, c: x.oklch.c, h: x.oklch.h })),
+    ).toBe(true);
+  });
 });

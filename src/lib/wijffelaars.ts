@@ -83,6 +83,18 @@ function buildTriangle(hue: number, s: number, w: number, gamut: Gamut): Tri {
   return { p0, q0, q1, q2, p2 };
 }
 
+// A hue-agnostic triangle from a given cusp (L, C) — used by the shared
+// triangleMode where every color rides the same (min/avg/max) triangle.
+function buildTriangleFromCusp(cuspL: number, cuspC: number, s: number): Tri {
+  const p0: LCH = { l: 0, c: 0, h: 0 };
+  const p1: LCH = { l: cuspL, c: cuspC, h: 0 };
+  const p2: LCH = { l: 1, c: 0, h: 0 };
+  const q0 = mixP(p0, p1, s);
+  const q2 = mixP(p2, p1, s);
+  const q1 = midP(q0, q2);
+  return { p0, q0, q1, q2, p2 };
+}
+
 // C_seq(t): two quadratic Béziers, black→…→MSC→…→white
 function cSeq(t: number, tri: Tri): LCH {
   const { p0, q0, q1, q2, p2 } = tri;
@@ -121,20 +133,65 @@ export function sequential(o: SequentialOptions): PaletteColor[] {
     hCycles = 0,
     hStartCenter = 0.5,
     hEasing = (t) => t,
+    triangleMode = 'perHue',
     gamut = 'srgb',
   } = o;
   const c = o.contrast ?? Math.min(0.88, 0.34 + 0.06 * N);
-  // single hue -> build the triangle once; only rebuild per color when hCycles ≠ 0
-  const baseTri = hCycles === 0 ? buildTriangle(hStart, s, w, gamut) : null;
+  const hueAt = (t: number) => hStart + 360 * hCycles * (hEasing(t) - hStartCenter);
+
+  // 'min'/'avg'/'max' share one triangle across the ramp's hues, so colorfulness
+  // is even (no chroma peaks). It's built from the min/avg/max cusp of those
+  // hues; each color keeps its own hue. cool/warm (w) only applies in 'perHue'.
+  let sharedTri: Tri | null = null;
+  let sharedCuspL = 0;
+  if (triangleMode !== 'perHue') {
+    const cusps: Array<{ l: number; c: number }> = [];
+    for (let i = 0; i < N; i++) {
+      const t = N <= 1 ? 0 : i / (N - 1);
+      cusps.push(cusp(((hueAt(t) % 360) + 360) % 360, gamut));
+    }
+    let sc: { l: number; c: number };
+    if (triangleMode === 'min') sc = cusps.reduce((a, p) => (p.c < a.c ? p : a));
+    else if (triangleMode === 'max') sc = cusps.reduce((a, p) => (p.c > a.c ? p : a));
+    else {
+      const n = cusps.length || 1;
+      sc = {
+        l: cusps.reduce((sum, p) => sum + p.l, 0) / n,
+        c: cusps.reduce((sum, p) => sum + p.c, 0) / n,
+      };
+    }
+    sharedCuspL = sc.l;
+    sharedTri = buildTriangleFromCusp(sc.l, sc.c, s);
+  }
+
+  // shared modes overlay each color's own hue, so cool/warm can't shift the
+  // triangle toward yellow. Instead it nudges the light colors' hues toward the
+  // bright point — the same "only the light end warms" behaviour as the paper.
+  const warmHue = sharedTri && w > 0 ? oklchOf('#ffff00').h : null;
+
+  // single hue (perHue + hCycles 0) -> build the triangle once
+  const baseTri = !sharedTri && hCycles === 0 ? buildTriangle(hStart, s, w, gamut) : null;
 
   const out: PaletteColor[] = [];
   for (let i = 0; i < N; i++) {
     const t = N <= 1 ? 0 : i / (N - 1);
-    const tri =
-      baseTri ?? buildTriangle(hStart + 360 * hCycles * (hEasing(t) - hStartCenter), s, w, gamut);
+    const tri = sharedTri ?? baseTri ?? buildTriangle(hueAt(t), s, w, gamut);
     const targetL = Math.min(tri.p2.l, Math.max(tri.p0.l, lightnessAt(t, b, c)));
     const col = cSeq(tForLightness(targetL, tri), tri);
-    const h = ((col.h % 360) + 360) % 360;
+
+    let h: number;
+    if (sharedTri) {
+      h = ((hueAt(t) % 360) + 360) % 360;
+      if (warmHue !== null) {
+        // weight 0 below the shared cusp, ramping to 1 at white (the top point)
+        const warmW = Math.max(0, Math.min(1, (col.l - sharedCuspL) / (1 - sharedCuspL || 1)));
+        const M = ((((warmHue - h) % 360) + 540) % 360) - 180; // shortest signed delta to yellow
+        h = (((h + w * warmW * M) % 360) + 360) % 360;
+      }
+    } else {
+      h = ((col.h % 360) + 360) % 360; // perHue: the curve already carries the warm shift
+    }
+
     // the straight triangle edges can poke just outside the real OKLCH gamut;
     // clamp chroma to the boundary (the paper's "little clamping").
     const c2 = Math.min(Math.max(0, col.c), maxChromaAt(h, col.l, gamut));

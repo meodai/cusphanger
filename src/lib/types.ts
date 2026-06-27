@@ -1,5 +1,12 @@
 export type Gamut = 'srgb' | 'display-p3';
 
+// For multi-hue ramps (hCycles): which gamut triangle each color rides toward.
+// - 'perHue': each color uses its own hue's cusp (faithful; chroma peaks).
+// - 'min'/'avg'/'max': all colors share one triangle (the min / mean / max cusp
+//   of the ramp's hues), so colorfulness is even across hues. 'min' is the
+//   paper's open "equal colorfulness" idea.
+export type TriangleMode = 'perHue' | 'min' | 'avg' | 'max';
+
 export interface Oklch {
   l: number; // 0..1
   c: number; // >= 0
@@ -31,6 +38,7 @@ export interface SequentialOptions {
   hCycles?: number; // hue rotations across the ramp. default 0
   hStartCenter?: number; // where hStart sits in the ramp (0..1). default 0.5
   hEasing?: (t: number) => number; // hue easing. default linear
+  triangleMode?: TriangleMode; // chroma envelope for multi-hue ramps. default 'perHue'
   gamut?: Gamut;
 }
 

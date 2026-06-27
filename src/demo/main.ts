@@ -1,4 +1,10 @@
-import { sequential, diverging, type PaletteColor, type Gamut } from '../lib/index';
+import {
+  sequential,
+  diverging,
+  type PaletteColor,
+  type Gamut,
+  type TriangleMode,
+} from '../lib/index';
 import { buildControls, type FieldSpec, type ChoiceSpec } from './controls';
 import { renderSwatches, renderStrip } from './swatches';
 import { renderSlice } from './slice';
@@ -74,14 +80,18 @@ const TABS: Tab[] = [
       { key: 'c', label: 'contrast (c)', min: 0, max: 1, step: 0.01, value: 0.88 },
       { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
     ],
-    choices: [{ key: 'hEasing', label: 'hue easing', options: HUE_EASING_NAMES, value: 'linear' }],
+    choices: [
+      { key: 'hEasing', label: 'hue easing', options: HUE_EASING_NAMES, value: 'linear' },
+      { key: 'triangleMode', label: 'triangle', options: ['perHue', 'min', 'avg', 'max'], value: 'perHue' },
+    ],
     // the paper's sequential + a RampenSau-style hue trajectory (each color is
-    // the paper's ramp for its own rotated hue).
+    // the paper's ramp for its own rotated hue). triangleMode evens colorfulness.
     build: (v, c, gamut) =>
       sequential({
         hStart: v.hStart!, total: v.total!, saturation: v.s!,
         brightness: v.b!, contrast: v.c!, coolWarm: v.w!,
         hCycles: v.hCycles!, hStartCenter: v.hStartCenter!, hEasing: HUE_EASINGS[c.hEasing!],
+        triangleMode: c.triangleMode as TriangleMode,
         gamut,
       }),
   },
