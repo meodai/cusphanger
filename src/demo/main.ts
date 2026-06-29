@@ -1,10 +1,5 @@
-import {
-  sequential,
-  diverging,
-  type PaletteColor,
-  type Gamut,
-  type TriangleMode,
-} from '../lib/index';
+import { sequential, diverging, type OklchColor, type TriangleMode } from '../lib/index';
+import { oklchSrgb, oklchP3, type Lut } from 'nutelch';
 import { buildControls, type FieldSpec, type ChoiceSpec } from './controls';
 import { renderSwatches, renderStrip } from './swatches';
 import { renderSlice } from './slice';
@@ -27,7 +22,7 @@ interface Tab {
   fields: FieldSpec[];
   choices?: ChoiceSpec[];
   forceMirror?: boolean; // always show both slice flaps (e.g. diverging)
-  build: (v: Record<string, number>, c: Record<string, string>, gamut: Gamut) => PaletteColor[];
+  build: (v: Record<string, number>, c: Record<string, string>, lut: Lut) => OklchColor[];
 }
 
 const TABS: Tab[] = [
@@ -42,10 +37,10 @@ const TABS: Tab[] = [
       { key: 'c', label: 'contrast (c)', min: 0, max: 1, step: 0.01, value: 0.88 },
       { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
     ],
-    build: (v, _c, gamut) =>
+    build: (v, _c, lut) =>
       sequential({
         hStart: v.hStart!, total: v.total!, saturation: v.s!,
-        brightness: v.b!, contrast: v.c!, coolWarm: v.w!, gamut,
+        brightness: v.b!, contrast: v.c!, coolWarm: v.w!, lut,
       }),
   },
   {
@@ -61,10 +56,10 @@ const TABS: Tab[] = [
       { key: 'c', label: 'contrast (c)', min: 0, max: 1, step: 0.01, value: 0.88 },
       { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
     ],
-    build: (v, _c, gamut) =>
+    build: (v, _c, lut) =>
       diverging({
         hStart: v.hStart!, hEnd: v.hEnd!, total: v.total!,
-        saturation: v.s!, brightness: v.b!, contrast: v.c!, coolWarm: v.w!, gamut,
+        saturation: v.s!, brightness: v.b!, contrast: v.c!, coolWarm: v.w!, lut,
       }),
   },
   {
@@ -88,13 +83,13 @@ const TABS: Tab[] = [
     // the paper's sequential + a RampenSau-style hue trajectory (each color is
     // the paper's ramp for its own rotated hue). triangleMode evens colorfulness;
     // saturation (sRange) and lightness (lRange) are RampenSau-style ranges here.
-    build: (v, c, gamut) =>
+    build: (v, c, lut) =>
       sequential({
         hStart: v.hStart!, total: v.total!,
         sRange: [v.sMin!, v.sMax!], lRange: [v.minLight!, v.maxLight!], coolWarm: v.w!,
         hCycles: v.hCycles!, hStartCenter: v.hStartCenter!, hEasing: HUE_EASINGS[c.hEasing!],
         triangleMode: c.triangleMode as TriangleMode,
-        gamut,
+        lut,
       }),
   },
 ];
@@ -189,26 +184,26 @@ function render(app: HTMLElement): void {
   // global state: active tab, the (persistent) gamut, the latest control values,
   // the wheel axis/flip, and the latest palette (so the wheel toggle can redraw).
   let activeTab: Tab = TABS[0]!;
-  let gamutState: Gamut = 'srgb';
+  let lutState: Lut = oklchSrgb;
   let wheelAxis: WheelAxis = 'chroma';
   const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
   let lastValues: Record<string, number> = {};
   let lastChoices: Record<string, string> = {};
-  let lastPalette: PaletteColor[] = [];
+  let lastPalette: OklchColor[] = [];
 
   const renderActive = () => {
-    const palette = activeTab.build(lastValues, lastChoices, gamutState);
+    const palette = activeTab.build(lastValues, lastChoices, lutState);
     lastPalette = palette;
     renderStrip(stripHost, palette);
     renderSwatches(swatchHost, palette);
-    renderWheel(wheelHost, palette, gamutState, wheelAxis, wheelFlip[wheelAxis]);
-    renderSlice(sliceHost, palette, gamutState, activeTab.forceMirror ?? false);
+    renderWheel(wheelHost, palette, lutState, wheelAxis, wheelFlip[wheelAxis]);
+    renderSlice(sliceHost, palette, lutState, activeTab.forceMirror ?? false);
   };
 
   // header control: gamut (global, persistent across tabs)
   const gamutSel = app.querySelector('.js-gamut') as HTMLSelectElement;
   gamutSel.addEventListener('change', () => {
-    gamutState = gamutSel.value as Gamut;
+    lutState = gamutSel.value === "display-p3" ? oklchP3 : oklchSrgb;
     renderActive();
   });
 
@@ -224,7 +219,7 @@ function render(app: HTMLElement): void {
         b.setAttribute('aria-selected', String(ba === wheelAxis));
         b.toggleAttribute('data-flipped', ba === wheelAxis && wheelFlip[ba]);
       }
-      renderWheel(wheelHost, lastPalette, gamutState, wheelAxis, wheelFlip[wheelAxis]);
+      renderWheel(wheelHost, lastPalette, lutState, wheelAxis, wheelFlip[wheelAxis]);
     });
   }
 

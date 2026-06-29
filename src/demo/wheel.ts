@@ -1,4 +1,9 @@
-import { cusp, toPaletteColor, type PaletteColor, type Gamut } from '../lib/index';
+import { type OklchColor } from '../lib/index';
+import { cusp } from './gamut';
+import { oklchP3, type Lut } from 'nutelch';
+import { css, cssOf } from './color';
+
+const gamutTag = (lut: Lut) => (lut === oklchP3 ? 'p3' : 'srgb');
 
 // Top view: hue = angle, the radius is either chroma or lightness, and `flip`
 // inverts the radial direction (what sits at the center vs. the rim).
@@ -29,8 +34,8 @@ interface WheelBg {
 
 const bgCache = new Map<string, WheelBg>();
 
-function buildBg(gamut: Gamut, axis: WheelAxis, flip: boolean): WheelBg {
-  const key = `${gamut}:${axis}:${flip}`;
+function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
+  const key = `${gamutTag(lut)}:${axis}:${flip}`;
   const cached = bgCache.get(key);
   if (cached) return cached;
 
@@ -40,7 +45,7 @@ function buildBg(gamut: Gamut, axis: WheelAxis, flip: boolean): WheelBg {
   const peaks: Array<{ hue: number; c: number; l: number }> = [];
   let maxCusp = 0;
   for (let h = 0; h < 360; h += STEP) {
-    const p = cusp(h, gamut);
+    const p = cusp(h, lut);
     peaks.push({ hue: h, c: p.c, l: p.l });
     if (p.c > maxCusp) maxCusp = p.c;
   }
@@ -63,7 +68,7 @@ function buildBg(gamut: Gamut, axis: WheelAxis, flip: boolean): WheelBg {
       const [a1x, a1y] = pt(a.hue, rad(a.c / maxCusp));
       const [b1x, b1y] = pt(bHue(i), rad(b.c / maxCusp));
       const [b0x, b0y] = pt(bHue(i), r0);
-      const fill = toPaletteColor({ l: a.l, c: a.c, h: a.hue }, gamut).css;
+      const fill = css(a.l, a.c, a.hue);
       wedges += `<path d="M ${f(a0x)},${f(a0y)} L ${f(a1x)},${f(a1y)} L ${f(b1x)},${f(b1y)} L ${f(b0x)},${f(b0y)} Z" fill="${fill}"/>`;
       boundary += `${i === 0 ? 'M' : 'L'} ${f(a1x)},${f(a1y)} `;
     }
@@ -79,16 +84,16 @@ function buildBg(gamut: Gamut, axis: WheelAxis, flip: boolean): WheelBg {
       <path d="${boundary}Z" class="wheel-boundary"/>`;
     legend = `boundary = per-hue cusp chroma (peaks &amp; valleys) · ${flip ? 'colorful center → neutral rim' : 'neutral center → colorful rim'} · dots = palette`;
   } else {
-    const tag = gamut === 'display-p3' ? 'p3' : 'srgb';
+    const tag = gamutTag(lut);
     let defs = '';
     let wedges = '';
     let contour = '';
     for (let i = 0; i < peaks.length; i++) {
       const a = peaks[i]!;
       const id = `wl-${tag}-${flip ? 'f' : 'n'}-${a.hue}`;
-      const cLo = toPaletteColor({ l: 0.04, c: 0, h: a.hue }, gamut).css;
-      const cCusp = toPaletteColor({ l: a.l, c: a.c, h: a.hue }, gamut).css;
-      const cHi = toPaletteColor({ l: 0.99, c: 0, h: a.hue }, gamut).css;
+      const cLo = css(0.04, 0, a.hue);
+      const cCusp = css(a.l, a.c, a.hue);
+      const cHi = css(0.99, 0, a.hue);
       const tCusp = 1 - a.l; // position of the cusp (white-at-center default)
       const cuspOff = ((rad(tCusp) / R) * 100).toFixed(1);
       defs += `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${CT}" cy="${CT}" r="${R}">
@@ -119,8 +124,8 @@ function buildBg(gamut: Gamut, axis: WheelAxis, flip: boolean): WheelBg {
 
 export function renderWheel(
   host: HTMLElement,
-  palette: PaletteColor[],
-  gamut: Gamut,
+  palette: OklchColor[],
+  lut: Lut,
   axis: WheelAxis = 'chroma',
   flip = false,
 ): void {
@@ -129,19 +134,19 @@ export function renderWheel(
     return;
   }
 
-  const bg = buildBg(gamut, axis, flip);
+  const bg = buildBg(lut, axis, flip);
   const rad = (t: number) => (flip ? 1 - t : t) * R;
   const radius =
     axis === 'chroma'
-      ? (col: PaletteColor) => rad(col.oklch.c / bg.maxCusp)
-      : (col: PaletteColor) => rad(1 - col.oklch.l);
-  const pts: Array<[number, number]> = palette.map((col) => pt(col.oklch.h, radius(col)));
+      ? (col: OklchColor) => rad(col.c / bg.maxCusp)
+      : (col: OklchColor) => rad(1 - col.l);
+  const pts: Array<[number, number]> = palette.map((col) => pt(col.h, radius(col)));
 
   let traj = '';
   for (let i = 0; i < pts.length - 1; i++) {
     const [x1, y1] = pts[i]!;
     const [x2, y2] = pts[i + 1]!;
-    traj += `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="${palette[i]!.css}" class="wheel-traj"/>`;
+    traj += `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="${cssOf(palette[i]!)}" class="wheel-traj"/>`;
   }
   const dots = pts.map(([x, y]) => `<circle cx="${f(x)}" cy="${f(y)}" r="4" class="wheel-dot"/>`).join('');
 
@@ -151,7 +156,7 @@ export function renderWheel(
   let cuspRings = '';
   let ringNote = '';
   if (axis === 'chroma') {
-    const cusps = palette.map((col) => cusp(col.oklch.h, gamut).c);
+    const cusps = palette.map((col) => cusp(col.h, lut).c);
     const minC = Math.min(...cusps);
     const maxC = Math.max(...cusps);
     const avgC = cusps.reduce((a, b) => a + b, 0) / cusps.length;
@@ -177,7 +182,7 @@ export function renderWheel(
 
   host.innerHTML = `
     <svg viewBox="0 0 ${SIZE} ${SIZE}" class="wheel-svg" role="img"
-         aria-label="Top view of all hues, ${axis} as radius, ${gamut}">
+         aria-label="Top view of all hues, ${axis} as radius, ${gamutTag(lut)}">
       <defs>
         <pattern id="wheelDots" width="22" height="22" patternUnits="userSpaceOnUse">
           <circle cx="2" cy="2" r="1" class="wheel-grid-dot"/>
@@ -187,7 +192,7 @@ export function renderWheel(
       ${cuspRings}
       ${traj}
       ${dots}
-      ${gamut === 'display-p3' ? `<text x="14" y="20" class="wheel-tag">P3</text>` : ''}
+      ${lut === oklchP3 ? `<text x="14" y="20" class="wheel-tag">P3</text>` : ''}
     </svg>
     <p class="slice-legend">${bg.legend}${ringNote}</p>`;
 }

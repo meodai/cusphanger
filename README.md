@@ -25,31 +25,35 @@ The knobs are the paper's:
 ## Install
 
 ```bash
-npm install cusphanger
+npm install cusphanger nutelch
 ```
+
+Gamut math is delegated to [nutelch](https://github.com/meodai/nutLCh) (LUT-backed, runtime
+dependency-free), so you pass the gamut **LUT** in (just like nutelch) — `oklchSrgb` or `oklchP3`.
 
 ## Usage
 
 ```ts
 import { sequential, diverging } from 'cusphanger';
+import { oklchSrgb, oklchP3, toCss } from 'nutelch';
 
 // single-hue sequential (paper, Table 1)
-sequential({ hStart: 260, total: 9, saturation: 0.6, brightness: 0.75, contrast: 0.88 });
+sequential({ hStart: 260, total: 9, saturation: 0.6, brightness: 0.75, contrast: 0.88, lut: oklchSrgb });
 
 // cool/warm multi-hue (Table 2)
-sequential({ hStart: 260, total: 9, coolWarm: 0.15 });
+sequential({ hStart: 260, total: 9, coolWarm: 0.15, lut: oklchSrgb });
 
 // diverging — two sequentials joined through a shared neutral
-diverging({ hStart: 250, hEnd: 30, total: 9 });
+diverging({ hStart: 250, hEnd: 30, total: 9, lut: oklchSrgb });
 
-// Display-P3 target
-sequential({ hStart: 260, total: 9, gamut: 'display-p3' });
+// Display-P3 target — just pass the P3 LUT
+sequential({ hStart: 260, total: 9, lut: oklchP3 });
 
 // lightness by endpoints instead of brightness/contrast (RampenSau-style lRange)
-sequential({ hStart: 260, total: 9, lRange: [0.25, 0.95] });
+sequential({ hStart: 260, total: 9, lRange: [0.25, 0.95], lut: oklchSrgb });
 
 // saturation as a (gamut-relative) range that varies across the ramp
-sequential({ hStart: 260, total: 9, sRange: [0, 1] }); // gray dark end → vivid light end
+sequential({ hStart: 260, total: 9, sRange: [0, 1], lut: oklchSrgb }); // gray dark → vivid light
 ```
 
 Option names follow RampenSau's conventions where they correspond (`total`, `hStart`/`hEnd`); the
@@ -61,15 +65,24 @@ paper-specific knobs keep their own names. Defaults follow the paper: `saturatio
 a bijection — the same lightness curve, with the paper's perceptual `0.2^x` spacing kept between the
 endpoints either way.
 
-Each color is returned as:
+Each color is the nutelch / culori-native OKLCH object:
 
 ```ts
-{ oklch: { l, c, h }, hex, css, inSrgb, inP3 }
+{ mode: 'oklch', l, c, h }
 ```
 
-`css` is `oklch(...)` for the sRGB target and `color(display-p3 ...)` for the P3 target.
+It's in-gamut by construction (clamped to the LUT's shell). To render it, hand it to nutelch's
+`toCss` — the browser renders `oklch()` natively and gamut-maps to the display:
 
-Also exported: `cusp(hue, gamut)` (the MSC), `maxChromaAt(hue, l, gamut)`, `toPaletteColor`, `oklchOf`.
+```ts
+el.style.background = toCss(palette[0]); // 'oklch(0.44 0.13 260)'
+```
+
+For a hex string or gamut flags (interchange, contrast math), use [culori](https://culorijs.org):
+`formatHex(color)`, `inGamut('rgb')(color)`.
+
+Also exported, both taking a nutelch LUT: `cusp(hue, lut)` (the MSC apex) and
+`maxChromaAt(hue, l, lut)` (the gamut shell at a lightness).
 
 ## Develop
 

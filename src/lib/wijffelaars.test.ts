@@ -1,11 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { inGamut } from 'culori';
 import { oklchSrgb } from 'nutelch';
 import { sequential } from './wijffelaars';
-import { cusp } from './gamut';
+import { cusp, maxChromaAt } from './gamut';
 
 const lut = oklchSrgb;
-const inSrgb = inGamut('rgb');
+// construction invariant: a color never exceeds the gamut shell it targets.
+// (We assert against the same nutelch LUT the lib clamps to — nutelch's accuracy
+// vs culori is checked separately in gamut.test.)
+const withinShell = (c: { l: number; c: number; h: number }) =>
+  c.c <= maxChromaAt(c.h, c.l, lut) + 1e-9;
 
 describe('sequential (paper, Table 1)', () => {
   it('returns the requested number of colors', () => {
@@ -35,7 +38,7 @@ describe('sequential (paper, Table 1)', () => {
   it('stays in gamut by construction (the triangle is inside the gamut)', () => {
     for (const hStart of [30, 120, 210, 300]) {
       const p = sequential({ hStart, total: 9, saturation: 0.8, lut });
-      expect(p.every((c) => inSrgb(c))).toBe(true);
+      expect(p.every(withinShell)).toBe(true);
     }
   });
 
@@ -97,6 +100,6 @@ describe('sequential (paper, Table 1)', () => {
     const min = sequential({ ...opts, triangleMode: 'min' });
     const maxC = (p: ReturnType<typeof sequential>) => Math.max(...p.map((x) => x.c));
     expect(maxC(min)).toBeLessThan(maxC(perHue));
-    expect(min.every((x) => inSrgb(x))).toBe(true);
+    expect(min.every(withinShell)).toBe(true);
   });
 });

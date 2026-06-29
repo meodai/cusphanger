@@ -1,10 +1,9 @@
-import {
-  maxChromaAt,
-  cusp,
-  toPaletteColor,
-  type PaletteColor,
-  type Gamut,
-} from '../lib/index';
+import { type OklchColor } from '../lib/index';
+import { maxChromaAt, cusp } from './gamut';
+import { oklchP3, type Lut } from 'nutelch';
+import { css } from './color';
+
+const gamutTag = (lut: Lut) => (lut === oklchP3 ? 'p3' : 'srgb');
 
 // Side view of the OKLCH gamut slice (chroma x lightness). With a single hue it
 // shows one (chroma vs lightness) cross-section; when the palette's start and
@@ -29,10 +28,10 @@ const angDiff = (a: number, b: number): number => {
   return d > 180 ? 360 - d : d;
 };
 
-function representativeHue(palette: PaletteColor[]): number {
+function representativeHue(palette: OklchColor[]): number {
   let best = palette[0]!;
-  for (const c of palette) if (c.oklch.c > best.oklch.c) best = c;
-  return best.oklch.h;
+  for (const c of palette) if (c.c > best.c) best = c;
+  return best.h;
 }
 
 function niceStep(max: number): number {
@@ -50,8 +49,8 @@ interface Side {
 
 export function renderSlice(
   host: HTMLElement,
-  palette: PaletteColor[],
-  gamut: Gamut,
+  palette: OklchColor[],
+  lut: Lut,
   forceMirror = false,
 ): void {
   if (!palette.length) {
@@ -59,13 +58,13 @@ export function renderSlice(
     return;
   }
 
-  const startHue = palette[0]!.oklch.h;
-  const endHue = palette[palette.length - 1]!.oklch.h;
+  const startHue = palette[0]!.h;
+  const endHue = palette[palette.length - 1]!.h;
   const mirror = forceMirror || angDiff(startHue, endHue) > 1;
 
   // include the palette's own max chroma so out-of-gamut points ('absolute'
   // mode) still fit inside the plot instead of falling off the edge.
-  const maxPC = palette.reduce((m, c) => Math.max(m, c.oklch.c), 0);
+  const maxPC = palette.reduce((m, c) => Math.max(m, c.c), 0);
 
   let sides: Side[];
   let pointSide: number[];
@@ -74,22 +73,22 @@ export function renderSlice(
 
   if (!mirror) {
     const hue = representativeHue(palette);
-    xMax = Math.max(cusp(hue, gamut).c, maxPC, 0.04) * 1.18;
+    xMax = Math.max(cusp(hue, lut).c, maxPC, 0.04) * 1.18;
     const cx = W / 2;
     const halfW = (W - 2 * 26) / 2;
     // real gamut on the left; the paper's straight-line triangle model mirrored
     // on the right, with its cusp tip — the approximation next to reality.
     sides = [{ hue, x0: cx, sign: -1, X: (c) => cx - (c / xMax) * halfW }];
     pointSide = palette.map(() => 0);
-    const peak = cusp(hue, gamut);
+    const peak = cusp(hue, lut);
     const tx = cx + (peak.c / xMax) * halfW;
     const ty = Y(peak.l);
     triModel = `<path d="M ${f(cx)},${f(Y(0))} L ${f(tx)},${f(ty)} L ${f(cx)},${f(Y(1))} Z" class="tri-model"/>
       <circle cx="${f(tx)}" cy="${f(ty)}" r="4" class="cusp"/>
       <text x="${f(tx + 7)}" y="${f(ty - 6)}" class="label" text-anchor="start">cusp ${peak.c.toFixed(3)}</text>`;
   } else {
-    const peakS = cusp(startHue, gamut);
-    const peakE = cusp(endHue, gamut);
+    const peakS = cusp(startHue, lut);
+    const peakE = cusp(endHue, lut);
     xMax = Math.max(peakS.c, peakE.c, maxPC, 0.04) * 1.18;
     const sp = 26;
     const cx = W / 2;
@@ -108,14 +107,14 @@ export function renderSlice(
     // key MUST encode the geometry (single vs mirror, anchor) — single-mode and
     // mirror-flap backgrounds can share gamut/mode/xMax/hue/sign yet differ in
     // layout, so omitting this collides them and stacks the flaps.
-    const key = `${gamut}|${mirror}|${drawTri}|${s.x0}|${s.sign}|${xMax.toFixed(4)}|${s.hue.toFixed(1)}`;
+    const key = `${gamutTag(lut)}|${mirror}|${drawTri}|${s.x0}|${s.sign}|${xMax.toFixed(4)}|${s.hue.toFixed(1)}`;
     const hit = sliceBgCache.get(key);
     if (hit) return hit;
 
-    const peak = cusp(s.hue, gamut);
+    const peak = cusp(s.hue, lut);
 
     const env: Array<[number, number]> = [];
-    for (let i = 0; i <= 96; i++) env.push([s.X(maxChromaAt(s.hue, i / 96, gamut)), Y(i / 96)]);
+    for (let i = 0; i <= 96; i++) env.push([s.X(maxChromaAt(s.hue, i / 96, lut)), Y(i / 96)]);
     const envLine = `M ${fmtPts(env)}`;
 
     // colored fill: per-lightness trapezoids from the center axis (neutral) out
@@ -123,7 +122,7 @@ export function renderSlice(
     // (no stepped edges) and pins its inner edge to the center axis, so the two
     // sides always meet cleanly at the center.
     const ROWS = 64;
-    const idBase = `sl-${gamut === 'display-p3' ? 'p' : 's'}-${Math.round(s.hue)}-${s.sign > 0 ? 'r' : 'l'}`;
+    const idBase = `sl-${lut === oklchP3 ? "p" : "s"}-${Math.round(s.hue)}-${s.sign > 0 ? 'r' : 'l'}`;
     const x0 = s.X(0);
     let grads = '';
     let polys = '';
@@ -131,12 +130,12 @@ export function renderSlice(
       const L0 = i / ROWS;
       const L1 = (i + 1) / ROWS;
       const Lm = (L0 + L1) / 2;
-      const maxC = maxChromaAt(s.hue, Lm, gamut);
+      const maxC = maxChromaAt(s.hue, Lm, lut);
       if (maxC <= 0) continue;
-      const xE0 = s.X(maxChromaAt(s.hue, L0, gamut));
-      const xE1 = s.X(maxChromaAt(s.hue, L1, gamut));
-      const cNeut = toPaletteColor({ l: Lm, c: 0, h: s.hue }, gamut).css;
-      const cEdge = toPaletteColor({ l: Lm, c: maxC, h: s.hue }, gamut).css;
+      const xE0 = s.X(maxChromaAt(s.hue, L0, lut));
+      const xE1 = s.X(maxChromaAt(s.hue, L1, lut));
+      const cNeut = css(Lm, 0, s.hue);
+      const cEdge = css(Lm, maxC, s.hue);
       const gid = `${idBase}-${i}`;
       grads += `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${f(x0)}" y1="0" x2="${f((xE0 + xE1) / 2)}" y2="0"><stop offset="0%" stop-color="${cNeut}"/><stop offset="100%" stop-color="${cEdge}"/></linearGradient>`;
       polys += `<polygon points="${f(x0)},${f(Y(L0))} ${f(xE0)},${f(Y(L0))} ${f(xE1)},${f(Y(L1))} ${f(x0)},${f(Y(L1))}" fill="url(#${gid})"/>`;
@@ -169,8 +168,8 @@ export function renderSlice(
   const path: Array<[number, number]> = [];
   palette.forEach((col, i) => {
     const s = sides[pointSide[i]!]!;
-    const { l, c } = col.oklch;
-    const maxC = maxChromaAt(s.hue, l, gamut);
+    const { l, c } = col;
+    const maxC = maxChromaAt(s.hue, l, lut);
     guides += `<line x1="${f(s.x0)}" y1="${f(Y(l))}" x2="${f(s.X(maxC))}" y2="${f(Y(l))}" class="guide"/>`;
     const x = s.X(c);
     path.push([x, Y(l)]);

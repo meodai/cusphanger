@@ -1,35 +1,40 @@
-import type { PaletteColor } from '../lib/index';
+import { maxChromaAt, type OklchColor } from '../lib/index';
+import { oklchSrgb } from 'nutelch';
 import { wcag, apca } from './contrast';
+import { cssOf, hexOf } from './color';
 
 // Pick black or white text for best WCAG contrast against the swatch.
 function textOn(hex: string): string {
   return wcag('#000000', hex) >= wcag('#ffffff', hex) ? '#000000' : '#ffffff';
 }
 
+// true when the color sits beyond the sRGB shell (i.e. a wide-gamut / P3 color).
+const outsideSrgb = (c: OklchColor): boolean => c.c > maxChromaAt(c.h, c.l, oklchSrgb) + 1e-6;
+
 // Compact full-width color band (no labels) — click expands the detail view.
-export function renderStrip(host: HTMLElement, palette: PaletteColor[]): void {
+export function renderStrip(host: HTMLElement, palette: OklchColor[]): void {
   host.innerHTML = palette
-    .map((c) => `<span class="palette-strip__cell" style="background:${c.css}"></span>`)
+    .map((c) => `<span class="palette-strip__cell" style="background:${cssOf(c)}"></span>`)
     .join('');
 }
 
-export function renderSwatches(host: HTMLElement, palette: PaletteColor[]): void {
+export function renderSwatches(host: HTMLElement, palette: OklchColor[]): void {
   host.innerHTML = '';
   for (const c of palette) {
-    const text = textOn(c.hex);
+    const hex = hexOf(c);
+    const text = textOn(hex);
     const el = document.createElement('div');
     el.className = 'swatch';
-    el.style.background = c.css;
+    el.style.background = cssOf(c);
     el.style.color = text;
 
-    const { l, c: chroma, h } = c.oklch;
-    const oklchStr = `oklch(${l.toFixed(3)} ${chroma.toFixed(3)} ${h.toFixed(1)})`;
-    const wc = wcag(text, c.hex).toFixed(1);
-    const ap = Math.abs(apca(text, c.hex)).toFixed(0);
-    const warn = c.inSrgb ? '' : '<span class="warn" title="outside sRGB">⚠︎</span>';
+    const oklchStr = `oklch(${c.l.toFixed(3)} ${c.c.toFixed(3)} ${c.h.toFixed(1)})`;
+    const wc = wcag(text, hex).toFixed(1);
+    const ap = Math.abs(apca(text, hex)).toFixed(0);
+    const warn = outsideSrgb(c) ? '<span class="warn" title="outside sRGB">⚠︎</span>' : '';
 
     el.innerHTML = `
-      <span>${c.hex}</span>
+      <span>${hex}</span>
       <span class="meta">
         <span>${oklchStr}</span>
         <span class="badge">WCAG ${wc}</span>
@@ -38,7 +43,7 @@ export function renderSwatches(host: HTMLElement, palette: PaletteColor[]): void
       </span>`;
     el.title = 'Click to copy CSS';
     el.addEventListener('click', () => {
-      void navigator.clipboard.writeText(c.css);
+      void navigator.clipboard.writeText(cssOf(c));
     });
     host.appendChild(el);
   }

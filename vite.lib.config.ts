@@ -12,8 +12,8 @@ export default defineConfig({
       fileName: 'cusphanger',
     },
     rollupOptions: {
-      external: ['culori'],
-      output: { globals: { culori: 'culori' } },
+      external: ['nutelch'],
+      output: { globals: { nutelch: 'nutelch' } },
     },
   },
 });
