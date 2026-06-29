@@ -1,6 +1,17 @@
+@font-face {
+  font-family: "Mekzantine";
+  src:
+    url("/fonts/mekzantine-regular.woff2") format("woff2"),
+    url("/fonts/mekzantine-regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light dark;
   font-family:
+    "Mekzantine",
     "Iosevka Web",
     ui-monospace,
     "SF Mono",
@@ -15,7 +26,7 @@
   --black: #292f2f;
   --bg: light-dark(var(--white), var(--black));
   --fg: light-dark(var(--black), var(--white));
-  --line: color-mix(in oklab, currentColor 20%, var(--bg));
+  --line: var(--fg);
   --ease: cubic-bezier(0.3, 0.7, 0, 1);
 
   /* aliases kept so the SVG slice + components resolve */
@@ -25,10 +36,13 @@
 
   background-color: var(--bg);
   color: var(--fg);
+  /*
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  */
+  text-rendering: geometricPrecision;
 }
 
 ::selection {
@@ -53,14 +67,14 @@ body {
   position: relative;
 }
 h1 {
-  font-size: 2rem;
+  font-size: 4rem;
   font-weight: 300;
   letter-spacing: -0.05em;
-  margin: 0 0 0.15rem;
+  margin: 0 0 0.15rem -0.05ex;
 }
 .sub {
   opacity: 0.7;
-  margin: 0 0 3.5rem;
+  margin: 0 0 3.5rem 2em;
   font-size: 1rem;
   max-width: 55ch;
   font-weight: 300;
@@ -80,7 +94,7 @@ h1 {
   min-width: 0;
 }
 .header .sub {
-  margin: 0;
+  margin: .5em 0 0;
 }
 .header-controls {
   display: flex;
@@ -154,8 +168,8 @@ h1 {
   font: inherit;
   font-size: 0.78rem;
   letter-spacing: 0.02em;
-  text-transform: lowercase;
-  padding: 0.6rem 0.8rem;
+  text-transform: capitalize;
+  padding: 0.65rem 0.8rem 0.6rem;
   background: var(--bg);
   color: inherit;
   border: 0;
