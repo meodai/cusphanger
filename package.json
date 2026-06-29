@@ -35,6 +35,6 @@
     "vitest": "^2.1.0"
   },
   "dependencies": {
-    "nutelch": "file:../nutLCh"
+    "nutelch": "^0.2.0"
   }
 }
