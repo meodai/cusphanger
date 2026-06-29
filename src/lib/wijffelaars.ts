@@ -1,6 +1,8 @@
 import { cusp, maxChromaAt } from './gamut';
-import { toPaletteColor, oklchOf } from './color';
-import type { Gamut, PaletteColor, SequentialOptions, DivergingOptions } from './types';
+import type { Gamut, OklchColor, SequentialOptions, DivergingOptions } from './types';
+
+// OKLCH of the paper's 'bright point' (sRGB yellow #ffff00) — Table 2 default.
+const BRIGHT_POINT = { l: 0.968, c: 0.211, h: 109.77 };
 
 // Faithful port of Wijffelaars, Vliegen, van Wijk & van der Linden (2008),
 // "Generating Color Palettes using Intuitive Parameters" (Computer Graphics
@@ -82,7 +84,7 @@ function buildTriangle(hue: number, s: number, w: number, gamut: Gamut): Tri {
   // top point p2 — white, or shifted toward the bright point (yellow) for w > 0
   let p2: LCH;
   if (w > 0) {
-    const pb = oklchOf('#ffff00'); // bright point (yellow), Table 2 default
+    const pb = BRIGHT_POINT; // bright point (yellow), Table 2 default
     const M = ((((180 + pb.h - hue) % 360) + 360) % 360) - 180; // shortest hue path
     const p2L = (1 - w) * 1 + w * pb.l;
     const p2H = hue + w * M;
@@ -138,7 +140,7 @@ function tForLightness(l: number, tri: Tri): number {
 
 // Single-hue (or cool/warm multi-hue) sequential palette, dark → light.
 // With hCycles ≠ 0, each color is the paper's ramp for its own rotated hue.
-export function sequential(o: SequentialOptions): PaletteColor[] {
+export function sequential(o: SequentialOptions): OklchColor[] {
   const {
     hStart,
     total: N,
@@ -196,7 +198,7 @@ export function sequential(o: SequentialOptions): PaletteColor[] {
   // shared modes overlay each color's own hue, so cool/warm can't shift the
   // triangle toward yellow. Instead it nudges the light colors' hues toward the
   // bright point — the same "only the light end warms" behaviour as the paper.
-  const warmHue = isShared && w > 0 ? oklchOf('#ffff00').h : null;
+  const warmHue = isShared && w > 0 ? BRIGHT_POINT.h : null;
 
   // build the triangle once when nothing varies it (constant s + single hue);
   // otherwise it is rebuilt per color (sRange and/or hCycles).
@@ -205,7 +207,7 @@ export function sequential(o: SequentialOptions): PaletteColor[] {
   const baseTri =
     !isShared && hCycles === 0 && sConst ? buildTriangle(hStart, sBase, w, gamut) : null;
 
-  const out: PaletteColor[] = [];
+  const out: OklchColor[] = [];
   for (let i = 0; i < N; i++) {
     const t = N <= 1 ? 0 : i / (N - 1);
     const sI = sAt(t);
@@ -234,14 +236,14 @@ export function sequential(o: SequentialOptions): PaletteColor[] {
     // the straight triangle edges can poke just outside the real OKLCH gamut;
     // clamp chroma to the boundary (the paper's "little clamping").
     const c2 = Math.min(Math.max(0, col.c), maxChromaAt(h, col.l, gamut));
-    out.push(toPaletteColor({ l: col.l, c: c2, h }, gamut));
+    out.push({ mode: 'oklch', l: col.l, c: c2, h });
   }
   return out;
 }
 
 // Diverging: two sequential palettes concatenated through a shared neutral point
 // (the paper's construction).
-export function diverging(o: DivergingOptions): PaletteColor[] {
+export function diverging(o: DivergingOptions): OklchColor[] {
   const { hStart, hEnd, total: N, gamut = 'srgb' } = o;
   const isOdd = N % 2 === 1;
   const side = Math.floor(N / 2); // saturated colors per arm (excluding the center)

@@ -1,29 +1,13 @@
-import { clampChroma } from 'culori';
+import { cusp as shell, oklchSrgb, oklchP3 } from 'nutelch';
 import type { Gamut } from './types';
 
-const RGB_GAMUT: Record<Gamut, string> = {
-  srgb: 'rgb',
-  'display-p3': 'p3',
-};
+const lutFor = (gamut: Gamut) => (gamut === 'display-p3' ? oklchP3 : oklchSrgb);
 
-const CHROMA_CEILING = 0.5; // above the true OKLCH max for any sRGB/P3 hue
-
-const chromaCache = new Map<string, number>();
-
+// Max in-gamut chroma at (hue, l) — the gamut shell, from nutelch's LUT.
 export function maxChromaAt(hue: number, l: number, gamut: Gamut = 'srgb'): number {
   if (l <= 0 || l >= 1) return 0;
   const h = ((hue % 360) + 360) % 360;
-  const key = `${gamut}:${h.toFixed(2)}:${l.toFixed(4)}`;
-  const cached = chromaCache.get(key);
-  if (cached !== undefined) return cached;
-  const clamped = clampChroma(
-    { mode: 'oklch', l, c: CHROMA_CEILING, h },
-    'oklch',
-    RGB_GAMUT[gamut],
-  );
-  const value = clamped.c ?? 0;
-  chromaCache.set(key, value);
-  return value;
+  return shell({ lut: lutFor(gamut), l, h }).c;
 }
 
 const cuspCache = new Map<string, { l: number; c: number }>();

@@ -7,18 +7,15 @@ export type Gamut = 'srgb' | 'display-p3';
 //   paper's open "equal colorfulness" idea.
 export type TriangleMode = 'perHue' | 'min' | 'avg' | 'max';
 
-export interface Oklch {
+// A color is the culori / nutelch-native OKLCH object. Hand it to `toCss()` (or
+// any culori formatter) for a string — the browser renders `oklch()` natively
+// and gamut-maps to the display. Palette colors are in-gamut by construction
+// (clamped to the target gamut's shell during generation).
+export interface OklchColor {
+  mode: 'oklch';
   l: number; // 0..1
   c: number; // >= 0
   h: number; // 0..360
-}
-
-export interface PaletteColor {
-  oklch: Oklch;
-  hex: string; // sRGB hex, gamut-clamped (always renderable)
-  css: string; // 'oklch(...)' for srgb target; 'color(display-p3 ...)' for p3 target
-  inSrgb: boolean;
-  inP3: boolean;
 }
 
 // Wijffelaars, Vliegen, van Wijk & van der Linden (2008), single-hue sequential
