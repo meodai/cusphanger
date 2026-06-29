@@ -1,5 +1,5 @@
 import { cusp, maxChromaAt } from './gamut';
-import type { Gamut, OklchColor, SequentialOptions, DivergingOptions } from './types';
+import type { Lut, OklchColor, SequentialOptions, DivergingOptions } from './types';
 
 // OKLCH of the paper's 'bright point' (sRGB yellow #ffff00) — Table 2 default.
 const BRIGHT_POINT = { l: 0.968, c: 0.211, h: 109.77 };
@@ -62,8 +62,8 @@ function bcFromLRange([a, z]: [number, number]): { b: number; c: number } {
 
 // S_max: the triangle (linear) approximation of the max chroma at lightness l
 // for hue h' — the chroma along the black→MSC or MSC→white edge (Table 2).
-function triangleChromaAt(l: number, hue: number, gamut: Gamut): number {
-  const peak = cusp(hue, gamut);
+function triangleChromaAt(l: number, hue: number, lut: Lut): number {
+  const peak = cusp(hue, lut);
   if (l <= peak.l) return peak.l <= 0 ? 0 : (l / peak.l) * peak.c;
   return peak.l >= 1 ? 0 : ((1 - l) / (1 - peak.l)) * peak.c;
 }
@@ -76,8 +76,8 @@ interface Tri {
   p2: LCH;
 }
 
-function buildTriangle(hue: number, s: number, w: number, gamut: Gamut): Tri {
-  const peak = cusp(hue, gamut);
+function buildTriangle(hue: number, s: number, w: number, lut: Lut): Tri {
+  const peak = cusp(hue, lut);
   const p0: LCH = { l: 0, c: 0, h: hue }; // black
   const p1: LCH = { l: peak.l, c: peak.c, h: hue }; // MSC(h)
 
@@ -88,7 +88,7 @@ function buildTriangle(hue: number, s: number, w: number, gamut: Gamut): Tri {
     const M = ((((180 + pb.h - hue) % 360) + 360) % 360) - 180; // shortest hue path
     const p2L = (1 - w) * 1 + w * pb.l;
     const p2H = hue + w * M;
-    const p2C = Math.min(triangleChromaAt(p2L, ((p2H % 360) + 360) % 360, gamut), w * s * pb.c);
+    const p2C = Math.min(triangleChromaAt(p2L, ((p2H % 360) + 360) % 360, lut), w * s * pb.c);
     p2 = { l: p2L, c: p2C, h: p2H };
   } else {
     p2 = { l: 1, c: 0, h: hue }; // white
@@ -150,7 +150,7 @@ export function sequential(o: SequentialOptions): OklchColor[] {
     hEasing = (t) => t,
     sEasing = (t) => t,
     triangleMode = 'perHue',
-    gamut = 'srgb',
+    lut,
   } = o;
   // lightness sampling: lRange (RampenSau-style endpoints) wins when given,
   // otherwise the paper's brightness/contrast (b/c).
@@ -180,7 +180,7 @@ export function sequential(o: SequentialOptions): OklchColor[] {
     const cusps: Array<{ l: number; c: number }> = [];
     for (let i = 0; i < N; i++) {
       const t = N <= 1 ? 0 : i / (N - 1);
-      cusps.push(cusp(((hueAt(t) % 360) + 360) % 360, gamut));
+      cusps.push(cusp(((hueAt(t) % 360) + 360) % 360, lut));
     }
     if (triangleMode === 'min') sharedCusp = cusps.reduce((a, p) => (p.c < a.c ? p : a));
     else if (triangleMode === 'max') sharedCusp = cusps.reduce((a, p) => (p.c > a.c ? p : a));
@@ -205,7 +205,7 @@ export function sequential(o: SequentialOptions): OklchColor[] {
   const sharedTri =
     isShared && sConst ? buildTriangleFromCusp(sharedCusp!.l, sharedCusp!.c, sBase) : null;
   const baseTri =
-    !isShared && hCycles === 0 && sConst ? buildTriangle(hStart, sBase, w, gamut) : null;
+    !isShared && hCycles === 0 && sConst ? buildTriangle(hStart, sBase, w, lut) : null;
 
   const out: OklchColor[] = [];
   for (let i = 0; i < N; i++) {
@@ -216,7 +216,7 @@ export function sequential(o: SequentialOptions): OklchColor[] {
       baseTri ??
       (isShared
         ? buildTriangleFromCusp(sharedCusp!.l, sharedCusp!.c, sI)
-        : buildTriangle(hueAt(t), sI, w, gamut));
+        : buildTriangle(hueAt(t), sI, w, lut));
     const targetL = Math.min(tri.p2.l, Math.max(tri.p0.l, lightnessAt(t, b, c)));
     const col = cSeq(tForLightness(targetL, tri), tri);
 
@@ -235,7 +235,7 @@ export function sequential(o: SequentialOptions): OklchColor[] {
 
     // the straight triangle edges can poke just outside the real OKLCH gamut;
     // clamp chroma to the boundary (the paper's "little clamping").
-    const c2 = Math.min(Math.max(0, col.c), maxChromaAt(h, col.l, gamut));
+    const c2 = Math.min(Math.max(0, col.c), maxChromaAt(h, col.l, lut));
     out.push({ mode: 'oklch', l: col.l, c: c2, h });
   }
   return out;
@@ -244,7 +244,7 @@ export function sequential(o: SequentialOptions): OklchColor[] {
 // Diverging: two sequential palettes concatenated through a shared neutral point
 // (the paper's construction).
 export function diverging(o: DivergingOptions): OklchColor[] {
-  const { hStart, hEnd, total: N, gamut = 'srgb' } = o;
+  const { hStart, hEnd, total: N, lut } = o;
   const isOdd = N % 2 === 1;
   const side = Math.floor(N / 2); // saturated colors per arm (excluding the center)
   const common = {
@@ -255,7 +255,7 @@ export function diverging(o: DivergingOptions): OklchColor[] {
     contrast: o.contrast,
     lRange: o.lRange,
     coolWarm: o.coolWarm,
-    gamut,
+    lut,
   };
   // each arm is dark(saturated) -> light(neutral); the last entry is the neutral center
   const left = sequential({ hStart, ...common });

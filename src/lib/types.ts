@@ -1,4 +1,8 @@
-export type Gamut = 'srgb' | 'display-p3';
+import type { Lut } from 'nutelch';
+
+// Re-exported so callers can type the LUT they pass (import the VALUES —
+// `oklchSrgb` / `oklchP3` — from 'nutelch' directly).
+export type { Lut } from 'nutelch';
 
 // For multi-hue ramps (hCycles): which gamut triangle each color rides toward.
 // - 'perHue': each color uses its own hue's cusp (faithful; chroma peaks).
@@ -44,7 +48,7 @@ export interface SequentialOptions {
   hStartCenter?: number; // where hStart sits in the ramp (0..1). default 0.5
   hEasing?: (t: number) => number; // hue easing. default linear
   triangleMode?: TriangleMode; // chroma envelope for multi-hue ramps. default 'perHue'
-  gamut?: Gamut;
+  lut: Lut; // a nutelch OKLCH LUT (oklchSrgb / oklchP3) — which gamut to target
 }
 
 // Diverging: two sequential palettes joined through a shared neutral point.
@@ -58,6 +62,6 @@ export interface DivergingOptions {
   contrast?: number;
   lRange?: [number, number]; // alternative to brightness/contrast (see SequentialOptions)
   coolWarm?: number;
-  gamut?: Gamut;
+  lut: Lut; // a nutelch OKLCH LUT (oklchSrgb / oklchP3) — which gamut to target
 }
 

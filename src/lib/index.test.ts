@@ -7,10 +7,8 @@ describe('public api', () => {
     expect(typeof api.diverging).toBe('function');
   });
 
-  it('exports the gamut + color helpers', () => {
+  it('exports the gamut helpers', () => {
     expect(typeof api.maxChromaAt).toBe('function');
     expect(typeof api.cusp).toBe('function');
-    expect(typeof api.toPaletteColor).toBe('function');
-    expect(typeof api.oklchOf).toBe('function');
   });
 });
