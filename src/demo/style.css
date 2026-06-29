@@ -113,7 +113,7 @@ h1 {
   margin-top: 3.5rem;
   max-width: 68ch;
   font-weight: 300;
-  font-size: 0.9rem;
+  font-size: 1rem;
   opacity: 0.7;
   line-height: 1.6;
 }
@@ -129,8 +129,9 @@ h1 {
   text-underline-offset: 2px;
 }
 .about .cite {
-  font-size: 0.8rem;
+  font-size: 1rem;
   opacity: 0.85;
+  margin-top: 1.5rem;
 }
 .about__nerd {
   margin-top: 1.25rem;
