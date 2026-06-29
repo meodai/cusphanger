@@ -29,8 +29,16 @@ export interface SequentialOptions {
   total: number; // N — number of colors
   hStart: number; // h — base hue
   saturation?: number; // s — Bézier tension (0 = gray ramp, 1 = through the cusp). default 0.6
+  // Alternative to `saturation`: vary the (gamut-relative) tension across the
+  // ramp (RampenSau-style sRange). Wins when given. [sMin, sMax], 0..1.
+  sRange?: [number, number];
+  sEasing?: (t: number) => number; // easing for sRange. default linear
   brightness?: number; // b — start of the lightness curve. default 0.75
   contrast?: number; // c — lightness span. default min(0.88, 0.34 + 0.06·total)
+  // Alternative to brightness/contrast: set the lightness endpoints directly
+  // (RampenSau-style lRange). Wins when given; the paper's perceptual 0.2^x
+  // spacing is kept between the endpoints. [minLight, maxLight], 0..1.
+  lRange?: [number, number];
   coolWarm?: number; // w — the paper's multi-hue shift of the light end toward yellow. default 0
   // RampenSau-style hue trajectory (an EXTENSION beyond the paper): each color is
   // the paper's single-hue ramp for its own rotated hue, so it stays faithful.
@@ -48,8 +56,10 @@ export interface DivergingOptions {
   hStart: number; // left-arm hue
   hEnd: number; // right-arm hue
   saturation?: number;
+  sRange?: [number, number]; // alternative to saturation (see SequentialOptions)
   brightness?: number;
   contrast?: number;
+  lRange?: [number, number]; // alternative to brightness/contrast (see SequentialOptions)
   coolWarm?: number;
   gamut?: Gamut;
 }

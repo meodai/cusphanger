@@ -44,11 +44,22 @@ diverging({ hStart: 250, hEnd: 30, total: 9 });
 
 // Display-P3 target
 sequential({ hStart: 260, total: 9, gamut: 'display-p3' });
+
+// lightness by endpoints instead of brightness/contrast (RampenSau-style lRange)
+sequential({ hStart: 260, total: 9, lRange: [0.25, 0.95] });
+
+// saturation as a (gamut-relative) range that varies across the ramp
+sequential({ hStart: 260, total: 9, sRange: [0, 1] }); // gray dark end → vivid light end
 ```
 
 Option names follow RampenSau's conventions where they correspond (`total`, `hStart`/`hEnd`); the
 paper-specific knobs keep their own names. Defaults follow the paper: `saturation = 0.6`,
 `brightness = 0.75`, `contrast = min(0.88, 0.34 + 0.06·total)`, `coolWarm = 0`.
+
+**Lightness — two equivalent knobs.** `brightness`/`contrast` are the paper's `b`/`c`; `lRange:
+[minLight, maxLight]` sets the two endpoints directly (RampenSau-style) and wins when given. They're
+a bijection — the same lightness curve, with the paper's perceptual `0.2^x` spacing kept between the
+endpoints either way.
 
 Each color is returned as:
 

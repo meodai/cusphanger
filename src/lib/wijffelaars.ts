@@ -43,6 +43,21 @@ const lightnessAt = (t: number, b: number, c: number): number => {
   return Math.min(1, Math.max(0, luv / 100));
 };
 
+// Inverse of L(t)'s curve: the exponent x that yields a given OKLCH lightness.
+const lightnessToX = (L: number): number =>
+  Math.log(1 - 0.8 * Math.min(1, Math.max(0, L))) / Math.log(0.2);
+
+// Convert an [minLight, maxLight] range into the paper's (b, c), so lRange and
+// brightness/contrast are two views of the same lightness curve (the 0.2^x
+// perceptual spacing between the endpoints is identical either way).
+function bcFromLRange([a, z]: [number, number]): { b: number; c: number } {
+  const xMin = lightnessToX(Math.min(a, z));
+  const xMax = lightnessToX(Math.max(a, z));
+  const c = Math.max(0, Math.min(1, xMax - xMin));
+  const b = c >= 1 ? 0 : xMin / (1 - c);
+  return { b, c };
+}
+
 // S_max: the triangle (linear) approximation of the max chroma at lightness l
 // for hue h' — the chroma along the black→MSC or MSC→white edge (Table 2).
 function triangleChromaAt(l: number, hue: number, gamut: Gamut): number {
@@ -127,22 +142,37 @@ export function sequential(o: SequentialOptions): PaletteColor[] {
   const {
     hStart,
     total: N,
-    saturation: s = 0.6,
-    brightness: b = 0.75,
     coolWarm: w = 0,
     hCycles = 0,
     hStartCenter = 0.5,
     hEasing = (t) => t,
+    sEasing = (t) => t,
     triangleMode = 'perHue',
     gamut = 'srgb',
   } = o;
-  const c = o.contrast ?? Math.min(0.88, 0.34 + 0.06 * N);
+  // lightness sampling: lRange (RampenSau-style endpoints) wins when given,
+  // otherwise the paper's brightness/contrast (b/c).
+  let b: number;
+  let c: number;
+  if (o.lRange) {
+    ({ b, c } = bcFromLRange(o.lRange));
+  } else {
+    b = o.brightness ?? 0.75;
+    c = o.contrast ?? Math.min(0.88, 0.34 + 0.06 * N);
+  }
+  // saturation = Bézier tension. sRange varies it across the ramp (RampenSau-
+  // style); otherwise the single `saturation` is used for every color.
+  const sBase = o.saturation ?? 0.6;
+  const sConst = !o.sRange;
+  const sAt = (t: number): number =>
+    sConst ? sBase : o.sRange![0] + (o.sRange![1] - o.sRange![0]) * sEasing(t);
+
   const hueAt = (t: number) => hStart + 360 * hCycles * (hEasing(t) - hStartCenter);
 
   // 'min'/'avg'/'max' share one triangle across the ramp's hues, so colorfulness
-  // is even (no chroma peaks). It's built from the min/avg/max cusp of those
+  // is even (no chroma peaks). The shared cusp is the min/avg/max cusp of those
   // hues; each color keeps its own hue. cool/warm (w) only applies in 'perHue'.
-  let sharedTri: Tri | null = null;
+  let sharedCusp: { l: number; c: number } | null = null;
   let sharedCuspL = 0;
   if (triangleMode !== 'perHue') {
     const cusps: Array<{ l: number; c: number }> = [];
@@ -150,37 +180,46 @@ export function sequential(o: SequentialOptions): PaletteColor[] {
       const t = N <= 1 ? 0 : i / (N - 1);
       cusps.push(cusp(((hueAt(t) % 360) + 360) % 360, gamut));
     }
-    let sc: { l: number; c: number };
-    if (triangleMode === 'min') sc = cusps.reduce((a, p) => (p.c < a.c ? p : a));
-    else if (triangleMode === 'max') sc = cusps.reduce((a, p) => (p.c > a.c ? p : a));
+    if (triangleMode === 'min') sharedCusp = cusps.reduce((a, p) => (p.c < a.c ? p : a));
+    else if (triangleMode === 'max') sharedCusp = cusps.reduce((a, p) => (p.c > a.c ? p : a));
     else {
       const n = cusps.length || 1;
-      sc = {
+      sharedCusp = {
         l: cusps.reduce((sum, p) => sum + p.l, 0) / n,
         c: cusps.reduce((sum, p) => sum + p.c, 0) / n,
       };
     }
-    sharedCuspL = sc.l;
-    sharedTri = buildTriangleFromCusp(sc.l, sc.c, s);
+    sharedCuspL = sharedCusp.l;
   }
+  const isShared = sharedCusp !== null;
 
   // shared modes overlay each color's own hue, so cool/warm can't shift the
   // triangle toward yellow. Instead it nudges the light colors' hues toward the
   // bright point — the same "only the light end warms" behaviour as the paper.
-  const warmHue = sharedTri && w > 0 ? oklchOf('#ffff00').h : null;
+  const warmHue = isShared && w > 0 ? oklchOf('#ffff00').h : null;
 
-  // single hue (perHue + hCycles 0) -> build the triangle once
-  const baseTri = !sharedTri && hCycles === 0 ? buildTriangle(hStart, s, w, gamut) : null;
+  // build the triangle once when nothing varies it (constant s + single hue);
+  // otherwise it is rebuilt per color (sRange and/or hCycles).
+  const sharedTri =
+    isShared && sConst ? buildTriangleFromCusp(sharedCusp!.l, sharedCusp!.c, sBase) : null;
+  const baseTri =
+    !isShared && hCycles === 0 && sConst ? buildTriangle(hStart, sBase, w, gamut) : null;
 
   const out: PaletteColor[] = [];
   for (let i = 0; i < N; i++) {
     const t = N <= 1 ? 0 : i / (N - 1);
-    const tri = sharedTri ?? baseTri ?? buildTriangle(hueAt(t), s, w, gamut);
+    const sI = sAt(t);
+    const tri =
+      sharedTri ??
+      baseTri ??
+      (isShared
+        ? buildTriangleFromCusp(sharedCusp!.l, sharedCusp!.c, sI)
+        : buildTriangle(hueAt(t), sI, w, gamut));
     const targetL = Math.min(tri.p2.l, Math.max(tri.p0.l, lightnessAt(t, b, c)));
     const col = cSeq(tForLightness(targetL, tri), tri);
 
     let h: number;
-    if (sharedTri) {
+    if (isShared) {
       h = ((hueAt(t) % 360) + 360) % 360;
       if (warmHue !== null) {
         // weight 0 below the shared cusp, ramping to 1 at white (the top point)
@@ -209,8 +248,10 @@ export function diverging(o: DivergingOptions): PaletteColor[] {
   const common = {
     total: side + 1,
     saturation: o.saturation,
+    sRange: o.sRange,
     brightness: o.brightness,
     contrast: o.contrast,
+    lRange: o.lRange,
     coolWarm: o.coolWarm,
     gamut,
   };

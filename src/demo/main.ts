@@ -75,9 +75,10 @@ const TABS: Tab[] = [
       { key: 'total', label: 'total (N)', min: 2, max: 24, step: 1, value: 9 },
       { key: 'hCycles', label: 'hCycles', min: -2, max: 2, step: 0.05, value: 0.3 },
       { key: 'hStartCenter', label: 'hStartCenter', min: 0, max: 1, step: 0.01, value: 0.5 },
-      { key: 's', label: 'saturation (s)', min: 0, max: 1, step: 0.01, value: 0.7 },
-      { key: 'b', label: 'brightness (b)', min: 0, max: 1, step: 0.01, value: 0.75 },
-      { key: 'c', label: 'contrast (c)', min: 0, max: 1, step: 0.01, value: 0.88 },
+      { key: 'sMin', label: 'sMin', min: 0, max: 1, step: 0.01, value: 0.5 },
+      { key: 'sMax', label: 'sMax', min: 0, max: 1, step: 0.01, value: 0.9 },
+      { key: 'minLight', label: 'minLight', min: 0, max: 0.6, step: 0.01, value: 0.2 },
+      { key: 'maxLight', label: 'maxLight', min: 0.5, max: 1, step: 0.01, value: 0.97 },
       { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
     ],
     choices: [
@@ -85,11 +86,12 @@ const TABS: Tab[] = [
       { key: 'triangleMode', label: 'triangle', options: ['perHue', 'min', 'avg', 'max'], value: 'perHue' },
     ],
     // the paper's sequential + a RampenSau-style hue trajectory (each color is
-    // the paper's ramp for its own rotated hue). triangleMode evens colorfulness.
+    // the paper's ramp for its own rotated hue). triangleMode evens colorfulness;
+    // saturation (sRange) and lightness (lRange) are RampenSau-style ranges here.
     build: (v, c, gamut) =>
       sequential({
-        hStart: v.hStart!, total: v.total!, saturation: v.s!,
-        brightness: v.b!, contrast: v.c!, coolWarm: v.w!,
+        hStart: v.hStart!, total: v.total!,
+        sRange: [v.sMin!, v.sMax!], lRange: [v.minLight!, v.maxLight!], coolWarm: v.w!,
         hCycles: v.hCycles!, hStartCenter: v.hStartCenter!, hEasing: HUE_EASINGS[c.hEasing!],
         triangleMode: c.triangleMode as TriangleMode,
         gamut,

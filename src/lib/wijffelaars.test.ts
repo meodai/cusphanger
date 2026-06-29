@@ -45,6 +45,35 @@ describe('sequential (paper, Table 1)', () => {
     expect(first(13)).toBeLessThan(first(3));
   });
 
+  it('sRange varies the tension across the ramp (and equals saturation when flat)', () => {
+    // a flat sRange reproduces the single saturation, color-for-color
+    const single = sequential({ hStart: 260, total: 9, saturation: 0.5 });
+    const flat = sequential({ hStart: 260, total: 9, sRange: [0.5, 0.5] });
+    expect(flat.map((c) => c.hex)).toEqual(single.map((c) => c.hex));
+
+    // rising [0→1]: gray dark end, saturated light end. falling [1→0]: the reverse.
+    const rising = sequential({ hStart: 260, total: 9, sRange: [0, 1] });
+    const falling = sequential({ hStart: 260, total: 9, sRange: [1, 0] });
+    expect(rising[0]!.oklch.c).toBeLessThan(falling[0]!.oklch.c);
+    expect(rising.at(-1)!.oklch.c).toBeGreaterThan(falling.at(-1)!.oklch.c);
+  });
+
+  it('lRange sets the lightness endpoints directly', () => {
+    const p = sequential({ hStart: 260, total: 9, lRange: [0.25, 0.95] });
+    expect(p[0]!.oklch.l).toBeCloseTo(0.25, 2);
+    expect(p[p.length - 1]!.oklch.l).toBeCloseTo(0.95, 2);
+  });
+
+  it('lRange and brightness/contrast are the same parameterization', () => {
+    // a b/c palette has some endpoint lightnesses; feeding those as lRange
+    // must reproduce it color-for-color (the bijection).
+    const bc = sequential({ hStart: 260, total: 9, brightness: 0.7, contrast: 0.8 });
+    const lo = bc[0]!.oklch.l;
+    const hi = bc[bc.length - 1]!.oklch.l;
+    const viaRange = sequential({ hStart: 260, total: 9, lRange: [lo, hi] });
+    viaRange.forEach((col, i) => expect(col.oklch.l).toBeCloseTo(bc[i]!.oklch.l, 4));
+  });
+
   it('hCycles = 0 collapses to a single hue (matches the paper exactly)', () => {
     const base = sequential({ hStart: 260, total: 9 });
     const withCycles0 = sequential({ hStart: 260, total: 9, hCycles: 0 });
