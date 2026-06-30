@@ -29,6 +29,8 @@
   --line: var(--fg);
   --ease: cubic-bezier(0.3, 0.7, 0, 1);
 
+  --s-line: 2px;
+
   /* aliases kept so the SVG slice + components resolve */
   --text: var(--fg);
   --panel: var(--bg);
@@ -190,13 +192,31 @@ h1 {
   color: var(--bg);
 }
 
-/* full-width palette strip + expandable detail — at the very end */
 .palette {
-  position: absolute;
-  inset: -1.5rem;
+  position: fixed;  
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 15vw;
+  &::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--dither-w, 10rem);
+    /* binary Bayer dither (src/demo/dither.ts) used as an alpha MASK — the SVG
+       only defines the squares, the colour is the theme bg (so it follows
+       light/dark). Solid at the right edge, loosening to nothing left; tiled down. */
+    background: var(--bg);
+    -webkit-mask: var(--dither-bg) repeat-y;
+    mask: var(--dither-bg) repeat-y;
+    pointer-events: none;
+  }
 }
 .palette-strip {
   display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   padding: 0;

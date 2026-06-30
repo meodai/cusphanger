@@ -4,6 +4,10 @@ import { buildControls, type FieldSpec, type ChoiceSpec } from './controls';
 import { renderSwatches, renderStrip } from './swatches';
 import { renderSlice } from './slice';
 import { renderWheel, type WheelAxis } from './wheel';
+import { ditherSvg } from './dither';
+
+// the loosening dither strip at the palette edge (configurable: svg width + square size)
+const DITHER = { width: 160, square: 2, color: '#000' };
 
 // hue-trajectory easings for the Ramp tab (RampenSau-style hue cycling).
 const HUE_EASINGS: Record<string, (t: number) => number> = {
@@ -112,13 +116,6 @@ function render(app: HTMLElement): void {
       </div>
     </header>
     <div class="stage">
-    <div class="palette">
-      <button class="palette-strip" type="button" aria-expanded="false" title="Show color details"></button>
-      <div class="palette-detail" hidden>
-        <div class="swatches"></div>
-        <p class="hint">Click a swatch to copy its CSS. ⚠︎ marks colors outside the sRGB gamut.</p>
-      </div>
-    </div>
     <nav class="tabs"></nav>
     <section class="panel">
     <div class="controls"></div>
@@ -166,7 +163,20 @@ function render(app: HTMLElement): void {
       Color Palettes using Intuitive Parameters”</a> (Computer Graphics Forum 27:3, 2008). Also
       inspired by <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener">Matt
       DesLauriers's OKLCH take</a> on the same paper.</p>
-    </section>`;
+    </section>
+    <div class="palette">
+      <button class="palette-strip" type="button" aria-expanded="false" title="Show color details"></button>
+      <div class="palette-detail" hidden>
+        <div class="swatches"></div>
+        <p class="hint">Click a swatch to copy its CSS. ⚠︎ marks colors outside the sRGB gamut.</p>
+      </div>
+    </div>
+    `;
+
+  // generate the dither strip SVG and hand it to the .palette::after via vars
+  const paletteEl = app.querySelector('.palette') as HTMLElement;
+  paletteEl.style.setProperty('--dither-bg', ditherSvg(DITHER));
+  paletteEl.style.setProperty('--dither-w', `${DITHER.width}px`);
 
   const tabsNav = app.querySelector('.tabs') as HTMLElement;
   const controlsHost = app.querySelector('.controls') as HTMLElement;
