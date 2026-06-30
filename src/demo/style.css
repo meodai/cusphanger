@@ -155,7 +155,7 @@ h1 {
   display: flex;
   margin-bottom: 0;
   transform: translateY(50%);
-  padding-left: calc(220px + 2rem);
+  margin-left: calc(220px + 3rem);
 }
 .tabs span {
   display: inline-block;
@@ -329,7 +329,6 @@ position: relative;
   display: inline-block;
   padding: 0.1rem 0.3rem;
   background: var(--bg);
-
 }
 
 
@@ -386,8 +385,7 @@ position: relative;
   color: inherit;
   border: 2px solid currentColor;
 }
-/* gamut toggle: a <label> styled like a slider box (label left, value right)
-   wrapping a hidden checkbox; toggling flips the value (sRGB / Display P3). */
+
 .control--toggle {
   display: block;
   border: 2px solid currentColor;
@@ -415,6 +413,28 @@ position: relative;
   opacity: 0.6;
   border-left: 2px solid var(--line);
   padding-left: 0.5rem;
+}
+
+.gamut-control {
+  position: absolute;
+  top: -2.105rem;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 1rem;
+  padding: 0.5rem 1em;
+  border-color: var(--fg);
+  .row {
+    span:not(.control__value) {
+      display: none;
+      text-transform: capitalize;
+    }
+  }
+
+  .control__value {
+    color: var(--bg);
+    background: var(--fg);
+    padding: 0;
+  }
 }
 
 @media (max-width: 920px) {
