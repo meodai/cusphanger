@@ -28,7 +28,7 @@ The knobs are the paper's:
 npm install cusphanger nutelch
 ```
 
-Gamut math is delegated to [nutelch](https://github.com/meodai/nutLCh) (LUT-backed, runtime
+Gamut math is delegated to [nutelch](https://github.com/meodai/nutelch) (LUT-backed, runtime
 dependency-free), so you pass the gamut **LUT** in (just like nutelch) — `oklchSrgb` or `oklchP3`.
 
 ## Usage

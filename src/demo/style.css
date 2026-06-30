@@ -318,21 +318,18 @@ position: relative;
   transform: scaleX(var(--valueRel, 0)) scaleY(1);
 }
 
-/* hue sliders: a FIXED-width OKLCH rainbow revealed by the value (clip-path, so
-   the spectrum doesn't squish like the default scaleX fill). The revealed edge
-   colour is the current hue. */
-.control--hue::before {
-  background: var(--hue-rainbow);
-  border-right: 0;
-  transform: scaleY(0.8);
-  clip-path: inset(0 calc((1 - var(--valueRel, 0)) * 100%) 0 0);
-  transition: clip-path 0.15s var(--ease), transform 0.15s var(--ease);
-}
+/* hue sliders behave exactly like the others — only the hover/drag/active fill
+   is the OKLCH rainbow instead of grey. The fill box still scales with the value
+   (scaleX), so the gradient is counter-scaled (background-size 100%/valueRel) to
+   stay FIXED size: the window reveals hues 0..current instead of squishing the
+   whole spectrum. */
 .control--hue:hover::before,
 .control--hue:focus-within::before,
 .control--hue:active::before {
-  background: var(--hue-rainbow);
-  transform: scaleY(1);
+  background-image: var(--hue-rainbow);
+  background-size: calc(100% / var(--valueRel, 1)) 100%;
+  background-position: left center;
+  background-repeat: no-repeat;
 }
 
 .control__value {
