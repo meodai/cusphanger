@@ -194,22 +194,23 @@ function render(app: HTMLElement): void {
     });
   };
 
-  const renderTabs = () => {
-    tabsNav.innerHTML = '';
-    for (const tab of TABS) {
-      const b = document.createElement('button');
-      b.textContent = tab.label;
-      b.setAttribute('aria-selected', String(tab.id === activeTab.id));
-      b.addEventListener('click', () => {
-        mountTab(tab);
-        renderTabs();
-      });
-      tabsNav.appendChild(b);
-    }
+  // build the tab buttons ONCE; selecting a tab only toggles aria-selected on the
+  // existing buttons. (Recreating them would skip the CSS transition on span::after,
+  // since transitions fire on property changes, not first paint.)
+  const tabButtons: HTMLButtonElement[] = [];
+  const selectTab = (tab: Tab) => {
+    mountTab(tab);
+    tabButtons.forEach((b, i) => b.setAttribute('aria-selected', String(TABS[i]!.id === tab.id)));
   };
+  for (const tab of TABS) {
+    const b = document.createElement('button');
+    b.innerHTML = `<span>${tab.label}</span>`;
+    b.addEventListener('click', () => selectTab(tab));
+    tabButtons.push(b);
+    tabsNav.appendChild(b);
+  }
 
-  renderTabs();
-  mountTab(TABS[0]!);
+  selectTab(TABS[0]!);
 }
 
 render(document.getElementById('app') as HTMLElement);
