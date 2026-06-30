@@ -168,6 +168,7 @@ h1 {
   display: flex;
   margin-bottom: 0;
   transform: translateY(50%);
+  padding-left: calc(220px + 2rem);
 }
 .tabs span {
   display: inline-block;
@@ -304,7 +305,7 @@ position: relative;
   position: absolute;
   inset: 0;
   background: rgb(from var(--line) r g b / 0);
-  border-right: 1px solid currentColor;
+  border-right: 2px solid currentColor;
   z-index: 0;
   transform-origin: left center;
   transform: scaleX(var(--valueRel, 0)) scaleY(.8);
