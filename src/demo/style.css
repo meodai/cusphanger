@@ -29,6 +29,11 @@
   --line: var(--fg);
   --ease: cubic-bezier(0.3, 0.7, 0, 1);
 
+  /* fixed-width OKLCH hue spectrum (~65%-ish chroma) for hue-slider fills */
+  --hue-rainbow: linear-gradient(to right in oklch,
+    oklch(0.7 0.13 0), oklch(0.7 0.13 60), oklch(0.7 0.13 120),
+    oklch(0.7 0.13 180), oklch(0.7 0.13 240), oklch(0.7 0.13 300), oklch(0.7 0.13 360));
+
   --s-line: 2px;
 
   /* aliases kept so the SVG slice + components resolve */
@@ -311,6 +316,23 @@ position: relative;
 .control--range:active::before {
   background: rgb(from var(--line) r g b / 0.1);
   transform: scaleX(var(--valueRel, 0)) scaleY(1);
+}
+
+/* hue sliders: a FIXED-width OKLCH rainbow revealed by the value (clip-path, so
+   the spectrum doesn't squish like the default scaleX fill). The revealed edge
+   colour is the current hue. */
+.control--hue::before {
+  background: var(--hue-rainbow);
+  border-right: 0;
+  transform: scaleY(0.8);
+  clip-path: inset(0 calc((1 - var(--valueRel, 0)) * 100%) 0 0);
+  transition: clip-path 0.15s var(--ease), transform 0.15s var(--ease);
+}
+.control--hue:hover::before,
+.control--hue:focus-within::before,
+.control--hue:active::before {
+  background: var(--hue-rainbow);
+  transform: scaleY(1);
 }
 
 .control__value {

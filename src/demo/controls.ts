@@ -53,6 +53,8 @@ export function buildControls(
   // a labelled range slider with a live value readout
   const addRange = (fld: FieldSpec, onSet: (v: number) => void) => {
     const { wrap, row } = makeControl(fld.label, 'range');
+    // a 0..360 slider is a hue slider — give its fill an OKLCH rainbow
+    if (fld.min === 0 && fld.max === 360) wrap.classList.add('control--hue');
     const input = document.createElement('input');
     input.type = 'range';
     input.min = String(fld.min);
