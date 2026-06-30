@@ -113,12 +113,12 @@ function render(app: HTMLElement): void {
     <nav class="tabs"></nav>
     <section class="panel">
       <div class="controls">
-        <label class="control control--select">
-          <span class="row"><span>gamut</span></span>
-          <select class="js-gamut">
-            <option value="srgb">srgb</option>
-            <option value="display-p3">display-p3</option>
-          </select>
+        <label class="control control--toggle gamut-control">
+          <input type="checkbox" class="js-gamut" />
+          <span class="row">
+            <span>gamut</span>
+            <span class="control__value">sRGB</span>
+          </span>
         </label>
         <div class="controls-fields"></div>
       </div>
@@ -171,10 +171,13 @@ function render(app: HTMLElement): void {
     renderSlice(sliceHost, palette, lutState, activeTab.forceMirror ?? false);
   };
 
-  // header control: gamut (global, persistent across tabs)
-  const gamutSel = app.querySelector('.js-gamut') as HTMLSelectElement;
-  gamutSel.addEventListener('change', () => {
-    lutState = gamutSel.value === "display-p3" ? oklchP3 : oklchSrgb;
+  // gamut toggle (global, persistent across tabs): click flips srgb ↔ display-p3
+  const gamutInput = app.querySelector('.js-gamut') as HTMLInputElement;
+  const gamutVal = app.querySelector('.control--toggle .control__value') as HTMLElement;
+  gamutInput.addEventListener('change', () => {
+    const p3 = gamutInput.checked;
+    lutState = p3 ? oklchP3 : oklchSrgb;
+    gamutVal.textContent = p3 ? 'Display P3' : 'sRGB';
     renderActive();
   });
 

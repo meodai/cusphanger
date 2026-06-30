@@ -26,6 +26,10 @@ const pt = (hue: number, r: number): [number, number] => {
 };
 const f = (n: number) => n.toFixed(2);
 
+// diamond marker (a square rotated 45°) of "radius" r centred at (x, y)
+const diamond = (x: number, y: number, r: number, cls: string) =>
+  `<polygon points="${f(x)},${f(y - r)} ${f(x + r)},${f(y)} ${f(x)},${f(y + r)} ${f(x - r)},${f(y)}" class="${cls}"/>`;
+
 interface WheelBg {
   svg: string;
   maxCusp: number;
@@ -148,7 +152,7 @@ export function renderWheel(
     const [x2, y2] = pts[i + 1]!;
     traj += `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="${cssOf(palette[i]!)}" class="wheel-traj"/>`;
   }
-  const dots = pts.map(([x, y]) => `<circle cx="${f(x)}" cy="${f(y)}" r="4" class="wheel-dot"/>`).join('');
+  const dots = pts.map(([x, y]) => diamond(x, y, 5, 'wheel-dot')).join('');
 
   // chroma view: rings at the min / avg / max cusp chroma of the palette's hues —
   // the three triangleMode levels. 'min' is the largest circle every hue can

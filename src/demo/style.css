@@ -90,31 +90,18 @@ h1 {
 /* header: intro on the left, global controls (chroma mode + gamut) on the right */
 .header {
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-end;
   gap: 1.5rem 2rem;
   margin-bottom: 3.5rem;
 }
 .header__intro {
-  flex: 1 1 22rem;
-  min-width: 0;
+  flex: 1 1 auto;
 }
 .header .sub {
   margin: .5em 0 0;
 }
-.header-controls {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-}
-.header-controls .control {
-  margin-top: 0;
-  min-width: 9rem;
-}
-.header-controls .control__hint {
-  max-width: 15rem;
-}
+
 
 .about {
   margin-top: 3.5rem;
@@ -398,6 +385,26 @@ position: relative;
   background: var(--bg);
   color: inherit;
   border: 2px solid currentColor;
+}
+/* gamut toggle: a <label> styled like a slider box (label left, value right)
+   wrapping a hidden checkbox; toggling flips the value (sRGB / Display P3). */
+.control--toggle {
+  display: block;
+  border: 2px solid currentColor;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg);
+  font-size: 0.78rem;
+  cursor: pointer;
+  position: relative;
+}
+.control--toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.control--toggle:focus-within {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 .control__hint {
   display: block;

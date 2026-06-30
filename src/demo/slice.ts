@@ -19,6 +19,10 @@ const f = (n: number) => n.toFixed(2);
 const Y = (L: number) => PAD.t + (1 - L) * PLOT_H;
 const fmtPts = (pts: Array<[number, number]>) => pts.map(([x, y]) => `${f(x)},${f(y)}`).join(' ');
 
+// diamond marker (a square rotated 45°) of "radius" r centred at (x, y)
+const diamond = (x: number, y: number, r: number, cls: string) =>
+  `<polygon points="${f(x)},${f(y - r)} ${f(x + r)},${f(y)} ${f(x)},${f(y + r)} ${f(x - r)},${f(y)}" class="${cls}"/>`;
+
 // per-(gamut, mode, scale, hue, side) colored background, so non-hue slider
 // changes don't recompute the gamut fill.
 const sliceBgCache = new Map<string, string>();
@@ -84,7 +88,7 @@ export function renderSlice(
     const tx = cx + (peak.c / xMax) * halfW;
     const ty = Y(peak.l);
     triModel = `<path d="M ${f(cx)},${f(Y(0))} L ${f(tx)},${f(ty)} L ${f(cx)},${f(Y(1))} Z" class="tri-model"/>
-      <circle cx="${f(tx)}" cy="${f(ty)}" r="4" class="cusp"/>
+      ${diamond(tx, ty, 5, 'cusp')}
       <text x="${f(tx + 7)}" y="${f(ty - 6)}" class="label" text-anchor="start">cusp ${peak.c.toFixed(3)}</text>`;
   } else {
     const peakS = cusp(startHue, lut);
@@ -144,7 +148,7 @@ export function renderSlice(
     const tri = `M ${f(s.X(0))},${f(Y(0))} L ${f(s.X(peak.c))},${f(Y(peak.l))} L ${f(s.X(0))},${f(Y(1))}`;
 
     const anchor = s.sign > 0 ? 'end' : 'start';
-    const cuspMark = `<circle cx="${f(s.X(peak.c))}" cy="${f(Y(peak.l))}" r="4" class="cusp"/>
+    const cuspMark = `${diamond(s.X(peak.c), Y(peak.l), 5, 'cusp')}
       <text x="${f(s.X(peak.c) - s.sign * 8)}" y="${f(Y(peak.l) - 7)}" class="label" text-anchor="${anchor}">cusp ${peak.c.toFixed(3)}</text>`;
 
     const cStep = niceStep(xMax);
@@ -173,7 +177,7 @@ export function renderSlice(
     guides += `<line x1="${f(s.x0)}" y1="${f(Y(l))}" x2="${f(s.X(maxC))}" y2="${f(Y(l))}" class="guide"/>`;
     const x = s.X(c);
     path.push([x, Y(l)]);
-    dots += `<circle cx="${f(x)}" cy="${f(Y(l))}" r="4" class="dot"/>`;
+    dots += diamond(x, Y(l), 5, 'dot');
   });
   const trajectory = path.length > 1 ? `<polyline points="${fmtPts(path)}" class="traj"/>` : '';
 
