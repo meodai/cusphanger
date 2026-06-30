@@ -112,7 +112,16 @@ function render(app: HTMLElement): void {
     </div>
     <nav class="tabs"></nav>
     <section class="panel">
-      <div class="controls"></div>
+      <div class="controls">
+        <label class="control control--select">
+          <span class="row"><span>gamut</span></span>
+          <select class="js-gamut">
+            <option value="srgb">srgb</option>
+            <option value="display-p3">display-p3</option>
+          </select>
+        </label>
+        <div class="controls-fields"></div>
+      </div>
       <div class="views">
         <div class="view-block">
           <div class="wheel"></div>
@@ -131,7 +140,7 @@ function render(app: HTMLElement): void {
   paletteEl.style.setProperty('--dither-w', `${DITHER.width}px`);
 
   const tabsNav = app.querySelector('.tabs') as HTMLElement;
-  const controlsHost = app.querySelector('.controls') as HTMLElement;
+  const controlsHost = app.querySelector('.controls-fields') as HTMLElement;
   const swatchHost = app.querySelector('.swatches') as HTMLElement;
   const sliceHost = app.querySelector('.slice') as HTMLElement;
   const wheelHost = app.querySelector('.wheel') as HTMLElement;

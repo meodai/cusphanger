@@ -281,6 +281,11 @@ position: relative;
   display: flex;
   flex-direction: column;
 }
+/* the per-tab fields share the .controls flex flow, so the persistent gamut
+   select stays the first item and isn't wiped when the tab rebuilds. */
+.controls-fields {
+  display: contents;
+}
 .control {
   display: flex;
   flex-direction: column;
