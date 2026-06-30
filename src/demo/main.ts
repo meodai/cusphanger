@@ -6,8 +6,10 @@ import { renderSlice } from './slice';
 import { renderWheel, type WheelAxis } from './wheel';
 import { ditherSvg } from './dither';
 
-// the loosening dither strip at the palette edge (configurable: svg width + square size)
-const DITHER = { width: 160, square: 2, color: '#000' };
+// the loosening dither at the palette's inner (bottom) edge — vertical so it
+// fades the top bar down into the page. `pad` is a solid (un-dithered) band at
+// the top before the fade. (configurable: pad + fade span + square size)
+const DITHER = { span: 100, square: 3, color: '#000', vertical: true, pad: 50 };
 
 // hue-trajectory easings for the Ramp tab (RampenSau-style hue cycling).
 const HUE_EASINGS: Record<string, (t: number) => number> = {
@@ -104,7 +106,8 @@ function render(app: HTMLElement): void {
   const stage = app.querySelector('.stage') as HTMLElement;
   stage.innerHTML = `
     <div class="palette">
-      <button class="palette-strip" type="button" aria-expanded="false" title="Show color details"></button>
+      <div class="palette-strip"></div>
+      <!-- swatch details rendered here but kept hidden for now (wired up later) -->
       <div class="palette-detail" hidden>
         <div class="swatches"></div>
         <p class="hint">Click a swatch to copy its CSS. ⚠︎ marks colors outside the sRGB gamut.</p>
@@ -137,20 +140,14 @@ function render(app: HTMLElement): void {
   // generate the dither strip SVG and hand it to the .palette::after via vars
   const paletteEl = app.querySelector('.palette') as HTMLElement;
   paletteEl.style.setProperty('--dither-bg', ditherSvg(DITHER));
-  paletteEl.style.setProperty('--dither-w', `${DITHER.width}px`);
+  paletteEl.style.setProperty('--dither-h', `${DITHER.pad + DITHER.span}px`);
 
   const tabsNav = app.querySelector('.tabs') as HTMLElement;
   const controlsHost = app.querySelector('.controls-fields') as HTMLElement;
   const swatchHost = app.querySelector('.swatches') as HTMLElement;
   const sliceHost = app.querySelector('.slice') as HTMLElement;
   const wheelHost = app.querySelector('.wheel') as HTMLElement;
-  const stripHost = app.querySelector('.palette-strip') as HTMLButtonElement;
-  const detailHost = app.querySelector('.palette-detail') as HTMLElement;
-  stripHost.addEventListener('click', () => {
-    const open = detailHost.hasAttribute('hidden');
-    detailHost.toggleAttribute('hidden', !open);
-    stripHost.setAttribute('aria-expanded', String(open));
-  });
+  const stripHost = app.querySelector('.palette-strip') as HTMLElement;
 
   // global state: active tab, the (persistent) gamut, the latest control values,
   // the wheel axis/flip, and the latest palette (so the wheel toggle can redraw).
@@ -222,7 +219,7 @@ function render(app: HTMLElement): void {
     tabsNav.appendChild(b);
   }
 
-  selectTab(TABS[0]!);
+  selectTab(TABS.find((t) => t.id === 'diverging') ?? TABS[0]!);
 }
 
 render(document.getElementById('app') as HTMLElement);
