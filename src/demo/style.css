@@ -663,7 +663,10 @@ h1 {
 /* re-click the active axis to flip its radial direction */
 .axis-toggle button[aria-selected="true"]::after {
   content: ' ⇄';
+  display: inline-block;
   opacity: 0.45;
+  margin-inline-start: 1em;
+  transform: translateY(-0.2ex);
 }
 .axis-toggle button[data-flipped]::after {
   opacity: 1;
