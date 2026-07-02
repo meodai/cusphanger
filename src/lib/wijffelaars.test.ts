@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { oklchSrgb } from 'nutelch';
-import { sequential } from './wijffelaars';
+import { sequential, diverging } from './wijffelaars';
 import { cusp, maxChromaAt } from './gamut';
 
 const lut = oklchSrgb;
@@ -117,5 +117,56 @@ describe('sequential (paper, Table 1)', () => {
     const maxC = (p: ReturnType<typeof sequential>) => Math.max(...p.map((x) => x.c));
     expect(maxC(min)).toBeLessThan(maxC(perHue));
     expect(min.every(withinShell)).toBe(true);
+  });
+});
+
+// shortest signed hue difference, for wrap-safe comparisons
+const hueDiff = (a: number, b: number) => ((((a - b) % 360) + 540) % 360) - 180;
+
+describe('diverging (paper §4.6, two arms through a combined neutral)', () => {
+  it('returns N colors, dark at the ends, lightest in the middle', () => {
+    const p = diverging({ hStart: 250, hEnd: 30, total: 9, lut });
+    expect(p).toHaveLength(9);
+    const ls = p.map((c) => c.l);
+    expect(Math.max(...ls)).toBe(ls[4]);
+    expect(ls[0]).toBe(Math.min(...ls));
+  });
+
+  it("odd N: one shared center at the arm curve's end, L(1)", () => {
+    // arm total 5 → b = 0.75, c = 0.64; L*(1) → OKLab 0.96641 (computed
+    // independently from the CIE formulas).
+    const p = diverging({ hStart: 250, hEnd: 30, total: 9, lut });
+    expect(p[4]!.l).toBeCloseTo(0.96641, 4);
+  });
+
+  it('even N: middles sit half a step from the neutral (joined-curve sampling)', () => {
+    // The joined diverging curve sampled at i/(N−1) puts each arm at u = 2i/(N−1).
+    // For N=8 the middle colors sit at u = 6/7 → OKLab L 0.92692 (independent CIE
+    // math) — NOT at the discrete arm step u = 0.75 → 0.89324, which leaves a
+    // double-width gap across the join.
+    const p = diverging({ hStart: 250, hEnd: 30, total: 8, lut });
+    expect(p[3]!.l).toBeCloseTo(0.92692, 4);
+    expect(p[4]!.l).toBeCloseTo(0.92692, 4);
+  });
+
+  it('is mirror-symmetric: swapping hStart/hEnd reverses the palette (incl. coolWarm)', () => {
+    for (const total of [8, 9]) {
+      const ab = diverging({ hStart: 250, hEnd: 30, total, coolWarm: 0.4, lut });
+      const ba = diverging({ hStart: 30, hEnd: 250, total, coolWarm: 0.4, lut }).reverse();
+      ab.forEach((c, i) => {
+        expect(c.l).toBeCloseTo(ba[i]!.l, 6);
+        expect(c.c).toBeCloseTo(ba[i]!.c, 6);
+        if (c.c > 1e-6) expect(hueDiff(c.h, ba[i]!.h)).toBeCloseTo(0, 4);
+      });
+    }
+  });
+
+  it('stays in gamut for both parities, with and without coolWarm', () => {
+    for (const total of [8, 9]) {
+      for (const w of [0, 0.5]) {
+        const p = diverging({ hStart: 250, hEnd: 30, total, coolWarm: w, lut });
+        expect(p.every(withinShell)).toBe(true);
+      }
+    }
   });
 });

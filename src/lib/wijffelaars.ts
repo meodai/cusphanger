@@ -156,6 +156,15 @@ function tForLightness(l: number, tri: Tri): number {
 // Single-hue (or cool/warm multi-hue) sequential palette, dark → light.
 // With hCycles ≠ 0, each color is the paper's ramp for its own rotated hue.
 export function sequential(o: SequentialOptions): OklchColor[] {
+  const N = o.total;
+  const ts = Array.from({ length: N }, (_, i) => (N <= 1 ? 0 : i / (N - 1)));
+  return sample(o, ts);
+}
+
+// The paper's P_seq sampled at arbitrary curve-fractions `ts` (each t ∈ [0,1]).
+// sequential() uses the uniform grid i/(N−1); diverging() samples each arm at
+// the joined-curve positions. Defaults still derive from o.total.
+function sample(o: SequentialOptions, ts: number[]): OklchColor[] {
   const {
     hStart,
     total: N,
@@ -193,8 +202,7 @@ export function sequential(o: SequentialOptions): OklchColor[] {
   let sharedCuspL = 0;
   if (triangleMode !== 'perHue') {
     const cusps: Array<{ l: number; c: number }> = [];
-    for (let i = 0; i < N; i++) {
-      const t = N <= 1 ? 0 : i / (N - 1);
+    for (const t of ts) {
       cusps.push(cusp(((hueAt(t) % 360) + 360) % 360, lut));
     }
     if (triangleMode === 'min') sharedCusp = cusps.reduce((a, p) => (p.c < a.c ? p : a));
@@ -223,8 +231,7 @@ export function sequential(o: SequentialOptions): OklchColor[] {
     !isShared && hCycles === 0 && sConst ? buildTriangle(hStart, sBase, w, lut) : null;
 
   const out: OklchColor[] = [];
-  for (let i = 0; i < N; i++) {
-    const t = N <= 1 ? 0 : i / (N - 1);
+  for (const t of ts) {
     const sI = sAt(t);
     const tri =
       sharedTri ??
@@ -256,8 +263,12 @@ export function sequential(o: SequentialOptions): OklchColor[] {
   return out;
 }
 
-// Diverging: two sequential palettes concatenated through a shared neutral point
-// (the paper's construction).
+const DEG = Math.PI / 180;
+
+// Diverging: two sequential arms joined through a combined neutral point (the
+// paper's construction). The joined curve is sampled at i/(N−1), i.e. each arm
+// at u = 2i/(N−1): odd N hits the neutral exactly once, even N straddles it at
+// half-step spacing (uniform steps across the join, per the thesis).
 export function diverging(o: DivergingOptions): OklchColor[] {
   const { hStart, hEnd, total: N, lut } = o;
   const isOdd = N % 2 === 1;
@@ -272,14 +283,26 @@ export function diverging(o: DivergingOptions): OklchColor[] {
     coolWarm: o.coolWarm,
     lut,
   };
-  // each arm is dark(saturated) -> light(neutral); the last entry is the neutral center
-  const left = sequential({ hStart, ...common });
-  const right = sequential({ hStart: hEnd, ...common });
-  const center = left[side]!; // the shared light/neutral point
 
-  return [
-    ...left.slice(0, side), // dark left -> toward center
-    ...(isOdd ? [center] : []),
-    ...right.slice(0, side).reverse(), // center -> dark right
-  ];
+  const armTs = Array.from({ length: side }, (_, i) => (2 * i) / (N - 1));
+  const ts = isOdd ? [...armTs, 1] : armTs; // odd N: sample the neutral too
+  const left = sample({ hStart, ...common }, ts);
+  const right = sample({ hStart: hEnd, ...common }, ts);
+
+  // Combined neutral (odd N): the Cartesian mean of the two arms' endpoints, so
+  // it is symmetric in the arms — near-achromatic at w = 0 (the arms' residual
+  // opposite-hue tints cancel), converging on the bright point as w → 1.
+  let center: OklchColor[] = [];
+  if (isOdd) {
+    const a = left[side]!;
+    const b = right[side]!;
+    const x = (a.c * Math.cos(a.h * DEG) + b.c * Math.cos(b.h * DEG)) / 2;
+    const y = (a.c * Math.sin(a.h * DEG) + b.c * Math.sin(b.h * DEG)) / 2;
+    const h = ((Math.atan2(y, x) / DEG) % 360 + 360) % 360;
+    const l = (a.l + b.l) / 2;
+    const c = Math.min(Math.hypot(x, y), maxChromaAt(h, l, lut));
+    center = [{ mode: 'oklch', l, c, h }];
+  }
+
+  return [...left.slice(0, side), ...center, ...right.slice(0, side).reverse()];
 }
