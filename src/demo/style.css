@@ -29,6 +29,8 @@
   --line: var(--fg);
   --ease: cubic-bezier(0.3, 0.7, 0, 1);
 
+  --inset: 1.5rem;
+
   --bar-h: 8vh; /* the palette bar (top) height */
 
   /* fixed-width OKLCH hue spectrum (~65%-ish chroma) for hue-slider fills */
@@ -105,10 +107,12 @@ h1 {
   justify-content: space-between;
   align-items: flex-end;
   gap: 1rem 3rem;
+  padding-inline: var(--inset);
 }
 .header .sub {
   margin: 0;
   max-width: 40ch;
+  text-align: right;
 }
 
 
@@ -119,6 +123,7 @@ h1 {
   font-size: 1rem;
   opacity: 0.7;
   line-height: 1.6;
+  padding-inline: var(--inset);
 }
 .about p {
   margin: 0 0 0.9rem;
@@ -252,9 +257,9 @@ h1 {
   gap: 2rem;
   border: 2px solid currentColor;
   background: var(--bg);
-  padding: 1.5rem;
+  padding: var(--inset);
 
-position: relative;
+  position: relative;
   z-index: 2;
 }
 
