@@ -58,6 +58,22 @@ describe('sequential (paper, Table 1)', () => {
     expect(rising.at(-1)!.c).toBeGreaterThan(falling.at(-1)!.c);
   });
 
+  it("maps the paper's CIELUV lightness to OKLCH via Y, not /100", () => {
+    // paper defaults, N=9 (b=0.75, c=0.88): L*(0)=16.86, L*(1)=98.76.
+    // For neutrals OKLab L = Y^(1/3) and L* = 116·Y^(1/3) − 16, so the faithful
+    // OKLab endpoints are (L*+16)/116 — computed independently of the lib.
+    const p = sequential({ hStart: 260, total: 9, lut });
+    expect(p[0]!.l).toBeCloseTo(0.28324, 4);
+    expect(p[p.length - 1]!.l).toBeCloseTo(0.98934, 4);
+  });
+
+  it('lRange endpoints survive the round trip through the CIE toe (L* < 8)', () => {
+    // OKLab L 0.03 → Y = 2.7e-5 → L* ≈ 0.024: exercises the linear CIE branch.
+    const p = sequential({ hStart: 260, total: 9, lRange: [0.03, 0.9], lut });
+    expect(p[0]!.l).toBeCloseTo(0.03, 3);
+    expect(p[p.length - 1]!.l).toBeCloseTo(0.9, 3);
+  });
+
   it('lRange sets the lightness endpoints directly', () => {
     const p = sequential({ hStart: 260, total: 9, lRange: [0.25, 0.95], lut });
     expect(p[0]!.l).toBeCloseTo(0.25, 2);

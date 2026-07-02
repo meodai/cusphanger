@@ -13,7 +13,9 @@ const BRIGHT_POINT = { l: 0.968, c: 0.211, h: 109.77 };
 //
 // Deviations from the paper (all intentional, documented):
 // - OKLCH instead of CIELUV (so it can target Display-P3); L is [0,1] not [0,100].
-// - L(t) keeps the paper's exact form, divided by 100 for OKLCH's scale.
+// - L(t) keeps the paper's exact form in CIE L* units; the result is converted
+//   to OKLab L through Y (for neutrals OKLab L = Y^(1/3) exactly), so the
+//   palette hits the same physical lightnesses the paper calibrated on Brewer.
 
 interface LCH {
   l: number;
@@ -38,16 +40,29 @@ const mixP = (a: LCH, b: LCH, s: number): LCH => ({
 });
 const midP = (a: LCH, b: LCH): LCH => ({ l: (a.l + b.l) / 2, c: (a.c + b.c) / 2, h: (a.h + b.h) / 2 });
 
-// L(t): the paper's lightness sampling (its '0.2^…' contrast curve), mapped to
-// OKLCH's [0,1] lightness scale.
+// CIE L* <-> OKLab L, through luminance Y (both scales are pinned to Y for
+// neutrals: L* = 116·Y^(1/3) − 16 above the toe, OKLab L = Y^(1/3)).
+const KAPPA = 24389 / 27; // CIE κ
+const EPS = 216 / 24389; // CIE ε
+const cieLToOk = (lStar: number): number =>
+  Math.cbrt(lStar > 8 ? Math.pow((lStar + 16) / 116, 3) : lStar / KAPPA);
+const okToCieL = (L: number): number => {
+  const y = L * L * L;
+  return y > EPS ? 116 * Math.cbrt(y) - 16 : KAPPA * y;
+};
+
+// L(t): the paper's lightness sampling (its '0.2^…' contrast curve, in CIE L*
+// units), converted to OKLab lightness.
 const lightnessAt = (t: number, b: number, c: number): number => {
-  const luv = 125 - 125 * Math.pow(0.2, (1 - c) * b + t * c);
-  return Math.min(1, Math.max(0, luv / 100));
+  const lStar = 125 - 125 * Math.pow(0.2, (1 - c) * b + t * c);
+  return Math.min(1, Math.max(0, cieLToOk(lStar)));
 };
 
 // Inverse of L(t)'s curve: the exponent x that yields a given OKLCH lightness.
-const lightnessToX = (L: number): number =>
-  Math.log(1 - 0.8 * Math.min(1, Math.max(0, L))) / Math.log(0.2);
+const lightnessToX = (L: number): number => {
+  const lStar = okToCieL(Math.min(1, Math.max(0, L)));
+  return Math.log(1 - lStar / 125) / Math.log(0.2);
+};
 
 // Convert an [minLight, maxLight] range into the paper's (b, c), so lRange and
 // brightness/contrast are two views of the same lightness curve (the 0.2^x
