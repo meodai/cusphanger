@@ -99,10 +99,12 @@ Also exported, both taking a nutelch LUT: `cusp(hue, lut)` (the MSC apex) and
 
 ## RampenSau interop, and what's left out on purpose
 
-[RampenSau](https://github.com/meodai/rampensau) option names are used where the concepts
-correspond (`total`, `hStart`, `hCycles`, `hStartCenter`, `hEasing`, `sRange`/`sEasing`, `lRange`,
-`hueList`), and RampenSau's easing/curve helpers plug straight into `hEasing`/`sEasing`. A few
-RampenSau options are omitted deliberately:
+The API is deliberately kept as close to [RampenSau](https://github.com/meodai/rampensau) as the
+paper allows: if you know one, you know the other. Everywhere the concepts correspond the options
+share RampenSau's names and semantics (`total`, `hStart`, `hCycles`, `hStartCenter`, `hEasing`,
+`sRange`/`sEasing`, `lRange`, `hueList`), and RampenSau's easing/curve helpers plug straight into
+`hEasing`/`sEasing`. Only the paper-specific knobs (`saturation`, `brightness`, `contrast`,
+`coolWarm`) have no RampenSau counterpart, and a few RampenSau options are omitted deliberately:
 
 - **`lEasing`** — the paper's contribution *is* the fixed perceptual lightness sampling (the
   `0.2^x` spacing, calibrated against Brewer). A free-form lightness easing would quietly undo the
