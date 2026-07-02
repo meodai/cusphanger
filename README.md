@@ -2,7 +2,7 @@
 
 A faithful OKLCH implementation of Wijffelaars, Vliegen, van Wijk & van der Linden,
 *"Generating Color Palettes using Intuitive Parameters"*
-([Computer Graphics Forum 27:3, 2008](https://doi.org/10.1111/j.1467-8659.2008.01203.x)).
+([Computer Graphics Forum 28:3, EuroVis 2009](https://doi.org/10.1111/j.1467-8659.2009.01342.x)).
 
 The paper generates **sequential** and **diverging** palettes from a few intuitive parameters by
 walking a quadratic-Bézier path through the gamut triangle (black · cusp · white) of a hue. It was
@@ -15,6 +15,15 @@ For a fixed hue, the displayable colors approximate a triangle in the chroma–l
 corners at black, white, and the **cusp** — the most saturated color that hue can reach (the paper's
 *MSC*). A palette is a quadratic-Bézier path through that triangle, sampled at perceptual lightness
 steps. The cusp / triangle being an inner approximation of the gamut keeps the result displayable.
+
+The paper's lightness curve is evaluated in its native CIE L\* units and converted to OKLab
+lightness through luminance Y (for neutrals OKLab L = Y^⅓ exactly), so the palettes hit the same
+physical lightnesses the paper calibrated against the Brewer palettes.
+
+Diverging palettes sample the *joined* two-arm curve uniformly: odd N lands on the combined
+neutral exactly once; even N straddles it at half-step spacing, so the step across the join reads
+like every other step. The neutral is symmetric in the two arms (swapping `hStart`/`hEnd` mirrors
+the palette, including with `coolWarm`).
 
 The knobs are the paper's:
 
@@ -54,6 +63,10 @@ sequential({ hStart: 260, total: 9, lRange: [0.25, 0.95], lut: oklchSrgb });
 
 // saturation as a (gamut-relative) range that varies across the ramp
 sequential({ hStart: 260, total: 9, sRange: [0, 1], lut: oklchSrgb }); // gray dark → vivid light
+
+// an explicit hue per color (RampenSau-style hueList) — pairs with RampenSau's
+// uniqueRandomHues / colorHarmonies. Overrides total and the hue trajectory.
+sequential({ hStart: 0, total: 9, hueList: [10, 120, 240], lut: oklchSrgb });
 ```
 
 Option names follow RampenSau's conventions where they correspond (`total`, `hStart`/`hEnd`); the
@@ -83,6 +96,23 @@ For a hex string or gamut flags (interchange, contrast math), use [culori](https
 
 Also exported, both taking a nutelch LUT: `cusp(hue, lut)` (the MSC apex) and
 `maxChromaAt(hue, l, lut)` (the gamut shell at a lightness).
+
+## RampenSau interop, and what's left out on purpose
+
+[RampenSau](https://github.com/meodai/rampensau) option names are used where the concepts
+correspond (`total`, `hStart`, `hCycles`, `hStartCenter`, `hEasing`, `sRange`/`sEasing`, `lRange`,
+`hueList`), and RampenSau's easing/curve helpers plug straight into `hEasing`/`sEasing`. A few
+RampenSau options are omitted deliberately:
+
+- **`lEasing`** — the paper's contribution *is* the fixed perceptual lightness sampling (the
+  `0.2^x` spacing, calibrated against Brewer). A free-form lightness easing would quietly undo the
+  model; use `lRange` (or `brightness`/`contrast`) to shape the range instead.
+- **`transformFn`** — colors are plain objects; `.map()` the result.
+- **Random defaults** — `total` and `hStart` are required. The point of the model is an exact,
+  reproducible specification, so nothing is randomized for you.
+
+The paper's bright point `p_b` (the yellow that `coolWarm` pulls toward) is canonically sRGB
+yellow in every gamut, so sRGB and Display-P3 palettes stay comparable.
 
 ## Develop
 
