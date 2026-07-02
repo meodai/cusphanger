@@ -22,7 +22,7 @@ export interface OklchColor {
   h: number; // 0..360
 }
 
-// Wijffelaars, Vliegen, van Wijk & van der Linden (2008), single-hue sequential
+// Wijffelaars, Vliegen, van Wijk & van der Linden (2009), single-hue sequential
 // model (Table 1) plus the cool/warm multi-hue extension (Table 2).
 // Option names follow RampenSau's conventions where they correspond (total,
 // hStart); the paper-specific knobs (s/b/c/w) have no RampenSau equivalent.
@@ -47,6 +47,11 @@ export interface SequentialOptions {
   hCycles?: number; // hue rotations across the ramp. default 0
   hStartCenter?: number; // where hStart sits in the ramp (0..1). default 0.5
   hEasing?: (t: number) => number; // hue easing. default linear
+  // RampenSau-style hueList: an explicit hue per color. Overrides total (the
+  // palette gets hueList.length colors) and the whole hue trajectory (hStart /
+  // hCycles / hStartCenter / hEasing). Pairs with RampenSau's uniqueRandomHues
+  // and colorHarmonies; each color still rides the paper's ramp for its hue.
+  hueList?: number[];
   triangleMode?: TriangleMode; // chroma envelope for multi-hue ramps. default 'perHue'
   lut: Lut; // a nutelch OKLCH LUT (oklchSrgb / oklchP3) — which gamut to target
 }
@@ -58,6 +63,7 @@ export interface DivergingOptions {
   hEnd: number; // right-arm hue
   saturation?: number;
   sRange?: [number, number]; // alternative to saturation (see SequentialOptions)
+  sEasing?: (t: number) => number; // easing for sRange, per arm. default linear
   brightness?: number;
   contrast?: number;
   lRange?: [number, number]; // alternative to brightness/contrast (see SequentialOptions)

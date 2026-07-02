@@ -4,9 +4,10 @@ import type { Lut, OklchColor, SequentialOptions, DivergingOptions } from './typ
 // OKLCH of the paper's 'bright point' (sRGB yellow #ffff00) — Table 2 default.
 const BRIGHT_POINT = { l: 0.968, c: 0.211, h: 109.77 };
 
-// Faithful port of Wijffelaars, Vliegen, van Wijk & van der Linden (2008),
+// Faithful port of Wijffelaars, Vliegen, van Wijk & van der Linden (2009),
 // "Generating Color Palettes using Intuitive Parameters" (Computer Graphics
-// Forum 27:3), Tables 1 (single-hue sequential) and 2 (multi-hue), re-expressed
+// Forum 28:3, EuroVis 2009, doi:10.1111/j.1467-8659.2009.01342.x),
+// Tables 1 (single-hue sequential) and 2 (multi-hue), re-expressed
 // in OKLCH. The paper works in CIELUV; MSC(h) — the Most Saturated Color of a
 // hue — is exactly the OKLCH cusp. The triangle (black, MSC, white) is an inner
 // approximation of the gamut, so the Bézier path through it stays in gamut.
@@ -156,9 +157,11 @@ function tForLightness(l: number, tri: Tri): number {
 // Single-hue (or cool/warm multi-hue) sequential palette, dark → light.
 // With hCycles ≠ 0, each color is the paper's ramp for its own rotated hue.
 export function sequential(o: SequentialOptions): OklchColor[] {
-  const N = o.total;
+  // hueList overrides total (RampenSau semantics); defaults derive from the
+  // effective palette size.
+  const N = o.hueList && o.hueList.length > 0 ? o.hueList.length : o.total;
   const ts = Array.from({ length: N }, (_, i) => (N <= 1 ? 0 : i / (N - 1)));
-  return sample(o, ts);
+  return sample(N === o.total ? o : { ...o, total: N }, ts);
 }
 
 // The paper's P_seq sampled at arbitrary curve-fractions `ts` (each t ∈ [0,1]).
@@ -172,6 +175,7 @@ function sample(o: SequentialOptions, ts: number[]): OklchColor[] {
     hCycles = 0,
     hStartCenter = 0.5,
     hEasing = (t) => t,
+    hueList,
     sEasing = (t) => t,
     triangleMode = 'perHue',
     lut,
@@ -193,7 +197,11 @@ function sample(o: SequentialOptions, ts: number[]): OklchColor[] {
   const sAt = (t: number): number =>
     sConst ? sBase : o.sRange![0] + (o.sRange![1] - o.sRange![0]) * sEasing(t);
 
-  const hueAt = (t: number) => hStart + 360 * hCycles * (hEasing(t) - hStartCenter);
+  const hasHueList = !!hueList && hueList.length > 0;
+  const hueAt = (t: number, i: number) =>
+    hasHueList
+      ? hueList![Math.min(i, hueList!.length - 1)]!
+      : hStart + 360 * hCycles * (hEasing(t) - hStartCenter);
 
   // 'min'/'avg'/'max' share one triangle across the ramp's hues, so colorfulness
   // is even (no chroma peaks). The shared cusp is the min/avg/max cusp of those
@@ -202,9 +210,9 @@ function sample(o: SequentialOptions, ts: number[]): OklchColor[] {
   let sharedCuspL = 0;
   if (triangleMode !== 'perHue') {
     const cusps: Array<{ l: number; c: number }> = [];
-    for (const t of ts) {
-      cusps.push(cusp(((hueAt(t) % 360) + 360) % 360, lut));
-    }
+    ts.forEach((t, i) => {
+      cusps.push(cusp(((hueAt(t, i) % 360) + 360) % 360, lut));
+    });
     if (triangleMode === 'min') sharedCusp = cusps.reduce((a, p) => (p.c < a.c ? p : a));
     else if (triangleMode === 'max') sharedCusp = cusps.reduce((a, p) => (p.c > a.c ? p : a));
     else {
@@ -228,23 +236,25 @@ function sample(o: SequentialOptions, ts: number[]): OklchColor[] {
   const sharedTri =
     isShared && sConst ? buildTriangleFromCusp(sharedCusp!.l, sharedCusp!.c, sBase) : null;
   const baseTri =
-    !isShared && hCycles === 0 && sConst ? buildTriangle(hStart, sBase, w, lut) : null;
+    !isShared && hCycles === 0 && !hasHueList && sConst
+      ? buildTriangle(hStart, sBase, w, lut)
+      : null;
 
   const out: OklchColor[] = [];
-  for (const t of ts) {
+  for (const [i, t] of ts.entries()) {
     const sI = sAt(t);
     const tri =
       sharedTri ??
       baseTri ??
       (isShared
         ? buildTriangleFromCusp(sharedCusp!.l, sharedCusp!.c, sI)
-        : buildTriangle(hueAt(t), sI, w, lut));
+        : buildTriangle(hueAt(t, i), sI, w, lut));
     const targetL = Math.min(tri.p2.l, Math.max(tri.p0.l, lightnessAt(t, b, c)));
     const col = cSeq(tForLightness(targetL, tri), tri);
 
     let h: number;
     if (isShared) {
-      h = ((hueAt(t) % 360) + 360) % 360;
+      h = ((hueAt(t, i) % 360) + 360) % 360;
       if (warmHue !== null) {
         // weight 0 below the shared cusp, ramping to 1 at white (the top point)
         const warmW = Math.max(0, Math.min(1, (col.l - sharedCuspL) / (1 - sharedCuspL || 1)));
@@ -277,6 +287,7 @@ export function diverging(o: DivergingOptions): OklchColor[] {
     total: side + 1,
     saturation: o.saturation,
     sRange: o.sRange,
+    sEasing: o.sEasing,
     brightness: o.brightness,
     contrast: o.contrast,
     lRange: o.lRange,

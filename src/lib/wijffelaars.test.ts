@@ -170,3 +170,31 @@ describe('diverging (paper §4.6, two arms through a combined neutral)', () => {
     }
   });
 });
+
+describe('hueList (RampenSau parity)', () => {
+  it('gives each color its own hue, in order', () => {
+    const p = sequential({ hStart: 0, total: 3, hueList: [10, 120, 240], lut });
+    expect(p.map((c) => c.h)).toEqual([10, 120, 240]);
+  });
+
+  it('overrides total, hStart and hCycles (like RampenSau)', () => {
+    const p = sequential({ hStart: 99, total: 9, hCycles: 2, hueList: [10, 120, 240], lut });
+    expect(p).toHaveLength(3);
+    expect(p.map((c) => c.h)).toEqual([10, 120, 240]);
+  });
+
+  it('keeps the paper lightness sampling and stays in gamut', () => {
+    const p = sequential({ hStart: 0, total: 4, hueList: [30, 100, 200, 320], lut });
+    for (let i = 1; i < p.length; i++) expect(p[i]!.l).toBeGreaterThan(p[i - 1]!.l);
+    expect(p.every(withinShell)).toBe(true);
+  });
+});
+
+describe('diverging option passthrough', () => {
+  it('honors sEasing alongside sRange (was silently dropped)', () => {
+    const base = { hStart: 250, hEnd: 30, total: 9, sRange: [0, 1] as [number, number], lut };
+    const linear = diverging(base);
+    const eased = diverging({ ...base, sEasing: (t: number) => t * t });
+    expect(eased[1]!.c).not.toBeCloseTo(linear[1]!.c, 6);
+  });
+});
