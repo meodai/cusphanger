@@ -596,6 +596,7 @@ h1 {
   margin: 0.5rem 0 0;
   line-height: 1.7;
   font-weight: 300;
+  display: none;
 }
 .slice-legend .k {
   display: inline-block;
@@ -640,7 +641,7 @@ h1 {
   width: max-content;
   border: 2px solid currentColor;
   position: absolute;
-  bottom: 3.5rem;
+  top: .75rem;
   left: 0;
 }
 .axis-toggle button {
