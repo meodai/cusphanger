@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CuspHanger — OKLCH palette generator</title>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Imbue:opsz,wght@10..100,100..900&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/Iosevka/6.0.0/iosevka/iosevka.min.css"
+    />
+    <link rel="stylesheet" href="/src/demo/style.css" />
+  </head>
+  <body>
+    <main id="app">
+      <header class="header">
+        <div class="header__intro">
+          <h1>CuspHanger</h1>
+          <p class="sub">Balanced color palettes from a few simple controls — consistent across every hue, and always true to what shows on screen.</p>
+        </div>
+      </header>
+
+      <!-- the interactive app window is built by src/demo/main.ts -->
+      <div class="stage"></div>
+
+      <section class="about">
+        <p>Choose a base color, how vivid you want it, and a light-to-dark range — CuspHanger turns
+        those few choices into a complete palette. The colors stay evenly balanced from light to dark
+        and from one hue to the next, never turn muddy, and always display correctly, so the palette
+        you design is the one people actually see.</p>
+        <p>It works for smooth gradients (<strong>sequential</strong>) and scales that fan out from a
+        neutral middle (<strong>diverging</strong>) — and it can target wide-gamut displays, not just
+        standard ones.</p>
+
+        <details class="about__nerd">
+          <summary>the technical version, for color nerds</summary>
+          <p>A faithful OKLCH port of the paper. For any hue, the displayable colors form a triangle in
+          the chroma–lightness plane with corners at black, white, and the <em>cusp</em> (the paper's
+          MSC — the most saturated color that hue can reach). A palette is a quadratic-Bézier path
+          through that triangle.</p>
+          <p>The knobs are the paper's: <em>saturation</em> (s) is the curve's tension — 0 gives a gray
+          ramp, 1 bends the path through the cusp; <em>brightness</em> (b) and <em>contrast</em> (c)
+          shape the lightness sampling; <em>cool/warm</em> (w) pulls the light end toward yellow.
+          Diverging joins two sequential palettes through a shared neutral.</p>
+          <p>The two diagrams show the same gamut from different angles. The <strong>top view</strong>
+          is a wheel — hue as angle, chroma or lightness as radius (click the active axis again to flip
+          it). The <strong>side view</strong> is the chroma × lightness slice: the real OKLCH gamut on
+          the left vs. the paper's straight-edged triangle model with its cusp tip on the right,
+          mirroring into a butterfly when a palette spans two hues. The generated palette is plotted in
+          both.</p>
+        </details>
+
+        <p class="cite">A faithful OKLCH implementation of Wijffelaars, Vliegen, van Wijk &amp; van der
+        Linden, <a href="https://doi.org/10.1111/j.1467-8659.2008.01203.x" target="_blank" rel="noopener">“Generating
+        Color Palettes using Intuitive Parameters”</a> (Computer Graphics Forum 27:3, 2008). Also
+        inspired by <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener">Matt
+        DesLauriers's OKLCH take</a> on the same paper. Gamut boundaries (the cusp / shell) come from
+        <a href="https://github.com/meodai/nutelch" target="_blank" rel="noopener">nutelch</a>.</p>
+      </section>
+    </main>
+    <script type="module" src="/src/demo/main.ts"></script>
+  </body>
+</html>

@@ -5,6 +5,9 @@ import { renderSwatches, renderStrip } from './swatches';
 import { renderSlice } from './slice';
 import { renderWheel, type WheelAxis } from './wheel';
 import { ditherSvg } from './dither';
+import { initXerox } from './xerox';
+// TEMP — noise tuning panel; remove once the xerox values are settled.
+import { initXeroxTuner } from './xerox-tuner';
 
 // the loosening dither at the palette's inner (bottom) edge — vertical so it
 // fades the top bar down into the page. `pad` is a solid (un-dithered) band at
@@ -105,7 +108,7 @@ function render(app: HTMLElement): void {
   // interactive app window into the .stage placeholder.
   const stage = app.querySelector('.stage') as HTMLElement;
   stage.innerHTML = `
-    <div class="palette">
+    <div class="palette" data-ghost="none">
       <div class="palette-strip"></div>
       <!-- swatch details rendered here but kept hidden for now (wired up later) -->
       <div class="palette-detail" hidden>
@@ -222,4 +225,10 @@ function render(app: HTMLElement): void {
   selectTab(TABS.find((t) => t.id === 'diverging') ?? TABS[0]!);
 }
 
-render(document.getElementById('app') as HTMLElement);
+const appEl = document.getElementById('app') as HTMLElement;
+render(appEl);
+// xerox layering: ghost copies of the whole page behind the sharp front —
+// kept in sync automatically (MutationObserver). See xerox.ts for the
+// data-ghost / data-ghost-keep content contract.
+initXerox(appEl, { size: 480, baseFrequency: 0.006, octaves: 4, seed: 99, gain: 1.65, threshold: 0.49 });
+initXeroxTuner(); // TEMP

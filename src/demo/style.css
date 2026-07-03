@@ -11,6 +11,7 @@
 :root {
   color-scheme: light dark;
   font-family:
+    "Imbue",
     "Mekzantine",
     "Iosevka Web",
     ui-monospace,
@@ -18,14 +19,17 @@
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
-    sans-serif;
+    serif;
   line-height: 1.5;
   font-weight: 300;
 
-  --white: #fff;
-  --black: #292f2f;
+  --white: #fdf9fa;
+  --black: #121222;
+  --grey: #7b7d8e;
   --bg: light-dark(var(--white), var(--black));
   --fg: light-dark(var(--black), var(--white));
+  --fg-light: var(--grey);
+
   --line: var(--fg);
   --ease: cubic-bezier(0.3, 0.7, 0, 1);
 
@@ -68,27 +72,35 @@ body {
   background: var(--bg);
   color: var(--fg);
 }
-#app {
+#app,
+.xerox-clone {
   max-width: 64rem;
   margin: var(--bar-h) auto 0;
   padding: 3rem 1.5rem 5rem;
+}
+
+/* ghost misregistration (riso-style): offset of the back copies vs the front */
+.xerox-clone {
+  transform: translate(var(--xerox-shift-x, -3px), var(--xerox-shift-y, -4px));
 }
 
 .stage {
   position: relative;
 }
 h1 {
+  font-family: 'Imbue', serif;
   font-size: 4rem;
   font-weight: 300;
+  font-variation-settings: 'opsz' 100; /* Imbue variable axis: 10..100 */
   letter-spacing: -0.05em;
   margin: 0 0 0.15rem -0.05ex;
 }
 .sub {
-  opacity: 0.7;
   margin: 0 0 3.5rem 2em;
   font-size: 1rem;
   max-width: 55ch;
   font-weight: 300;
+  color: var(--fg-light);
 }
 
 /* header: intro on the left, global controls (chroma mode + gamut) on the right */
@@ -121,7 +133,7 @@ h1 {
   max-width: 68ch;
   font-weight: 300;
   font-size: 1rem;
-  opacity: 0.7;
+  color: var(--fg-light);
   line-height: 1.6;
   padding-inline: var(--inset);
 }
@@ -138,7 +150,6 @@ h1 {
 }
 .about .cite {
   font-size: 1rem;
-  opacity: 0.85;
   margin-top: 1.5rem;
 }
 .about__nerd {
@@ -410,7 +421,7 @@ h1 {
   font-size: 0.68rem;
   line-height: 1.4;
   font-weight: 300;
-  opacity: 0.6;
+  color: var(--fg-light);
   border-left: 2px solid var(--line);
   padding-left: 0.5rem;
 }
@@ -470,16 +481,14 @@ h1 {
 .swatch .badge {
   font-size: 0.64rem;
   font-weight: 300;
-  opacity: 0.85;
 }
 .swatch .warn {
   font-weight: 700;
-  opacity: 1;
 }
 
 .hint {
   font-size: 0.72rem;
-  opacity: 0.6;
+  color: var(--fg-light);
   margin: 1.25rem 0 0;
   font-weight: 300;
 }
@@ -503,8 +512,7 @@ h1 {
 }
 .slice-svg .tick,
 .slice-svg .axis {
-  fill: currentColor;
-  fill-opacity: 0.55;
+  fill: var(--fg-light);
   font-size: 9px;
 }
 /* background chrome — grid, tick values, text labels, titles — only on hover.
@@ -527,13 +535,11 @@ h1 {
 }
 .slice-svg .title {
   fill: currentColor;
-  fill-opacity: 0.85;
   font-size: 11px;
   font-weight: 400;
 }
 .slice-svg .label {
-  fill: currentColor;
-  fill-opacity: 0.7;
+  fill: var(--fg-light);
   font-size: 9px;
 }
 .slice-svg .env-fill {
@@ -592,7 +598,7 @@ h1 {
 }
 .slice-legend {
   font-size: 0.68rem;
-  opacity: 0.65;
+  color: var(--fg-light);
   margin: 0.5rem 0 0;
   line-height: 1.7;
   font-weight: 300;
@@ -664,7 +670,7 @@ h1 {
 .axis-toggle button[aria-selected="true"]::after {
   content: ' ⇄';
   display: inline-block;
-  opacity: 0.45;
+  color: var(--fg-light);
   margin-inline-start: 1em;
   transform: translateY(-0.2ex);
 }
@@ -721,8 +727,7 @@ h1 {
   stroke-dasharray: 1 4;
 }
 .wheel-cusp-label {
-  fill: currentColor;
-  fill-opacity: 0.5;
+  fill: var(--fg-light);
   font-size: 9px;
 }
 .wheel-traj {
@@ -735,8 +740,86 @@ h1 {
   stroke-width: 1.5;
 }
 .wheel-tag {
-  fill: currentColor;
-  fill-opacity: 0.7;
+  fill: var(--fg-light);
   font-size: 11px;
   font-weight: 400;
+}
+
+/* ── xerox layers ──────────────────────────────────────────────────────────
+   The page exists twice behind itself (built by xerox.ts): copy A is the
+   faint all-over ghost, copy B a heavier blur revealed only through patches
+   of turbulence noise (--xerox-noise) — uneven toner. The sharp front (#app)
+   sits on top. Tune the blurs/opacities and the mask size here. */
+.xerox-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+}
+.xerox-back__copy {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+.xerox-back__copy--soft {
+  filter: blur(0.6px) grayscale(1) opacity(0.5);
+}
+.xerox-back__copy--heavy {
+  filter: blur(var(--xerox-heavy-blur, 4px)) grayscale(0.2)
+    opacity(var(--xerox-heavy-opacity, 1));
+  -webkit-mask: var(--xerox-noise) 0 0 / var(--xerox-mask-size, 480px)
+    var(--xerox-mask-size, 480px) repeat;
+  mask: var(--xerox-noise) 0 0 / var(--xerox-mask-size, 480px) var(--xerox-mask-size, 480px)
+    repeat;
+}
+#app {
+  position: relative;
+  z-index: 1;
+}
+
+/* per-element layer control (see xerox.ts) */
+#app [data-ghost='only'] {
+  opacity: 0;
+}
+.xerox-back [data-ghost='none'] {
+  opacity: 0;
+}
+
+/* TEMP — xerox noise tuning panel (xerox-tuner.ts); remove with it */
+.xerox-tuner {
+  position: fixed;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 99;
+  width: 240px;
+  padding: 0.6rem 0.75rem;
+  border: 2px solid currentColor;
+  background: var(--bg);
+  font-size: 0.68rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.xerox-tuner label {
+  display: grid;
+  grid-template-columns: 7em 1fr 3.5em;
+  align-items: center;
+  gap: 0.4rem;
+}
+.xerox-tuner input[type='range'] {
+  width: 100%;
+  min-width: 0;
+}
+.xerox-tuner__out {
+  margin: 0.4rem 0 0;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--line);
+  white-space: pre-wrap;
+  word-break: break-all;
+  cursor: copy;
+  color: var(--fg-light);
 }
