@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { oklchSrgb } from 'nutelch';
-import { sequential, diverging } from './wijffelaars';
+import { sequential, ramp, diverging } from './wijffelaars';
 import { cusp, maxChromaAt } from './gamut';
 
 const lut = oklchSrgb;
@@ -47,17 +47,6 @@ describe('sequential (paper, Table 1)', () => {
     expect(first(13)).toBeLessThan(first(3));
   });
 
-  it('sRange varies the tension across the ramp (and equals saturation when flat)', () => {
-    const single = sequential({ hStart: 260, total: 9, saturation: 0.5, lut });
-    const flat = sequential({ hStart: 260, total: 9, sRange: [0.5, 0.5], lut });
-    expect(flat).toEqual(single);
-
-    const rising = sequential({ hStart: 260, total: 9, sRange: [0, 1], lut });
-    const falling = sequential({ hStart: 260, total: 9, sRange: [1, 0], lut });
-    expect(rising[0]!.c).toBeLessThan(falling[0]!.c);
-    expect(rising.at(-1)!.c).toBeGreaterThan(falling.at(-1)!.c);
-  });
-
   it("maps the paper's CIELUV lightness to OKLCH via Y, not /100", () => {
     // paper defaults, N=9 (b=0.75, c=0.88): L*(0)=16.86, L*(1)=98.76.
     // For neutrals OKLab L = Y^(1/3) and L* = 116·Y^(1/3) − 16, so the faithful
@@ -88,15 +77,29 @@ describe('sequential (paper, Table 1)', () => {
     viaRange.forEach((col, i) => expect(col.l).toBeCloseTo(bc[i]!.l, 4));
   });
 
-  it('hCycles = 0 collapses to a single hue (matches the paper exactly)', () => {
+});
+
+describe('ramp (RampenSau extensions)', () => {
+  it('with no extensions set, collapses to sequential() exactly', () => {
     const base = sequential({ hStart: 260, total: 9, lut });
-    const withCycles0 = sequential({ hStart: 260, total: 9, hCycles: 0, lut });
+    const viaRamp = ramp({ hStart: 260, total: 9, hCycles: 0, lut });
     expect(base.every((c) => Math.abs(c.h - 260) < 1e-9 || c.c < 1e-9)).toBe(true);
-    expect(withCycles0).toEqual(base);
+    expect(viaRamp).toEqual(base);
+  });
+
+  it('sRange varies the tension across the ramp (and equals saturation when flat)', () => {
+    const single = sequential({ hStart: 260, total: 9, saturation: 0.5, lut });
+    const flat = ramp({ hStart: 260, total: 9, sRange: [0.5, 0.5], lut });
+    expect(flat).toEqual(single);
+
+    const rising = ramp({ hStart: 260, total: 9, sRange: [0, 1], lut });
+    const falling = ramp({ hStart: 260, total: 9, sRange: [1, 0], lut });
+    expect(rising[0]!.c).toBeLessThan(falling[0]!.c);
+    expect(rising.at(-1)!.c).toBeGreaterThan(falling.at(-1)!.c);
   });
 
   it('hCycles rotates the hue across the ramp (each color in its own hue)', () => {
-    const p = sequential({ hStart: 0, total: 9, hCycles: 1, saturation: 0.9, lut });
+    const p = ramp({ hStart: 0, total: 9, hCycles: 1, saturation: 0.9, lut });
     const hues = p.filter((c) => c.c > 0.02).map((c) => c.h);
     const spread = Math.max(...hues) - Math.min(...hues);
     expect(spread).toBeGreaterThan(180);
@@ -104,17 +107,17 @@ describe('sequential (paper, Table 1)', () => {
 
   it('cool/warm still warms the light end in a shared triangle mode', () => {
     const opts = { hStart: 264, total: 9, triangleMode: 'min', lut } as const;
-    const cold = sequential({ ...opts, coolWarm: 0 });
-    const warm = sequential({ ...opts, coolWarm: 0.6 });
+    const cold = ramp({ ...opts, coolWarm: 0 });
+    const warm = ramp({ ...opts, coolWarm: 0.6 });
     expect(cold.every((c) => Math.abs(c.h - 264) < 1 || c.c < 1e-6)).toBe(true);
     expect(warm[warm.length - 2]!.h).toBeLessThan(240);
   });
 
   it("triangleMode 'min' evens colorfulness (caps chroma below perHue)", () => {
     const opts = { hStart: 0, total: 12, hCycles: 1, saturation: 0.95, lut } as const;
-    const perHue = sequential(opts);
-    const min = sequential({ ...opts, triangleMode: 'min' });
-    const maxC = (p: ReturnType<typeof sequential>) => Math.max(...p.map((x) => x.c));
+    const perHue = ramp(opts);
+    const min = ramp({ ...opts, triangleMode: 'min' });
+    const maxC = (p: ReturnType<typeof ramp>) => Math.max(...p.map((x) => x.c));
     expect(maxC(min)).toBeLessThan(maxC(perHue));
     expect(min.every(withinShell)).toBe(true);
   });
@@ -173,18 +176,18 @@ describe('diverging (paper §4.6, two arms through a combined neutral)', () => {
 
 describe('hueList (RampenSau parity)', () => {
   it('gives each color its own hue, in order', () => {
-    const p = sequential({ hStart: 0, total: 3, hueList: [10, 120, 240], lut });
+    const p = ramp({ hStart: 0, total: 3, hueList: [10, 120, 240], lut });
     expect(p.map((c) => c.h)).toEqual([10, 120, 240]);
   });
 
   it('overrides total, hStart and hCycles (like RampenSau)', () => {
-    const p = sequential({ hStart: 99, total: 9, hCycles: 2, hueList: [10, 120, 240], lut });
+    const p = ramp({ hStart: 99, total: 9, hCycles: 2, hueList: [10, 120, 240], lut });
     expect(p).toHaveLength(3);
     expect(p.map((c) => c.h)).toEqual([10, 120, 240]);
   });
 
   it('keeps the paper lightness sampling and stays in gamut', () => {
-    const p = sequential({ hStart: 0, total: 4, hueList: [30, 100, 200, 320], lut });
+    const p = ramp({ hStart: 0, total: 4, hueList: [30, 100, 200, 320], lut });
     for (let i = 1; i < p.length; i++) expect(p[i]!.l).toBeGreaterThan(p[i - 1]!.l);
     expect(p.every(withinShell)).toBe(true);
   });

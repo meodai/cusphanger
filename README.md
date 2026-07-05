@@ -43,7 +43,7 @@ dependency-free), so you pass the gamut **LUT** in (just like nutelch) — `oklc
 ## Usage
 
 ```ts
-import { sequential, diverging } from 'cusphanger';
+import { sequential, ramp, diverging } from 'cusphanger';
 import { oklchSrgb, oklchP3, toCss } from 'nutelch';
 
 // single-hue sequential (paper, Table 1)
@@ -61,17 +61,25 @@ sequential({ hStart: 260, total: 9, lut: oklchP3 });
 // lightness by endpoints instead of brightness/contrast (RampenSau-style lRange)
 sequential({ hStart: 260, total: 9, lRange: [0.25, 0.95], lut: oklchSrgb });
 
+// ramp() — the RampenSau hybrid: a hue trajectory through the paper's model
+// (each color rides the paper's ramp for its own rotated hue)
+ramp({ hStart: 260, total: 9, hCycles: 0.3, lut: oklchSrgb });
+
 // saturation as a (gamut-relative) range that varies across the ramp
-sequential({ hStart: 260, total: 9, sRange: [0, 1], lut: oklchSrgb }); // gray dark → vivid light
+ramp({ hStart: 260, total: 9, sRange: [0, 1], lut: oklchSrgb }); // gray dark → vivid light
 
 // an explicit hue per color (RampenSau-style hueList) — pairs with RampenSau's
 // uniqueRandomHues / colorHarmonies. Overrides total and the hue trajectory.
-sequential({ hStart: 0, total: 9, hueList: [10, 120, 240], lut: oklchSrgb });
+ramp({ hStart: 0, total: 9, hueList: [10, 120, 240], lut: oklchSrgb });
 ```
 
-Option names follow RampenSau's conventions where they correspond (`total`, `hStart`/`hEnd`); the
-paper-specific knobs keep their own names. Defaults follow the paper: `saturation = 0.6`,
-`brightness = 0.75`, `contrast = min(0.88, 0.34 + 0.06·total)`, `coolWarm = 0`.
+`sequential()` and `diverging()` are the paper's surface, nothing else. `ramp()` is the
+RampenSau-shaped entry point: `RampOptions` extends `SequentialOptions` with the hue trajectory
+(`hCycles`, `hStartCenter`, `hEasing`, `hueList`), ramped tension (`sRange`/`sEasing`) and
+`triangleMode`; with none of them set it equals `sequential()` exactly. Option names follow
+RampenSau's conventions where they correspond (`total`, `hStart`/`hEnd`); the paper-specific knobs
+keep their own names. Defaults follow the paper: `saturation = 0.6`, `brightness = 0.75`,
+`contrast = min(0.88, 0.34 + 0.06·total)`, `coolWarm = 0`.
 
 **Lightness — two equivalent knobs.** `brightness`/`contrast` are the paper's `b`/`c`; `lRange:
 [minLight, maxLight]` sets the two endpoints directly (RampenSau-style) and wins when given. They're
@@ -100,11 +108,14 @@ Also exported, both taking a nutelch LUT: `cusp(hue, lut)` (the MSC apex) and
 ## RampenSau interop, and what's left out on purpose
 
 The API is deliberately kept as close to [RampenSau](https://github.com/meodai/rampensau) as the
-paper allows: if you know one, you know the other. Everywhere the concepts correspond the options
-share RampenSau's names and semantics (`total`, `hStart`, `hCycles`, `hStartCenter`, `hEasing`,
-`sRange`/`sEasing`, `lRange`, `hueList`), and RampenSau's easing/curve helpers plug straight into
-`hEasing`/`sEasing`. Only the paper-specific knobs (`saturation`, `brightness`, `contrast`,
-`coolWarm`) have no RampenSau counterpart, and a few RampenSau options are omitted deliberately:
+paper allows: if you know one, you know the other. `ramp()` is the counterpart to RampenSau's
+`generateColorRamp` — everywhere the concepts correspond the options share RampenSau's names and
+semantics (`total`, `hStart`, `hCycles`, `hStartCenter`, `hEasing`, `sRange`/`sEasing`, `lRange`,
+`hueList`), and RampenSau's easing/curve helpers plug straight into `hEasing`/`sEasing`. Only the
+paper-specific knobs (`saturation`, `brightness`, `contrast`, `coolWarm`) have no RampenSau
+counterpart. One of them changes meaning inside `ramp()`: under a shared `triangleMode` there is no
+per-hue triangle to shift, so `coolWarm` instead nudges the light colors' hues toward the bright
+point — same visual intent, different mechanism. A few RampenSau options are omitted deliberately:
 
 - **`lEasing`** — the paper's contribution *is* the fixed perceptual lightness sampling (the
   `0.2^x` spacing, calibrated against Brewer). A free-form lightness easing would quietly undo the

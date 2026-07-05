@@ -1,5 +1,5 @@
 import { cusp, maxChromaAt } from './gamut';
-import type { Lut, OklchColor, SequentialOptions, DivergingOptions } from './types';
+import type { Lut, OklchColor, SequentialOptions, RampOptions, DivergingOptions } from './types';
 
 // OKLCH of the paper's 'bright point' (sRGB yellow #ffff00) — Table 2 default.
 const BRIGHT_POINT = { l: 0.968, c: 0.211, h: 109.77 };
@@ -154,9 +154,21 @@ function tForLightness(l: number, tri: Tri): number {
   return Math.min(1, Math.max(0, u));
 }
 
-// Single-hue (or cool/warm multi-hue) sequential palette, dark → light.
-// With hCycles ≠ 0, each color is the paper's ramp for its own rotated hue.
+// Single-hue (or cool/warm multi-hue) sequential palette, dark → light —
+// the paper's model, exactly. For hue trajectories / hueList / triangleMode
+// (the RampenSau-style extensions) use ramp().
 export function sequential(o: SequentialOptions): OklchColor[] {
+  const N = o.total;
+  const ts = Array.from({ length: N }, (_, i) => (N <= 1 ? 0 : i / (N - 1)));
+  return sample(o, ts);
+}
+
+// The RampenSau hybrid: each color is the paper's sequential ramp evaluated at
+// its own hue along a RampenSau-style trajectory (hCycles/hEasing or an
+// explicit hueList), optionally with ramped tension (sRange) and a shared
+// chroma envelope (triangleMode). With none of the extensions set this is
+// sequential() exactly.
+export function ramp(o: RampOptions): OklchColor[] {
   // hueList overrides total (RampenSau semantics); defaults derive from the
   // effective palette size.
   const N = o.hueList && o.hueList.length > 0 ? o.hueList.length : o.total;
@@ -165,9 +177,9 @@ export function sequential(o: SequentialOptions): OklchColor[] {
 }
 
 // The paper's P_seq sampled at arbitrary curve-fractions `ts` (each t ∈ [0,1]).
-// sequential() uses the uniform grid i/(N−1); diverging() samples each arm at
-// the joined-curve positions. Defaults still derive from o.total.
-function sample(o: SequentialOptions, ts: number[]): OklchColor[] {
+// sequential()/ramp() use the uniform grid i/(N−1); diverging() samples each
+// arm at the joined-curve positions. Defaults still derive from o.total.
+function sample(o: RampOptions, ts: number[]): OklchColor[] {
   const {
     hStart,
     total: N,

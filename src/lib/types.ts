@@ -23,27 +23,37 @@ export interface OklchColor {
 }
 
 // Wijffelaars, Vliegen, van Wijk & van der Linden (2009), single-hue sequential
-// model (Table 1) plus the cool/warm multi-hue extension (Table 2).
-// Option names follow RampenSau's conventions where they correspond (total,
-// hStart); the paper-specific knobs (s/b/c/w) have no RampenSau equivalent.
+// model (Table 1) plus the cool/warm multi-hue extension (Table 2). This is
+// the paper's surface, nothing else — the RampenSau-style extensions live on
+// RampOptions / ramp(). Option names follow RampenSau's conventions where they
+// correspond (total, hStart); the paper knobs (s/b/c/w) have no counterpart.
 export interface SequentialOptions {
   total: number; // N — number of colors
   hStart: number; // h — base hue
   saturation?: number; // s — Bézier tension (0 = gray ramp, 1 = through the cusp). default 0.6
-  // Alternative to `saturation`: vary the (gamut-relative) tension across the
-  // ramp (RampenSau-style sRange). Wins when given. [sMin, sMax], 0..1.
-  sRange?: [number, number];
-  sEasing?: (t: number) => number; // easing for sRange. default linear
   brightness?: number; // b — start of the lightness curve. default 0.75
   contrast?: number; // c — lightness span. default min(0.88, 0.34 + 0.06·total)
   // Alternative to brightness/contrast: set the lightness endpoints directly
   // (RampenSau-style lRange). Wins when given; the paper's perceptual 0.2^x
-  // spacing is kept between the endpoints. [minLight, maxLight], 0..1.
+  // spacing is kept between the endpoints — a pure re-parameterization, which
+  // is why it stays on the paper surface. [minLight, maxLight], 0..1.
   lRange?: [number, number];
   coolWarm?: number; // w — the paper's multi-hue shift of the light end toward yellow. default 0
-  // RampenSau-style hue trajectory (an EXTENSION beyond the paper): each color is
-  // the paper's single-hue ramp for its own rotated hue, so it stays faithful.
-  // hCycles = 0 collapses to the single-hue model.
+  lut: Lut; // a nutelch OKLCH LUT (oklchSrgb / oklchP3) — which gamut to target
+}
+
+// ramp(): the RampenSau hybrid — each color rides the paper's ramp for its own
+// hue along a RampenSau-style hue trajectory. Extends the paper surface; every
+// extension is opt-in and hCycles = 0 with none of them set collapses to
+// sequential() exactly. coolWarm crosses the boundary with changed semantics:
+// under a shared triangleMode it nudges the light colors' hues toward the
+// bright point instead of shifting the triangle (the paper's construction
+// can't apply — there is no per-hue triangle to shift).
+export interface RampOptions extends SequentialOptions {
+  // vary the (gamut-relative) tension across the ramp instead of a single
+  // `saturation`. Wins when given. [sMin, sMax], 0..1.
+  sRange?: [number, number];
+  sEasing?: (t: number) => number; // easing for sRange. default linear
   hCycles?: number; // hue rotations across the ramp. default 0
   hStartCenter?: number; // where hStart sits in the ramp (0..1). default 0.5
   hEasing?: (t: number) => number; // hue easing. default linear
@@ -53,21 +63,15 @@ export interface SequentialOptions {
   // and colorHarmonies; each color still rides the paper's ramp for its hue.
   hueList?: number[];
   triangleMode?: TriangleMode; // chroma envelope for multi-hue ramps. default 'perHue'
-  lut: Lut; // a nutelch OKLCH LUT (oklchSrgb / oklchP3) — which gamut to target
 }
 
 // Diverging: two sequential palettes joined through a shared neutral point.
-export interface DivergingOptions {
-  total: number;
-  hStart: number; // left-arm hue
-  hEnd: number; // right-arm hue
-  saturation?: number;
-  sRange?: [number, number]; // alternative to saturation (see SequentialOptions)
+// The arms are plain single-hue sequentials (the paper's construction), so no
+// hue-trajectory options — but the arm tension may ramp (sRange/sEasing, a
+// deliberate RampenSau-parity passthrough applied to each arm symmetrically).
+export interface DivergingOptions extends SequentialOptions {
+  hEnd: number; // right-arm hue (hStart is the left arm)
+  sRange?: [number, number]; // alternative to saturation, per arm (see RampOptions)
   sEasing?: (t: number) => number; // easing for sRange, per arm. default linear
-  brightness?: number;
-  contrast?: number;
-  lRange?: [number, number]; // alternative to brightness/contrast (see SequentialOptions)
-  coolWarm?: number;
-  lut: Lut; // a nutelch OKLCH LUT (oklchSrgb / oklchP3) — which gamut to target
 }
 
