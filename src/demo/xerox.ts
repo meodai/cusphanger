@@ -36,7 +36,17 @@ function sanitize(root: HTMLElement): HTMLElement {
   return root;
 }
 
+// WebKit rasterizes url(#…) filters on HTML content in software, per-primitive,
+// at device resolution — the page-sized ghost + turbulence mask can eat >1GB and
+// near-hang Safari. Vendor is 'Apple Computer, Inc.' on every WebKit engine
+// (Safari and all iOS browsers), unlike UA strings, which they spoof.
+export const isWebKitEngine = (vendor: string): boolean => vendor === 'Apple Computer, Inc.';
+
 export function initXerox(front: HTMLElement): void {
+  if (isWebKitEngine(navigator.vendor)) {
+    document.documentElement.classList.add('no-xerox');
+    return;
+  }
   const back = document.createElement('div');
   back.className = 'xerox-back';
   back.setAttribute('aria-hidden', 'true');

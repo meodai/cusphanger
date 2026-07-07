@@ -38,6 +38,11 @@ body {
   -webkit-mask: url(#fx-front-mask);
   mask: url(#fx-front-mask);
 }
+/* no ghost layer behind the mask's holes on WebKit — drop the mask with it */
+.no-xerox #app .canvas {
+  -webkit-mask: none;
+  mask: none;
+}
 .xerox-back {
   position: absolute;
   inset: 0;
