@@ -8,6 +8,7 @@ import { renderWheel, type WheelAxis } from './wheel';
 import { initExport } from './export';
 import { initCompositions } from './compositions';
 import { initXerox } from './xerox';
+import { initFxPanel } from './fx-panel';
 
 const HUE_EASINGS: Record<string, (t: number) => number> = {
   linear: (t) => t,
@@ -242,4 +243,16 @@ syncVizButtons();
 selectTab(TABS.find((t) => t.id === 'diverging') ?? TABS[0]!);
 
 initXerox(document.getElementById('app') as HTMLElement);
+
+const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+let konamiAt = 0;
+window.addEventListener('keydown', (e) => {
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  konamiAt = key === KONAMI[konamiAt] ? konamiAt + 1 : key === KONAMI[0] ? 1 : 0;
+  if (konamiAt < KONAMI.length) return;
+  konamiAt = 0;
+  const panel = document.querySelector('#app .fx-panel') as HTMLElement | null;
+  if (panel) panel.hidden = !panel.hidden;
+  else initFxPanel();
+});
 

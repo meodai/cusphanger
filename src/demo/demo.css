@@ -384,6 +384,9 @@ body {
 .xerox-back [data-ghost='none'] {
   visibility: hidden;
 }
+.fx-panel[hidden] {
+  display: none;
+}
 .fx-panel {
   border-top: var(--line-w) solid var(--chrome-line);
   padding: var(--space-4) var(--space-3) 0;
@@ -830,12 +833,6 @@ body {
   line-height: var(--leading);
   overflow-x: auto;
   color: var(--ink);
-}
-.hint {
-  margin: calc(-1 * var(--space-5)) 0 0;
-  font-family: var(--font-chrome);
-  font-size: var(--text-xs);
-  color: var(--canvas-muted);
 }
 
 
