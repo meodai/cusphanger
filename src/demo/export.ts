@@ -29,15 +29,16 @@ export function initExport(
   ];
 
   host.innerHTML = `
-    <div class="export__bar" role="tablist" aria-label="Export format">
+    <div class="export__bar tabs" role="tablist" aria-label="Export format">
       ${FORMATS.map(
         (f) =>
-          `<button type="button" role="tab" data-format="${f.id}"
+          `<button type="button" class="tabs__tab" role="tab" data-format="${f.id}"
              aria-selected="${f.id === active}">${f.label}</button>`,
       ).join('')}
-      <button type="button" class="export__copy">copy</button>
+      <button type="button" class="tabs__tab export__copy">copy</button>
     </div>
-    <pre class="export__code"><code></code></pre>`;
+    <pre class="export__code"><code></code></pre>
+    <span class="marks" aria-hidden="true"></span>`;
 
   const code = host.querySelector('code') as HTMLElement;
   const tabs = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-format]'));

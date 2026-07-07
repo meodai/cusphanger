@@ -198,23 +198,26 @@ body {
   display: flex;
   border: var(--line-w) solid var(--frame);
 }
-.tabs button {
-  flex: 1;
+.tabs__tab {
   position: relative;
   font: inherit;
   font-size: var(--text-xs);
-  padding: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
   background: transparent;
   color: var(--ink);
   border: 0;
   cursor: pointer;
 }
-.tabs button + button {
+.tabs__tab + .tabs__tab {
   border-left: var(--line-w) solid var(--frame);
 }
-.tabs button[aria-selected='true'] {
+.tabs__tab[aria-selected='true'] {
   background: var(--fill);
   color: var(--ink-inverse);
+}
+.rail .tabs__tab {
+  flex: 1;
+  padding-inline: 0;
 }
 
 .controls {
@@ -325,8 +328,10 @@ body {
 }
 .marks::before,
 .marks::after,
-:is(.tabs, .axis-toggle) button[aria-selected='true']::before,
-:is(.tabs, .axis-toggle) button[aria-selected='true']::after {
+.tabs__tab[aria-selected='true']::before,
+.tabs__tab[aria-selected='true']::after,
+.axis-toggle button[aria-selected='true']::before,
+.axis-toggle button[aria-selected='true']::after {
 
   --xm-s: 14px;
   --xm-c: 8px;
@@ -366,11 +371,13 @@ body {
   background-repeat: no-repeat;
 }
 .marks::before,
-:is(.tabs, .axis-toggle) button[aria-selected='true']::before {
+.tabs__tab[aria-selected='true']::before,
+.axis-toggle button[aria-selected='true']::before {
   top: var(--xm-off);
 }
 .marks::after,
-:is(.tabs, .axis-toggle) button[aria-selected='true']::after {
+.tabs__tab[aria-selected='true']::after,
+.axis-toggle button[aria-selected='true']::after {
   bottom: var(--xm-off);
 }
 
@@ -785,32 +792,32 @@ body {
 }
 
 .export {
-  border: var(--line-w) solid var(--canvas-line);
+  --frame: transparent;
+  --fill: transparent;
+  --ink: var(--canvas-ink);
+  --ink-muted: var(--canvas-muted);
+  --ink-inverse: var(--canvas-bg);
+  --cover: transparent;
+  position: relative;
+  border: var(--line-w) solid var(--frame);
+}
+.xerox-back .export {
+  --frame: var(--ink-print);
+  --fill: var(--ink-print);
+  --ink: transparent;
+  --ink-muted: transparent;
+  --ink-inverse: transparent;
+  --cover: var(--canvas-bg);
 }
 .export__bar {
-  display: flex;
-  border-bottom: var(--line-w) solid var(--canvas-line);
-}
-.export__bar button {
-  font: inherit;
-  font-weight: 700;
-  font-size: var(--text-xs);
-  padding: var(--space-2) var(--space-3);
-  background: transparent;
-  color: var(--canvas-muted);
-  border: 0;
-  cursor: pointer;
-}
-.export__bar [data-format][aria-selected='true'] {
-  color: var(--canvas-ink);
-  box-shadow: inset 0 calc(-1 * var(--line-w-strong)) 0 var(--canvas-accent);
+  border-width: 0 0 var(--line-w);
 }
 .export__copy {
   margin-left: auto;
-  border-left: var(--line-w) solid var(--canvas-line) !important;
+  border-left: var(--line-w) solid var(--frame);
 }
 .export__copy:hover {
-  color: var(--canvas-ink);
+  color: var(--ink);
 }
 .export__copy[data-copied]::after {
   content: ' \2713';
@@ -822,7 +829,7 @@ body {
   font-size: var(--text-xs);
   line-height: var(--leading);
   overflow-x: auto;
-  color: var(--canvas-ink);
+  color: var(--ink);
 }
 .hint {
   margin: calc(-1 * var(--space-5)) 0 0;
@@ -831,10 +838,6 @@ body {
   color: var(--canvas-muted);
 }
 
-.xerox-back .export button,
-.xerox-back .export__code {
-  color: transparent;
-}
 
 a {
   color: inherit;

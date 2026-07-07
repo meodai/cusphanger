@@ -186,6 +186,7 @@ const selectTab = (tab: Tab) => {
 for (const tab of TABS) {
   const b = document.createElement('button');
   b.type = 'button';
+  b.className = 'tabs__tab';
   b.textContent = tab.label;
   b.setAttribute('role', 'tab');
   b.addEventListener('click', () => selectTab(tab));
