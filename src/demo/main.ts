@@ -211,8 +211,22 @@ gamutInput.addEventListener('change', () => {
 });
 
 // sidebar viz switch: chroma / lightness show the wheel (re-click the active
-// axis to flip its radial direction); slice shows the mini gamut slice
+// axis to flip its radial direction); slice shows the mini gamut slice.
+// The ⇄ overlay in the viz box's top-left corner flips the current axis too.
 const axisBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.axis-toggle button'));
+const flipBtn = $('.viz-flip') as HTMLButtonElement;
+const syncVizButtons = () => {
+  flipBtn.hidden = vizView === 'slice';
+  flipBtn.toggleAttribute('data-flipped', vizView !== 'slice' && wheelFlip[wheelAxis]);
+  for (const b of axisBtns) {
+    const ba = b.dataset.axis as VizView;
+    b.setAttribute('aria-selected', String(ba === vizView));
+    b.toggleAttribute(
+      'data-flipped',
+      ba !== 'slice' && ba === vizView && wheelFlip[ba as WheelAxis],
+    );
+  }
+};
 for (const btn of axisBtns) {
   btn.addEventListener('click', () => {
     const a = btn.dataset.axis as VizView;
@@ -224,16 +238,15 @@ for (const btn of axisBtns) {
     vizView = a;
     wheelHost.hidden = vizView === 'slice';
     sliceMiniHost.hidden = vizView !== 'slice';
-    for (const b of axisBtns) {
-      const ba = b.dataset.axis as VizView;
-      b.setAttribute('aria-selected', String(ba === vizView));
-      b.toggleAttribute(
-        'data-flipped',
-        ba !== 'slice' && ba === vizView && wheelFlip[ba as WheelAxis],
-      );
-    }
+    syncVizButtons();
   });
 }
+flipBtn.addEventListener('click', () => {
+  wheelFlip[wheelAxis] = !wheelFlip[wheelAxis];
+  renderWheel(wheelHost, palette, lut, wheelAxis, wheelFlip[wheelAxis]);
+  syncVizButtons();
+});
+syncVizButtons();
 
 selectTab(TABS.find((t) => t.id === 'diverging') ?? TABS[0]!);
 

@@ -131,6 +131,26 @@ body {
 .rail__viz .viz-pane {
   padding: var(--space-2);
 }
+/* flip control — floats over the wheel's top-left corner and inverts the
+   radial direction of the active axis (hidden on the slice view) */
+.viz-flip {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 1;
+  font-family: var(--font-chrome);
+  font-size: var(--text-s);
+  line-height: 1;
+  padding: var(--space-1);
+  background: transparent;
+  color: var(--ink-muted);
+  border: 0;
+  cursor: pointer;
+}
+.viz-flip:hover,
+.viz-flip[data-flipped] {
+  color: var(--ink);
+}
 .rail .wheel-svg,
 .rail .slice-svg {
   color: var(--chrome-ink);
