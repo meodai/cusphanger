@@ -1,9 +1,3 @@
-// TEMP — live controls for the #xerox-blur SVG filter (index.html) plus the
-// ghost misregistration shift/opacity. Built into the front rail, marked
-// data-ghost="none" so its ghost copy is blanked (but keeps its space, so the
-// layers stay aligned). Dial the look, click the readout to copy the values,
-// then paste them back into index.html + tokens.css to make them the default.
-
 interface Field {
   key: string;
   label: string;
@@ -12,7 +6,7 @@ interface Field {
   step: number;
   get: () => number;
   set: (v: number) => void;
-  fmt?: (v: number) => string; // readout formatting
+  fmt?: (v: number) => string;
 }
 
 const el = <T extends Element>(sel: string): T => {
@@ -21,25 +15,18 @@ const el = <T extends Element>(sel: string): T => {
   return node as T;
 };
 
-// These don't map to single attributes, so keep them here and rebuild the
-// relevant feColorMatrix on change. gain/threshold compose the noise→alpha row
-// (shared by the ghost patches and the front mask); softFade/heavyFade are
-// the per-blur opacities that make the two blurs blend instead of stack opaque.
 let gain = 1.8;
 let threshold = 0.63;
 let softFade = 0.95;
 let heavyFade = 0.8;
-// front-mask cutoff: how sparse the dissolve holes are. The mask shares the
-// noise FIELD with the ghost patches but needs its own (higher) cutoff — the
-// ghost wants a mid-range haze, the mask wants mostly-opaque + sparse holes.
-let dissolve = 0.3; // 0 = no holes (all sharp), 1 = lots of holes
 
-// noise → alpha row for feColorMatrix: alpha = gain·luma − threshold
+let dissolve = 0.3;
+
 const alphaRow = (g: number, t: number) => {
   const k = (g / 3).toFixed(3);
   return `0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  ${k} ${k} ${k} 0 ${(-t).toFixed(3)}`;
 };
-// identity RGB, alpha scaled by `a` — fades a blur layer without tinting it
+
 const fadeMatrix = (a: number) => `1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${a} 0`;
 
 function buildFields(): Field[] {
@@ -47,12 +34,11 @@ function buildFields(): Field[] {
   const heavy = el<SVGElement>('#fx-heavy');
   const softFadeEl = el<SVGElement>('#fx-soft-fade');
   const heavyFadeEl = el<SVGElement>('#fx-heavy-fade');
-  // the ghost's noise FIELD and the front mask's noise field are identical
-  // (same turbulence); their alpha mappings differ, so the matrices are separate.
+
   const turbs = [el<SVGElement>('#fx-turb'), el<SVGElement>('#fx-mask-turb')];
-  const matrix = el<SVGElement>('#fx-matrix'); // ghost patches (haze)
-  const maskMatrix = el<SVGElement>('#fx-mask-matrix'); // front mask (sparse holes)
-  const turb = turbs[0]!; // read defaults from the primary
+  const matrix = el<SVGElement>('#fx-matrix');
+  const maskMatrix = el<SVGElement>('#fx-mask-matrix');
+  const turb = turbs[0]!;
   const rootStyle = document.documentElement.style;
 
   const num = (node: SVGElement, attr: string) => parseFloat(node.getAttribute(attr) ?? '0');
@@ -62,7 +48,7 @@ function buildFields(): Field[] {
     nodes.forEach((n) => n.setAttribute(attr, String(v)));
 
   const applyMatrix = () => matrix.setAttribute('values', alphaRow(gain, threshold));
-  // mask cutoff rises as dissolve falls, so fewer holes = more of the sharp front
+
   const applyMaskMatrix = () => maskMatrix.setAttribute('values', alphaRow(gain, 1 - dissolve));
   const applySoftFade = () => softFadeEl.setAttribute('values', fadeMatrix(softFade));
   const applyHeavyFade = () => heavyFadeEl.setAttribute('values', fadeMatrix(heavyFade));

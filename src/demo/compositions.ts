@@ -1,11 +1,5 @@
-// Random compositions painted by the current palette — RampenSau's example
-// tiles. Every shape fills with var(--pal-i), so palette changes repaint the
-// tiles through the tokens with no re-render; a tile only re-randomizes when
-// the palette size changes (indices must stay in range) or when clicked.
-
 type Rng = () => number;
 
-// mulberry32 — tiny seedable rng so a tile's layout is stable until reseeded
 const mulberry32 = (seed: number): Rng => {
   let a = seed >>> 0;
   return () => {
@@ -20,28 +14,14 @@ const mulberry32 = (seed: number): Rng => {
 const pal = (i: number) => `var(--pal-${i})`;
 const f = (v: number) => v.toFixed(1);
 
-// Sol LeWitt-style isometric cube: a ground color carrying a 2:1 iso cube whose
-// three visible faces (top, left, right) are three distinct palette members —
-// ground + faces are all unique within a tile (wrapping only if N < 4). The
-// cube is centered at a fixed size; the only randomness is the color pick.
-// Oblique (cabinet) projection, like the Sol LeWitt blocks: the FRONT face is
-// a true axis-aligned square; the DEPTH shears back at 45° up-and-right, so the
-// top and right faces are parallelograms. Not isometric — the front reads flat.
-const FRONT = 80; // side of the square front face
-const DEPTH = 100; // receding length along the 45° axis (long side walls)
-const A = DEPTH * Math.SQRT1_2; // its x/y component (equal, at 45°)
-const VB = FRONT + A; // tight square viewBox — the block fills it edge to edge;
-// the ground/padding is the tile's own background + CSS padding, so the border
-// around the block is a constant width regardless of 1x1 vs 2x2 tile size.
+const FRONT = 80;
+const DEPTH = 100;
+const A = DEPTH * Math.SQRT1_2;
+const VB = FRONT + A;
 
-// stroke each face in its own fill so the shared edges don't show an
-// anti-aliasing seam between adjacent polygons
 const poly = (pts: Array<[number, number]>, fill: string) =>
   `<polygon points="${pts.map(([px, py]) => `${f(px)},${f(py)}`).join(' ')}" fill="${fill}" stroke="${fill}" stroke-width="1" stroke-linejoin="round"/>`;
 
-// the block's wireframe as ONE path, each shared edge drawn exactly once —
-// stroking the face polygons instead would double-stroke shared edges and
-// the compounded anti-aliasing reads as darker, fatter lines
 function outlinePath(faces: Array<Array<[number, number]>>): string {
   const seen = new Set<string>();
   let d = '';
@@ -61,10 +41,6 @@ function outlinePath(faces: Array<Array<[number, number]>>): string {
   return d.trim();
 }
 
-// The block for a given depth direction (sx, sy ∈ {-1, +1}: which corner the
-// square sits in and which way it recedes). Returns the three visible faces —
-// front square, a horizontal face (top if it recedes up, else bottom) and a
-// vertical face (right if it recedes right, else left) — centered in the tile.
 function blockFaces(sx: number, sy: number): {
   front: Array<[number, number]>;
   horiz: Array<[number, number]>;
@@ -76,14 +52,12 @@ function blockFaces(sx: number, sy: number): {
   const FLb: [number, number] = [0, FRONT];
   const bk = ([x, y]: [number, number]): [number, number] => [x + sx * A, y + sy * A];
 
-  // horizontal face = the front edge that faces the recede direction, extruded
   const horiz: Array<[number, number]> =
     sy < 0 ? [FLt, FRt, bk(FRt), bk(FLt)] : [FLb, FRb, bk(FRb), bk(FLb)];
   const vert: Array<[number, number]> =
     sx > 0 ? [FRt, FRb, bk(FRb), bk(FRt)] : [FLt, FLb, bk(FLb), bk(FLt)];
   const front: Array<[number, number]> = [FLt, FRt, FRb, FLb];
 
-  // center the whole block (front corners plus their extruded counterparts)
   const all = [FLt, FRt, FRb, FLb, bk(FLt), bk(FRt), bk(FRb), bk(FLb)];
   const xs = all.map((p) => p[0]);
   const ys = all.map((p) => p[1]);
@@ -94,16 +68,12 @@ function blockFaces(sx: number, sy: number): {
   return { front: shift(front), horiz: shift(horiz), vert: shift(vert) };
 }
 
-// `colorAt(i)` resolves palette slot i to a fill: either the shared --pal-i
-// token (repaints live with the palette) or a baked CSS string (hue mode).
-// Returns the ground fill (goes on the tile's background) and the block SVG
-// (fills the tile's content box; the CSS padding is the constant ground border).
 function tileSvg(
   rng: Rng,
   n: number,
   colorAt: (i: number) => string,
 ): { ground: string; svg: string } {
-  // shuffled unique indices — ground first, then the three faces
+
   const order = Array.from({ length: n }, (_, i) => i);
   for (let i = n - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
@@ -112,29 +82,25 @@ function tileSvg(
   const ground = order[0]!;
   const face = (k: number) => colorAt(order[1 + (k % (n - 1 || 1))] ?? ground);
 
-  // random recede direction — the square lands in a random corner
   const sx = rng() < 0.5 ? -1 : 1;
   const sy = rng() < 0.5 ? -1 : 1;
   const { front, horiz, vert } = blockFaces(sx, sy);
 
   const block =
-    poly(horiz, face(1)) + poly(vert, face(2)) + poly(front, face(0)); // front square on top
+    poly(horiz, face(1)) + poly(vert, face(2)) + poly(front, face(0));
   const lines = outlinePath([front, horiz, vert]);
 
   return {
     ground: colorAt(ground),
-    // data-ghost-keep: the color block prints only in the xerox ghost; the
-    // wireframe path stays outside the group, so it exists only in the sharp
-    // front (the ghost copies keeps only). See demo.css.
+
     svg: `<svg viewBox="0 0 ${f(VB)} ${f(VB)}" role="img" aria-label="composition"><g data-ghost-keep>${block}</g><path class="tile-lines" d="${lines}" vector-effect="non-scaling-stroke"/></svg>`,
   };
 }
 
 export interface CompositionControls {
-  regen: HTMLElement; // "regenerate all" button
-  hueToggle: HTMLInputElement; // "randomize hue" checkbox
-  // builds a hue-randomized palette variant as CSS strings, seeded by `rng`
-  // (same settings as the live palette, rotated to a random starting hue)
+  regen: HTMLElement;
+  hueToggle: HTMLInputElement;
+
   variantColors: (rng: Rng) => string[];
 }
 
@@ -149,7 +115,7 @@ export function initCompositions(
 
   const draw = (i: number) => {
     const n = Math.max(lastN, 1);
-    // one rng per tile drives shuffle, direction and (in hue mode) the hue
+
     const rng = mulberry32(seeds[i]!);
     let colorAt: (k: number) => string;
     if (hueToggle.checked) {
@@ -168,7 +134,7 @@ export function initCompositions(
   const tiles = Array.from({ length: count }, (_, i) => {
     const b = document.createElement('button');
     b.type = 'button';
-    // the 2nd and 7th tiles span a 2x2 area in the grid
+
     b.className = i === 1 || i === 6 ? 'tile tile--big' : 'tile';
     b.title = 'click to reshuffle';
     b.addEventListener('click', () => {
@@ -185,7 +151,6 @@ export function initCompositions(
   });
   hueToggle.addEventListener('change', drawAll);
 
-  // auto-cycle: twice a second reshuffle a random tile (same as clicking it)
   setInterval(() => {
     const i = Math.floor(Math.random() * count);
     reseed(i);
@@ -195,8 +160,7 @@ export function initCompositions(
   return (n: number) => {
     const sizeChanged = n !== lastN;
     lastN = n;
-    // token mode repaints via CSS on same-size changes; hue mode bakes colors
-    // from the live settings, so it must redraw whenever anything changes.
+
     if (hueToggle.checked || sizeChanged) drawAll();
   };
 }

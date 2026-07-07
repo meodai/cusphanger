@@ -5,20 +5,13 @@ import { css, cssOf } from './color';
 
 const gamutTag = (lut: Lut) => (lut === oklchP3 ? 'p3' : 'srgb');
 
-// Top view: hue = angle, the radius is either chroma or lightness, and `flip`
-// inverts the radial direction (what sits at the center vs. the rim).
-// - 'chroma': neutral↔colorful between center and rim; boundary = per-hue cusp
-//   chroma (peaks & valleys).
-// - 'lightness': white↔dark between center and rim; fill is the most saturated
-//   color at each (hue, L); the contour is each hue's cusp lightness.
-
 export type WheelAxis = 'chroma' | 'lightness';
 
 const SIZE = 400;
 const CT = SIZE / 2;
 const PAD = 26;
 const R = CT - PAD;
-const STEP = 2; // degrees per wedge
+const STEP = 2;
 
 const pt = (hue: number, r: number): [number, number] => {
   const a = (hue * Math.PI) / 180;
@@ -26,7 +19,6 @@ const pt = (hue: number, r: number): [number, number] => {
 };
 const f = (n: number) => n.toFixed(2);
 
-// diamond marker (a square rotated 45°) of "radius" r centred at (x, y)
 const diamond = (x: number, y: number, r: number, cls: string) =>
   `<polygon points="${f(x)},${f(y - r)} ${f(x + r)},${f(y)} ${f(x)},${f(y + r)} ${f(x - r)},${f(y)}" class="${cls}"/>`;
 
@@ -43,7 +35,6 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
   const cached = bgCache.get(key);
   if (cached) return cached;
 
-  // t in [0,1]; t=0 sits at the center unless flipped
   const rad = (t: number) => (flip ? 1 - t : t) * R;
 
   const peaks: Array<{ hue: number; c: number; l: number }> = [];
@@ -62,7 +53,7 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
   let legend: string;
 
   if (axis === 'chroma') {
-    const r0 = rad(0); // the neutral (c=0) radius
+    const r0 = rad(0);
     let wedges = '';
     let boundary = '';
     for (let i = 0; i < peaks.length; i++) {
@@ -76,7 +67,7 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
       wedges += `<path d="M ${f(a0x)},${f(a0y)} L ${f(a1x)},${f(a1y)} L ${f(b1x)},${f(b1y)} L ${f(b0x)},${f(b0y)} Z" fill="${fill}"/>`;
       boundary += `${i === 0 ? 'M' : 'L'} ${f(a1x)},${f(a1y)} `;
     }
-    // fade the neutral end toward the page background
+
     const fadeStops = flip
       ? `<stop offset="54%" class="wheel-fade-out"/><stop offset="100%" class="wheel-fade-in"/>`
       : `<stop offset="0%" class="wheel-fade-in"/><stop offset="46%" class="wheel-fade-out"/>`;
@@ -98,7 +89,7 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
       const cLo = css(0.04, 0, a.hue);
       const cCusp = css(a.l, a.c, a.hue);
       const cHi = css(0.99, 0, a.hue);
-      const tCusp = 1 - a.l; // position of the cusp (white-at-center default)
+      const tCusp = 1 - a.l;
       const cuspOff = ((rad(tCusp) / R) * 100).toFixed(1);
       defs += `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${CT}" cy="${CT}" r="${R}">
         <stop offset="0%" stop-color="${flip ? cLo : cHi}"/>
@@ -154,9 +145,6 @@ export function renderWheel(
   }
   const dots = pts.map(([x, y]) => diamond(x, y, 5, 'wheel-dot')).join('');
 
-  // chroma view: rings at the min / avg / max cusp chroma of the palette's hues —
-  // the three triangleMode levels. 'min' is the largest circle every hue can
-  // reach (the equal-colorfulness ceiling); dots stay inside it in 'min' mode.
   let cuspRings = '';
   let ringNote = '';
   if (axis === 'chroma') {
@@ -173,7 +161,7 @@ export function renderWheel(
     cuspRings = rings
       .map(([name, c]) => {
         const r = rad(c / bg.maxCusp);
-        const [lx, ly] = pt(90, r); // label at 12 o'clock
+        const [lx, ly] = pt(90, r);
         return (
           `<circle cx="${CT}" cy="${CT}" r="${f(r)}" class="wheel-cusp-ring wheel-cusp-${name}"/>` +
           `<text x="${f(lx)}" y="${f(ly - 3)}" class="wheel-cusp-label" text-anchor="middle">${name}</text>`
@@ -196,7 +184,6 @@ export function renderWheel(
       ${cuspRings}
       ${traj}
       ${dots}
-      ${lut === oklchP3 ? `<text x="14" y="20" class="wheel-tag">P3</text>` : ''}
     </svg>
     <p class="slice-legend">${bg.legend}${ringNote}</p>`;
 }

@@ -1,6 +1,3 @@
-// Export block: how to call the library to get exactly the palette above
-// (default), or the result itself as CSS custom properties, a bare oklch()
-// list, or a JS array — one format visible at a time, one copy button.
 import type { OklchColor } from '../lib/index';
 import { cssOf, hexOf } from './color';
 import { copyText } from './clipboard';

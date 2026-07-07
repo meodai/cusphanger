@@ -1,8 +1,3 @@
-// Demo-side gamut boundary, via culori — smoother than nutelch's LUT near the
-// sharp cusps (the LUT bilinear-interpolates and wobbles there). Used only for
-// the DIAGRAM outlines (wheel boundary, slice envelope); the palette itself
-// comes from the library (nutelch). Same signatures as the lib's gamut helpers,
-// so the views can swap import source without other changes.
 import { clampChroma } from 'culori';
 import { oklchP3, type Lut } from 'nutelch';
 

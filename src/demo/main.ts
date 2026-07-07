@@ -8,10 +8,7 @@ import { renderWheel, type WheelAxis } from './wheel';
 import { initExport } from './export';
 import { initCompositions } from './compositions';
 import { initXerox } from './xerox';
-// xerox tuning panel — uncomment (with the call below) to dial the filter.
-// import { initFxPanel } from './fx-panel';
 
-// hue-trajectory easings for the Ramp tab (RampenSau-style hue cycling)
 const HUE_EASINGS: Record<string, (t: number) => number> = {
   linear: (t) => t,
   'ease-in': (t) => t * t,
@@ -26,9 +23,9 @@ interface Tab {
   label: string;
   fields: FieldSpec[];
   choices?: ChoiceSpec[];
-  forceMirror?: boolean; // always show both slice flaps (diverging)
+  forceMirror?: boolean;
   build: (v: Record<string, number>, c: Record<string, string>, lut: Lut) => OklchColor[];
-  // the library call that reproduces the current palette (the 'usage' export)
+
   usage: (v: Record<string, number>, c: Record<string, string>, lutName: string) => string;
 }
 
@@ -147,7 +144,6 @@ const tabsNav = $('.tabs');
 const controlsHost = $('.controls');
 const updateExport = initExport($('.export'));
 
-// the sidebar viz box shows the wheel (either radial axis) or the mini slice
 type VizView = WheelAxis | 'slice';
 let activeTab: Tab = TABS[0]!;
 let lut: Lut = oklchSrgb;
@@ -158,9 +154,6 @@ let lastValues: Record<string, number> = {};
 let lastChoices: Record<string, string> = {};
 let palette: OklchColor[] = [];
 
-// the composition tiles' hue-randomized variant: the active tab's current
-// settings verbatim, with ONLY hStart set to a random hue (hEnd and everything
-// else are left exactly as the live palette). Returns the palette as CSS.
 const updateCompositions = initCompositions($('.compositions'), {
   regen: $('.compo-regen'),
   hueToggle: document.querySelector('.compo-hue input') as HTMLInputElement,
@@ -180,7 +173,6 @@ function renderAll(): void {
   updateExport(palette, activeTab.usage(lastValues, lastChoices, lut === oklchP3 ? 'oklchP3' : 'oklchSrgb'));
 }
 
-// tabs — built once; switching only re-targets the controls
 const tabButtons: HTMLButtonElement[] = [];
 const selectTab = (tab: Tab) => {
   activeTab = tab;
@@ -201,18 +193,16 @@ for (const tab of TABS) {
   tabsNav.appendChild(b);
 }
 
-// gamut toggle: sRGB <-> Display P3
-const gamutInput = document.querySelector('.gamut input') as HTMLInputElement;
-const gamutVal = $('.gamut__value');
-gamutInput.addEventListener('change', () => {
-  lut = gamutInput.checked ? oklchP3 : oklchSrgb;
-  gamutVal.textContent = gamutInput.checked ? 'Display P3' : 'sRGB';
+const vizGamut = $('.viz-gamut') as HTMLButtonElement;
+let p3 = false;
+vizGamut.addEventListener('click', () => {
+  p3 = !p3;
+  lut = p3 ? oklchP3 : oklchSrgb;
+  vizGamut.textContent = p3 ? 'P3' : 'sRGB';
+  vizGamut.toggleAttribute('data-active', p3);
   renderAll();
 });
 
-// sidebar viz switch: chroma / lightness show the wheel (re-click the active
-// axis to flip its radial direction); slice shows the mini gamut slice.
-// The ⇄ overlay in the viz box's top-left corner flips the current axis too.
 const axisBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.axis-toggle button'));
 const flipBtn = $('.viz-flip') as HTMLButtonElement;
 const syncVizButtons = () => {
@@ -250,8 +240,5 @@ syncVizButtons();
 
 selectTab(TABS.find((t) => t.id === 'diverging') ?? TABS[0]!);
 
-// xerox layering: a blurred ghost of the whole app behind the sharp front,
-// kept in sync by a MutationObserver. Which parts print on which layer is
-// decided in demo.css (the .rail layer-split custom properties).
 initXerox(document.getElementById('app') as HTMLElement);
-// initFxPanel(); // xerox tuning panel — re-enable to dial the filter values
+

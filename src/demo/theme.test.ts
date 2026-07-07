@@ -18,16 +18,16 @@ describe('deriveTheme', () => {
     expect(t.bg.l).toBeGreaterThanOrEqual(0.94);
     expect(t.ink.l).toBeLessThanOrEqual(0.2);
     expect(t.bg.l - t.ink.l).toBeGreaterThanOrEqual(0.4);
-    expect(t.bg.h).toBe(200); // hue of the lightest member survives
-    expect(t.ink.h).toBe(220); // hue of the darkest member survives
-    expect(t.bg.c).toBeLessThanOrEqual(0.03); // surfaces stay quiet
+    expect(t.bg.h).toBe(200);
+    expect(t.ink.h).toBe(220);
+    expect(t.bg.c).toBeLessThanOrEqual(0.03);
   });
 
   it('picks the max-chroma member as peak, clamping the accent lightness', () => {
     const palette = [o(0.93, 0.18, 100), o(0.55, 0.21, 30), o(0.2, 0.02, 100)];
     const t = deriveTheme(palette);
     expect(t.peak).toEqual(palette[1]);
-    expect(t.accent).toEqual(palette[1]); // mid lightness: no clamp needed
+    expect(t.accent).toEqual(palette[1]);
 
     const light = deriveTheme([o(0.93, 0.18, 100), o(0.5, 0.05, 100)]);
     expect(light.accent.l).toBeLessThanOrEqual(0.68);
@@ -43,7 +43,7 @@ describe('deriveTheme', () => {
 });
 
 describe('applyTheme', () => {
-  // minimal stand-in for an element's CSSStyleDeclaration surface
+
   const fakeEl = () => {
     const props = new Map<string, string>();
     return {

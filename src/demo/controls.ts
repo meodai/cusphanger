@@ -1,6 +1,3 @@
-// The rail's parameter controls: labelled range sliders (with the paper's
-// symbols) and named-choice selects. The slider fill tracks --valueRel; a
-// 0..360 slider is a hue slider and gets the OKLCH rainbow track.
 export interface FieldSpec {
   key: string;
   label: string;
@@ -84,7 +81,7 @@ export function buildControls(
       choices[c.key] = select.value;
       emit();
     });
-    // the select sits in a relative box so its corner .marks can frame it
+
     const box = document.createElement('span');
     box.className = 'control__selectbox';
     box.appendChild(select);

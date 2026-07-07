@@ -1,22 +1,17 @@
-// The hero: the palette as horizontal bands anchored to the right edge, each
-// reaching left by its darkness (1 − L, eased into a [min, max] span) — the
-// hanger rotated to RampenSau's stepped-band layout. A sequential ramp reads
-// as a staircase, a diverging palette as a wedge. Every band carries its own
-// oklch numbers as a big label; clicking a band copies the full oklch().
 import type { OklchColor } from '../lib/index';
 import { cssOf } from './color';
 import { copyText } from './clipboard';
 
 const REACH_MIN = 0.34;
 const REACH_MAX = 1;
-// bands lighter than this get dark ink; darker ones get light ink
+
 const LABEL_FLIP_L = 0.62;
 
 const label = (c: OklchColor) =>
   `${c.l.toFixed(2)} ${c.c.toFixed(3)} ${(((c.h % 360) + 360) % 360).toFixed(0)}°`;
 
 export function renderHanger(host: HTMLElement, palette: OklchColor[]): void {
-  // reuse bands across renders so width changes transition instead of remount
+
   const bands = Array.from(host.children) as HTMLButtonElement[];
   while (bands.length > palette.length) bands.pop()!.remove();
   while (bands.length < palette.length) {

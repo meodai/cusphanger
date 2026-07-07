@@ -1,18 +1,6 @@
-/* ── CuspHanger demo tokens ──────────────────────────────────────────────
-   Three tiers. Components never use raw values — only tokens from here.
-
-   1. primitives  — static scales (space, type, geometry, motion)
-   2. palette     — --pal-* written by theme.ts after every generate
-   3. semantic    — chrome (neutral rail, light-dark aware) and canvas
-                    (palette-derived; the JS-written values override the
-                    fallbacks below on :root's inline style)               */
-
 :root {
   color-scheme: light dark;
 
-  /* ── 1 · primitives ── */
-
-  /* type */
   --font-display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
   --font-chrome: "Space Mono", ui-monospace, "SF Mono", Menlo, Consolas,
     monospace;
@@ -25,7 +13,6 @@
   --leading: 1.5;
   --leading-tight: 0.94;
 
-  /* space — 4px base */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -35,49 +22,36 @@
   --space-7: 3rem;
   --space-8: 4.5rem;
 
-  /* geometry */
   --line-w: 1px;
   --line-w-strong: 2px;
   --radius-1: 2px;
   --rail-w: max(19rem, 20vw);
 
-  /* motion */
   --ease: cubic-bezier(0.3, 0.7, 0, 1);
   --dur-1: 120ms;
   --dur-2: 360ms;
 
-  /* fixed OKLCH hue spectrum for the hue-slider tracks */
   --hue-rainbow: linear-gradient(
     to right in oklch longer hue,
     oklch(0.7 0.13 0),
     oklch(0.7 0.13 360)
   );
 
-  /* ── 2 · palette (JS-written; declared so lookups never fail) ── */
   --pal-n: 0;
 
-  /* ── 3 · semantic ── */
-
-  /* canvas — palette-tinted, written by theme.ts after every generate:
-     bg = the palette's light end, ink = its dark end (both contrast-guarded).
-     The light-dark() values are first-paint fallbacks only. */
   --canvas-bg: light-dark(oklch(0.965 0.004 95), oklch(0.21 0.008 270));
   --canvas-ink: light-dark(oklch(0.23 0.012 270), oklch(0.92 0.006 95));
   --canvas-accent: oklch(0.55 0.16 260);
   --canvas-muted: color-mix(in oklch, var(--canvas-ink) 55%, var(--canvas-bg));
   --canvas-line: color-mix(in oklch, var(--canvas-ink) 16%, var(--canvas-bg));
 
-  /* chrome — the sidebar: the same surface as the canvas. Its frames and
-     fills are printed only by the xerox ghost layer (see demo.css) */
   --chrome-bg: var(--canvas-bg);
   --chrome-ink: var(--canvas-ink);
   --chrome-muted: color-mix(in oklch, var(--chrome-ink) 55%, var(--chrome-bg));
   --chrome-line: color-mix(in oklch, var(--chrome-ink) 20%, var(--chrome-bg));
 
-  /* fixed print ink — frames that stay black no matter the palette */
   --ink-print: oklch(0.19 0 0);
 
-  /* xerox ghost — misregistration offset + overall toner strength */
   --xerox-shift-x: -1px;
   --xerox-shift-y: 1.5px;
   --xerox-opacity: 0.85;

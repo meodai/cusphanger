@@ -5,11 +5,6 @@ import { css } from './color';
 
 const gamutTag = (lut: Lut) => (lut === oklchP3 ? 'p3' : 'srgb');
 
-// Side view of the OKLCH gamut slice (chroma x lightness). With a single hue it
-// shows one (chroma vs lightness) cross-section; when the palette's start and
-// end hue differ it mirrors into a butterfly: start hue on the left, end hue on
-// the right, sharing the central lightness axis.
-
 const W = 400;
 const H = 400;
 const PAD = { l: 48, r: 16, t: 26, b: 32 };
@@ -19,12 +14,9 @@ const f = (n: number) => n.toFixed(2);
 const Y = (L: number) => PAD.t + (1 - L) * PLOT_H;
 const fmtPts = (pts: Array<[number, number]>) => pts.map(([x, y]) => `${f(x)},${f(y)}`).join(' ');
 
-// diamond marker (a square rotated 45°) of "radius" r centred at (x, y)
 const diamond = (x: number, y: number, r: number, cls: string) =>
   `<polygon points="${f(x)},${f(y - r)} ${f(x + r)},${f(y)} ${f(x)},${f(y + r)} ${f(x - r)},${f(y)}" class="${cls}"/>`;
 
-// per-(gamut, mode, scale, hue, side) colored background, so non-hue slider
-// changes don't recompute the gamut fill.
 const sliceBgCache = new Map<string, string>();
 
 const angDiff = (a: number, b: number): number => {
@@ -46,8 +38,8 @@ function niceStep(max: number): number {
 
 interface Side {
   hue: number;
-  x0: number; // chroma = 0 anchor
-  sign: -1 | 1; // direction of increasing chroma
+  x0: number;
+  sign: -1 | 1;
   X: (c: number) => number;
 }
 
@@ -66,22 +58,19 @@ export function renderSlice(
   const endHue = palette[palette.length - 1]!.h;
   const mirror = forceMirror || angDiff(startHue, endHue) > 1;
 
-  // include the palette's own max chroma so out-of-gamut points ('absolute'
-  // mode) still fit inside the plot instead of falling off the edge.
   const maxPC = palette.reduce((m, c) => Math.max(m, c.c), 0);
 
   let sides: Side[];
   let pointSide: number[];
   let xMax: number;
-  let triModel = ''; // single-hue: the paper's triangle model, mirrored right
+  let triModel = '';
 
   if (!mirror) {
     const hue = representativeHue(palette);
     xMax = Math.max(cusp(hue, lut).c, maxPC, 0.04) * 1.18;
     const cx = W / 2;
     const halfW = (W - 2 * 26) / 2;
-    // real gamut on the left; the paper's straight-line triangle model mirrored
-    // on the right, with its cusp tip — the approximation next to reality.
+
     sides = [{ hue, x0: cx, sign: -1, X: (c) => cx - (c / xMax) * halfW }];
     pointSide = palette.map(() => 0);
     const peak = cusp(hue, lut);
@@ -101,16 +90,12 @@ export function renderSlice(
       { hue: startHue, x0: cx, sign: -1, X: (c) => cx - (c / xMax) * halfW },
       { hue: endHue, x0: cx, sign: 1, X: (c) => cx + (c / xMax) * halfW },
     ];
-    // first half -> left flap (start hue arm), second half -> right flap.
-    // robust when both hues are equal (e.g. a symmetric diverging palette).
+
     pointSide = palette.map((_, i) => (i < palette.length / 2 ? 0 : 1));
   }
 
-  // background per side: colored gamut fill + envelope + triangle + cusp + ref + ticks
   const background = (s: Side, drawTri: boolean): string => {
-    // key MUST encode the geometry (single vs mirror, anchor) — single-mode and
-    // mirror-flap backgrounds can share gamut/mode/xMax/hue/sign yet differ in
-    // layout, so omitting this collides them and stacks the flaps.
+
     const key = `${gamutTag(lut)}|${mirror}|${drawTri}|${s.x0}|${s.sign}|${xMax.toFixed(4)}|${s.hue.toFixed(1)}`;
     const hit = sliceBgCache.get(key);
     if (hit) return hit;
@@ -121,10 +106,6 @@ export function renderSlice(
     for (let i = 0; i <= 96; i++) env.push([s.X(maxChromaAt(s.hue, i / 96, lut)), Y(i / 96)]);
     const envLine = `M ${fmtPts(env)}`;
 
-    // colored fill: per-lightness trapezoids from the center axis (neutral) out
-    // to the gamut envelope (cusp-edge color). Each trapezoid follows the curve
-    // (no stepped edges) and pins its inner edge to the center axis, so the two
-    // sides always meet cleanly at the center.
     const ROWS = 64;
     const idBase = `sl-${lut === oklchP3 ? "p" : "s"}-${Math.round(s.hue)}-${s.sign > 0 ? 'r' : 'l'}`;
     const x0 = s.X(0);
@@ -158,17 +139,14 @@ export function renderSlice(
     }
 
     const triEl = drawTri ? `<path d="${tri}" class="tri"/>` : '';
-    // the colored gamut fill (gradients ride inside the group) prints only in
-    // the xerox ghost; the linework stays on the sharp front (see demo.css)
+
     const str = `<g data-ghost-keep>${fill}</g>${triEl}<path d="${envLine}" class="env-line"/>${cuspMark}${cTicks}`;
     sliceBgCache.set(key, str);
     return str;
   };
 
-  // single-hue shows the triangle separately (right), so skip the left overlay
   const bg = sides.map((s) => background(s, mirror)).join('');
 
-  // foreground: per-point guide + dot, and a trajectory across all points
   let guides = '';
   let dots = '';
   const path: Array<[number, number]> = [];

@@ -77,6 +77,7 @@
     <aside class="rail">
       <div class="rail__viz">
         <button type="button" class="viz-flip" aria-label="invert the radial direction">&#x21C4;</button>
+        <button type="button" class="viz-gamut" aria-label="toggle gamut (sRGB / Display P3)">sRGB</button>
         <div id="wheel" class="viz-pane"></div>
         <div id="slice-mini" class="viz-pane" hidden></div>
         <div class="axis-toggle" role="group" aria-label="Sidebar figure">
@@ -90,13 +91,6 @@
       <nav class="tabs" role="tablist" aria-label="Palette type"></nav>
       <form class="controls" aria-label="Palette parameters"></form>
 
-      <label class="gamut">
-        <input type="checkbox" />
-        <span class="control__row">
-          <span class="control__label">gamut</span>
-          <span class="gamut__value">sRGB</span>
-        </span>
-      </label>
     </aside>
 
     <main class="canvas">
@@ -130,6 +124,19 @@
 
         <section class="export" aria-label="Export"></section>
         <p class="hint">Click any color in the palette above to copy its oklch() value.</p>
+
+        <p class="cite">
+          A faithful OKLCH implementation of Wijffelaars, Vliegen, van Wijk &amp; van der Linden,
+          <a href="https://doi.org/10.1111/j.1467-8659.2009.01342.x" target="_blank" rel="noopener"
+            >&ldquo;Generating Color Palettes using Intuitive Parameters&rdquo;</a
+          >
+          (Computer Graphics Forum 28:3, EuroVis 2009). Also inspired by
+          <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener"
+            >Matt DesLauriers&rsquo;s OKLCH take</a
+          >
+          on the same paper. Gamut boundaries (the cusp / shell) come from
+          <a href="https://github.com/meodai/nutelch" target="_blank" rel="noopener">nutelch</a>.
+        </p>
       </div>
     </main>
     </div>

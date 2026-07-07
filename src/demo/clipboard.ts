@@ -1,5 +1,3 @@
-// Copy with a transient "copied" state on the trigger element (data-copied,
-// styled in CSS). Falls back to a hidden textarea off insecure contexts.
 export function copyText(text: string, trigger?: HTMLElement): void {
   const done = () => {
     if (!trigger) return;
