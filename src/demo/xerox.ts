@@ -43,10 +43,9 @@ function sanitize(root: HTMLElement): HTMLElement {
 export const isWebKitEngine = (vendor: string): boolean => vendor === 'Apple Computer, Inc.';
 
 export function initXerox(front: HTMLElement): void {
-  if (isWebKitEngine(navigator.vendor)) {
-    document.documentElement.classList.add('no-xerox');
-    return;
-  }
+  // The ghost layer stays (the rail's fills/frames live on it) — .no-xerox
+  // only strips the filter + mask, leaving a sharp clean print.
+  if (isWebKitEngine(navigator.vendor)) document.documentElement.classList.add('no-xerox');
   const back = document.createElement('div');
   back.className = 'xerox-back';
   back.setAttribute('aria-hidden', 'true');

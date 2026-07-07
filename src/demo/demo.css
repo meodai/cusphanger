@@ -38,10 +38,15 @@ body {
   -webkit-mask: url(#fx-front-mask);
   mask: url(#fx-front-mask);
 }
-/* no ghost layer behind the mask's holes on WebKit — drop the mask with it */
+/* WebKit rasterizes url() filters in software at page size — near-hangs
+   Safari. .no-xerox keeps both layers but skips the filter and the
+   turbulence mask: a clean print instead of a photocopied one. */
 .no-xerox #app .canvas {
   -webkit-mask: none;
   mask: none;
+}
+.no-xerox .xerox-back {
+  filter: none;
 }
 .xerox-back {
   position: absolute;
