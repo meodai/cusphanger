@@ -163,6 +163,7 @@ body {
 }
 .axis-toggle button {
   flex: 1;
+  position: relative; /* anchors the active button's corner marks */
   font-family: var(--font-chrome);
   font-size: var(--text-xs);
   padding: var(--space-2) 0;
@@ -189,6 +190,7 @@ body {
 }
 .tabs button {
   flex: 1;
+  position: relative; /* anchors the active tab's corner marks */
   font: inherit;
   font-weight: 700;
   font-size: var(--text-xs);
@@ -207,10 +209,14 @@ body {
 }
 
 /* controls — a slider is a bordered box; the input is invisible and the value
-   reads as a fill (::before) scaled to --valueRel with a hard right edge */
+   reads as a fill (::before) scaled to --valueRel with a hard right edge.
+   The stack docks straight onto the tabs: the rail gap is cancelled and the
+   first box's top border overlaps the tabs' bottom one (single shared rule,
+   marked by the first control's + pair). */
 .controls {
   display: flex;
   flex-direction: column;
+  margin-top: calc(-1 * var(--space-5) - var(--line-w));
 }
 .control {
   display: block;
@@ -361,8 +367,9 @@ body {
 }
 .marks::before,
 .marks::after,
-.axis-toggle::before,
-.gamut::before {
+.gamut::before,
+:is(.tabs, .axis-toggle) button[aria-selected='true']::before,
+:is(.tabs, .axis-toggle) button[aria-selected='true']::after {
   /* mark bounds, cross length (arm thickness = --line-w-strong, like the
      lines), knockout outline, and the strip's outward overhang that centers
      the marks on the border line */
@@ -404,11 +411,12 @@ body {
   background-repeat: no-repeat;
 }
 .marks::before,
-.axis-toggle::before,
-.gamut::before {
+.gamut::before,
+:is(.tabs, .axis-toggle) button[aria-selected='true']::before {
   top: var(--xm-off);
 }
-.marks::after {
+.marks::after,
+:is(.tabs, .axis-toggle) button[aria-selected='true']::after {
   bottom: var(--xm-off);
 }
 
