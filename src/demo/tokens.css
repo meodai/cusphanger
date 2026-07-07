@@ -54,7 +54,7 @@
 
   --xerox-shift-x: -1px;
   --xerox-shift-y: 1.5px;
-  --xerox-opacity: 0.85;
+  --xerox-opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

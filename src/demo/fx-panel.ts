@@ -15,10 +15,10 @@ const el = <T extends Element>(sel: string): T => {
   return node as T;
 };
 
-let gain = 1.8;
+let gain = 1.95;
 let threshold = 0.63;
 let softFade = 0.95;
-let heavyFade = 0.8;
+let heavyFade = 1;
 
 let dissolve = 0.3;
 
