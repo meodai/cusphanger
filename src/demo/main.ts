@@ -1,27 +1,23 @@
-import { sequential, diverging, type OklchColor, type TriangleMode } from '../lib/index';
-import { oklchSrgb, oklchP3, type Lut } from 'nutelch';
+import { sequential, ramp, diverging, type OklchColor, type TriangleMode } from '../lib/index';
+import { oklchSrgb, oklchP3, toCss, type Lut } from 'nutelch';
 import { buildControls, type FieldSpec, type ChoiceSpec } from './controls';
-import { renderSwatches, renderStrip } from './swatches';
+import { applyTheme } from './theme';
+import { renderHanger } from './hanger';
 import { renderSlice } from './slice';
 import { renderWheel, type WheelAxis } from './wheel';
-import { ditherSvg } from './dither';
+import { initExport } from './export';
+import { initCompositions } from './compositions';
 import { initXerox } from './xerox';
-// TEMP — noise tuning panel; remove once the xerox values are settled.
-import { initXeroxTuner } from './xerox-tuner';
+// xerox tuning panel — uncomment (with the call below) to dial the filter.
+// import { initFxPanel } from './fx-panel';
 
-// the loosening dither at the palette's inner (bottom) edge — vertical so it
-// fades the top bar down into the page. `pad` is a solid (un-dithered) band at
-// the top before the fade. (configurable: pad + fade span + square size)
-const DITHER = { span: 100, square: 3, color: '#000', vertical: true, pad: 50 };
-
-// hue-trajectory easings for the Ramp tab (RampenSau-style hue cycling).
+// hue-trajectory easings for the Ramp tab (RampenSau-style hue cycling)
 const HUE_EASINGS: Record<string, (t: number) => number> = {
   linear: (t) => t,
   'ease-in': (t) => t * t,
   'ease-out': (t) => 1 - (1 - t) * (1 - t),
   sine: (t) => 0.5 - 0.5 * Math.cos(Math.PI * t),
 };
-const HUE_EASING_NAMES = Object.keys(HUE_EASINGS);
 
 type TabId = 'sequential' | 'diverging' | 'ramp';
 
@@ -30,205 +26,219 @@ interface Tab {
   label: string;
   fields: FieldSpec[];
   choices?: ChoiceSpec[];
-  forceMirror?: boolean; // always show both slice flaps (e.g. diverging)
+  forceMirror?: boolean; // always show both slice flaps (diverging)
   build: (v: Record<string, number>, c: Record<string, string>, lut: Lut) => OklchColor[];
+  // the library call that reproduces the current palette (the 'usage' export)
+  usage: (v: Record<string, number>, c: Record<string, string>, lutName: string) => string;
 }
 
 const TABS: Tab[] = [
   {
     id: 'sequential',
-    label: 'Sequential',
+    label: 'seq',
     fields: [
-      { key: 'hStart', label: 'hStart (h)', min: 0, max: 360, step: 1, value: 260 },
-      { key: 'total', label: 'total (N)', min: 2, max: 15, step: 1, value: 9 },
-      { key: 's', label: 'saturation (s)', min: 0, max: 1, step: 0.01, value: 0.6 },
-      { key: 'b', label: 'brightness (b)', min: 0, max: 1, step: 0.01, value: 0.75 },
-      { key: 'c', label: 'contrast (c)', min: 0, max: 1, step: 0.01, value: 0.88 },
-      { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
+      { key: 'hStart', label: 'hue h', min: 0, max: 360, step: 1, value: 260 },
+      { key: 'total', label: 'colors N', min: 2, max: 15, step: 1, value: 9 },
+      { key: 's', label: 'saturation s', min: 0, max: 1, step: 0.01, value: 0.6 },
+      { key: 'b', label: 'brightness b', min: 0, max: 1, step: 0.01, value: 0.75 },
+      { key: 'c', label: 'contrast c', min: 0, max: 1, step: 0.01, value: 0.88 },
+      { key: 'w', label: 'cool/warm w', min: 0, max: 1, step: 0.01, value: 0 },
     ],
     build: (v, _c, lut) =>
       sequential({
         hStart: v.hStart!, total: v.total!, saturation: v.s!,
         brightness: v.b!, contrast: v.c!, coolWarm: v.w!, lut,
       }),
+    usage: (v, _c, lutName) => `import { sequential } from 'cusphanger';
+import { ${lutName} } from 'nutelch';
+
+const palette = sequential({
+  hStart: ${v.hStart},
+  total: ${v.total},
+  saturation: ${v.s},
+  brightness: ${v.b},
+  contrast: ${v.c},
+  coolWarm: ${v.w},
+  lut: ${lutName},
+});`,
   },
   {
     id: 'diverging',
-    label: 'Diverging',
+    label: 'div',
     forceMirror: true,
     fields: [
-      { key: 'hStart', label: 'hStart (left)', min: 0, max: 360, step: 1, value: 250 },
-      { key: 'hEnd', label: 'hEnd (right)', min: 0, max: 360, step: 1, value: 30 },
-      { key: 'total', label: 'total (N)', min: 3, max: 15, step: 1, value: 9 },
-      { key: 's', label: 'saturation (s)', min: 0, max: 1, step: 0.01, value: 0.6 },
-      { key: 'b', label: 'brightness (b)', min: 0, max: 1, step: 0.01, value: 0.75 },
-      { key: 'c', label: 'contrast (c)', min: 0, max: 1, step: 0.01, value: 0.88 },
-      { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
+      { key: 'hStart', label: 'hue start', min: 0, max: 360, step: 1, value: 250 },
+      { key: 'hEnd', label: 'hue end', min: 0, max: 360, step: 1, value: 30 },
+      { key: 'total', label: 'colors N', min: 3, max: 15, step: 1, value: 9 },
+      { key: 's', label: 'saturation s', min: 0, max: 1, step: 0.01, value: 0.6 },
+      { key: 'b', label: 'brightness b', min: 0, max: 1, step: 0.01, value: 0.75 },
+      { key: 'c', label: 'contrast c', min: 0, max: 1, step: 0.01, value: 0.88 },
+      { key: 'w', label: 'cool/warm w', min: 0, max: 1, step: 0.01, value: 0 },
     ],
     build: (v, _c, lut) =>
       diverging({
         hStart: v.hStart!, hEnd: v.hEnd!, total: v.total!,
         saturation: v.s!, brightness: v.b!, contrast: v.c!, coolWarm: v.w!, lut,
       }),
+    usage: (v, _c, lutName) => `import { diverging } from 'cusphanger';
+import { ${lutName} } from 'nutelch';
+
+const palette = diverging({
+  hStart: ${v.hStart},
+  hEnd: ${v.hEnd},
+  total: ${v.total},
+  saturation: ${v.s},
+  brightness: ${v.b},
+  contrast: ${v.c},
+  coolWarm: ${v.w},
+  lut: ${lutName},
+});`,
   },
   {
     id: 'ramp',
-    label: 'Ramp',
+    label: 'ramp',
     fields: [
-      { key: 'hStart', label: 'hStart (h)', min: 0, max: 360, step: 1, value: 260 },
-      { key: 'total', label: 'total (N)', min: 2, max: 24, step: 1, value: 9 },
-      { key: 'hCycles', label: 'hCycles', min: -2, max: 2, step: 0.05, value: 0.3 },
-      { key: 'hStartCenter', label: 'hStartCenter', min: 0, max: 1, step: 0.01, value: 0.5 },
-      { key: 'sMin', label: 'sMin', min: 0, max: 1, step: 0.01, value: 0.5 },
-      { key: 'sMax', label: 'sMax', min: 0, max: 1, step: 0.01, value: 0.9 },
-      { key: 'minLight', label: 'minLight', min: 0, max: 0.6, step: 0.01, value: 0.2 },
-      { key: 'maxLight', label: 'maxLight', min: 0.5, max: 1, step: 0.01, value: 0.97 },
-      { key: 'w', label: 'cool/warm (w)', min: 0, max: 1, step: 0.01, value: 0 },
+      { key: 'hStart', label: 'hue h', min: 0, max: 360, step: 1, value: 260 },
+      { key: 'total', label: 'colors N', min: 2, max: 24, step: 1, value: 9 },
+      { key: 'hCycles', label: 'hue cycles', min: -2, max: 2, step: 0.05, value: 0.3 },
+      { key: 'hStartCenter', label: 'hue center', min: 0, max: 1, step: 0.01, value: 0.5 },
+      { key: 'sMin', label: 'sat min', min: 0, max: 1, step: 0.01, value: 0.5 },
+      { key: 'sMax', label: 'sat max', min: 0, max: 1, step: 0.01, value: 0.9 },
+      { key: 'minLight', label: 'light min', min: 0, max: 0.6, step: 0.01, value: 0.2 },
+      { key: 'maxLight', label: 'light max', min: 0.5, max: 1, step: 0.01, value: 0.97 },
+      { key: 'w', label: 'cool/warm w', min: 0, max: 1, step: 0.01, value: 0 },
     ],
     choices: [
-      { key: 'hEasing', label: 'hue easing', options: HUE_EASING_NAMES, value: 'linear' },
+      { key: 'hEasing', label: 'hue easing', options: Object.keys(HUE_EASINGS), value: 'linear' },
       { key: 'triangleMode', label: 'triangle', options: ['perHue', 'min', 'avg', 'max'], value: 'perHue' },
     ],
-    // the paper's sequential + a RampenSau-style hue trajectory (each color is
-    // the paper's ramp for its own rotated hue). triangleMode evens colorfulness;
-    // saturation (sRange) and lightness (lRange) are RampenSau-style ranges here.
     build: (v, c, lut) =>
-      sequential({
+      ramp({
         hStart: v.hStart!, total: v.total!,
         sRange: [v.sMin!, v.sMax!], lRange: [v.minLight!, v.maxLight!], coolWarm: v.w!,
         hCycles: v.hCycles!, hStartCenter: v.hStartCenter!, hEasing: HUE_EASINGS[c.hEasing!],
         triangleMode: c.triangleMode as TriangleMode,
         lut,
       }),
+    usage: (v, c, lutName) => `import { ramp } from 'cusphanger';
+import { ${lutName} } from 'nutelch';
+
+const palette = ramp({
+  hStart: ${v.hStart},
+  total: ${v.total},
+  hCycles: ${v.hCycles},
+  hStartCenter: ${v.hStartCenter},
+  hEasing: ${HUE_EASINGS[c.hEasing!]}, // ${c.hEasing}
+  sRange: [${v.sMin}, ${v.sMax}],
+  lRange: [${v.minLight}, ${v.maxLight}],
+  coolWarm: ${v.w},
+  triangleMode: '${c.triangleMode}',
+  lut: ${lutName},
+});`,
   },
 ];
 
-function render(app: HTMLElement): void {
-  // static chrome (header, intro, about) lives in index.html — build only the
-  // interactive app window into the .stage placeholder.
-  const stage = app.querySelector('.stage') as HTMLElement;
-  stage.innerHTML = `
-    <div class="palette" data-ghost="none">
-      <div class="palette-strip"></div>
-      <!-- swatch details rendered here but kept hidden for now (wired up later) -->
-      <div class="palette-detail" hidden>
-        <div class="swatches"></div>
-        <p class="hint">Click a swatch to copy its CSS. ⚠︎ marks colors outside the sRGB gamut.</p>
-      </div>
-    </div>
-    <nav class="tabs"></nav>
-    <section class="panel">
-      <div class="controls">
-        <label class="control control--toggle gamut-control">
-          <input type="checkbox" class="js-gamut" />
-          <span class="row">
-            <span>gamut</span>
-            <span class="control__value">sRGB</span>
-          </span>
-        </label>
-        <div class="controls-fields"></div>
-      </div>
-      <div class="views">
-        <div class="view-block">
-          <div class="wheel"></div>
-          <div class="axis-toggle">
-            <button data-axis="chroma" aria-selected="true">C</button>
-            <button data-axis="lightness" aria-selected="false">L</button>
-          </div>
-        </div>
-        <div class="slice"></div>
-      </div>
-    </section>`;
+const $ = (sel: string) => document.querySelector(sel) as HTMLElement;
 
-  // generate the dither strip SVG and hand it to the .palette::after via vars
-  const paletteEl = app.querySelector('.palette') as HTMLElement;
-  paletteEl.style.setProperty('--dither-bg', ditherSvg(DITHER));
-  paletteEl.style.setProperty('--dither-h', `${DITHER.pad + DITHER.span}px`);
+const hangerHost = $('.hanger');
+const sliceMiniHost = $('#slice-mini');
+const wheelHost = $('#wheel');
+const tabsNav = $('.tabs');
+const controlsHost = $('.controls');
+const updateExport = initExport($('.export'));
 
-  const tabsNav = app.querySelector('.tabs') as HTMLElement;
-  const controlsHost = app.querySelector('.controls-fields') as HTMLElement;
-  const swatchHost = app.querySelector('.swatches') as HTMLElement;
-  const sliceHost = app.querySelector('.slice') as HTMLElement;
-  const wheelHost = app.querySelector('.wheel') as HTMLElement;
-  const stripHost = app.querySelector('.palette-strip') as HTMLElement;
+// the sidebar viz box shows the wheel (either radial axis) or the mini slice
+type VizView = WheelAxis | 'slice';
+let activeTab: Tab = TABS[0]!;
+let lut: Lut = oklchSrgb;
+let vizView: VizView = 'chroma';
+let wheelAxis: WheelAxis = 'chroma';
+const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
+let lastValues: Record<string, number> = {};
+let lastChoices: Record<string, string> = {};
+let palette: OklchColor[] = [];
 
-  // global state: active tab, the (persistent) gamut, the latest control values,
-  // the wheel axis/flip, and the latest palette (so the wheel toggle can redraw).
-  let activeTab: Tab = TABS[0]!;
-  let lutState: Lut = oklchSrgb;
-  let wheelAxis: WheelAxis = 'chroma';
-  const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
-  let lastValues: Record<string, number> = {};
-  let lastChoices: Record<string, string> = {};
-  let lastPalette: OklchColor[] = [];
+// the composition tiles' hue-randomized variant: the active tab's current
+// settings verbatim, with ONLY hStart set to a random hue (hEnd and everything
+// else are left exactly as the live palette). Returns the palette as CSS.
+const updateCompositions = initCompositions($('.compositions'), {
+  regen: $('.compo-regen'),
+  hueToggle: document.querySelector('.compo-hue input') as HTMLInputElement,
+  variantColors: (rng) => {
+    const v = { ...lastValues, hStart: rng() * 360 };
+    return activeTab.build(v, lastChoices, lut).map(toCss);
+  },
+});
 
-  const renderActive = () => {
-    const palette = activeTab.build(lastValues, lastChoices, lutState);
-    lastPalette = palette;
-    renderStrip(stripHost, palette);
-    renderSwatches(swatchHost, palette);
-    renderWheel(wheelHost, palette, lutState, wheelAxis, wheelFlip[wheelAxis]);
-    renderSlice(sliceHost, palette, lutState, activeTab.forceMirror ?? false);
-  };
-
-  // gamut toggle (global, persistent across tabs): click flips srgb ↔ display-p3
-  const gamutInput = app.querySelector('.js-gamut') as HTMLInputElement;
-  const gamutVal = app.querySelector('.control--toggle .control__value') as HTMLElement;
-  gamutInput.addEventListener('change', () => {
-    const p3 = gamutInput.checked;
-    lutState = p3 ? oklchP3 : oklchSrgb;
-    gamutVal.textContent = p3 ? 'Display P3' : 'sRGB';
-    renderActive();
-  });
-
-  // wheel radial-axis toggle (re-click the active axis to flip its direction)
-  const axisBtns = Array.from(app.querySelectorAll<HTMLButtonElement>('.axis-toggle button'));
-  for (const btn of axisBtns) {
-    btn.addEventListener('click', () => {
-      const a = btn.dataset.axis as WheelAxis;
-      if (a === wheelAxis) wheelFlip[a] = !wheelFlip[a];
-      else wheelAxis = a;
-      for (const b of axisBtns) {
-        const ba = b.dataset.axis as WheelAxis;
-        b.setAttribute('aria-selected', String(ba === wheelAxis));
-        b.toggleAttribute('data-flipped', ba === wheelAxis && wheelFlip[ba]);
-      }
-      renderWheel(wheelHost, lastPalette, lutState, wheelAxis, wheelFlip[wheelAxis]);
-    });
-  }
-
-  const mountTab = (tab: Tab) => {
-    activeTab = tab;
-    buildControls(controlsHost, tab.fields, tab.choices ?? [], ({ values, choices }) => {
-      lastValues = values;
-      lastChoices = choices;
-      renderActive();
-    });
-  };
-
-  // build the tab buttons ONCE; selecting a tab only toggles aria-selected on the
-  // existing buttons. (Recreating them would skip the CSS transition on span::after,
-  // since transitions fire on property changes, not first paint.)
-  const tabButtons: HTMLButtonElement[] = [];
-  const selectTab = (tab: Tab) => {
-    mountTab(tab);
-    tabButtons.forEach((b, i) => b.setAttribute('aria-selected', String(TABS[i]!.id === tab.id)));
-  };
-  for (const tab of TABS) {
-    const b = document.createElement('button');
-    b.innerHTML = `<span>${tab.label}</span>`;
-    b.addEventListener('click', () => selectTab(tab));
-    tabButtons.push(b);
-    tabsNav.appendChild(b);
-  }
-
-  selectTab(TABS.find((t) => t.id === 'diverging') ?? TABS[0]!);
+function renderAll(): void {
+  palette = activeTab.build(lastValues, lastChoices, lut);
+  applyTheme(document.documentElement, palette);
+  renderHanger(hangerHost, palette);
+  renderSlice(sliceMiniHost, palette, lut, activeTab.forceMirror ?? false);
+  renderWheel(wheelHost, palette, lut, wheelAxis, wheelFlip[wheelAxis]);
+  updateCompositions(palette.length);
+  updateExport(palette, activeTab.usage(lastValues, lastChoices, lut === oklchP3 ? 'oklchP3' : 'oklchSrgb'));
 }
 
-const appEl = document.getElementById('app') as HTMLElement;
-render(appEl);
-// xerox layering: ghost copies of the whole page behind the sharp front —
-// kept in sync automatically (MutationObserver). See xerox.ts for the
-// data-ghost / data-ghost-keep content contract.
-initXerox(appEl, { size: 480, baseFrequency: 0.006, octaves: 4, seed: 99, gain: 1.65, threshold: 0.49 });
-initXeroxTuner(); // TEMP
+// tabs — built once; switching only re-targets the controls
+const tabButtons: HTMLButtonElement[] = [];
+const selectTab = (tab: Tab) => {
+  activeTab = tab;
+  tabButtons.forEach((b, i) => b.setAttribute('aria-selected', String(TABS[i]!.id === tab.id)));
+  buildControls(controlsHost, tab.fields, tab.choices ?? [], ({ values, choices }) => {
+    lastValues = values;
+    lastChoices = choices;
+    renderAll();
+  });
+};
+for (const tab of TABS) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = tab.label;
+  b.setAttribute('role', 'tab');
+  b.addEventListener('click', () => selectTab(tab));
+  tabButtons.push(b);
+  tabsNav.appendChild(b);
+}
+
+// gamut toggle: sRGB <-> Display P3
+const gamutInput = document.querySelector('.gamut input') as HTMLInputElement;
+const gamutVal = $('.gamut__value');
+gamutInput.addEventListener('change', () => {
+  lut = gamutInput.checked ? oklchP3 : oklchSrgb;
+  gamutVal.textContent = gamutInput.checked ? 'Display P3' : 'sRGB';
+  renderAll();
+});
+
+// sidebar viz switch: chroma / lightness show the wheel (re-click the active
+// axis to flip its radial direction); slice shows the mini gamut slice
+const axisBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.axis-toggle button'));
+for (const btn of axisBtns) {
+  btn.addEventListener('click', () => {
+    const a = btn.dataset.axis as VizView;
+    if (a !== 'slice') {
+      if (a === vizView) wheelFlip[a] = !wheelFlip[a];
+      wheelAxis = a;
+      renderWheel(wheelHost, palette, lut, wheelAxis, wheelFlip[wheelAxis]);
+    }
+    vizView = a;
+    wheelHost.hidden = vizView === 'slice';
+    sliceMiniHost.hidden = vizView !== 'slice';
+    for (const b of axisBtns) {
+      const ba = b.dataset.axis as VizView;
+      b.setAttribute('aria-selected', String(ba === vizView));
+      b.toggleAttribute(
+        'data-flipped',
+        ba !== 'slice' && ba === vizView && wheelFlip[ba as WheelAxis],
+      );
+    }
+  });
+}
+
+selectTab(TABS.find((t) => t.id === 'diverging') ?? TABS[0]!);
+
+// xerox layering: a blurred ghost of the whole app behind the sharp front,
+// kept in sync by a MutationObserver. Which parts print on which layer is
+// decided in demo.css (the .rail layer-split custom properties).
+initXerox(document.getElementById('app') as HTMLElement);
+// initFxPanel(); // xerox tuning panel — re-enable to dial the filter values

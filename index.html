@@ -3,44 +3,46 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CuspHanger</title>
+    <title>CuspHanger — palettes from intuitive parameters</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Imbue:opsz,wght@10..100,100..900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Space+Mono:wght@400;700&display=swap"
     />
-    <link rel="stylesheet" href="/src/demo/xerox.css" />
+    <link rel="stylesheet" href="/src/demo/tokens.css" />
+    <link rel="stylesheet" href="/src/demo/demo.css" />
   </head>
   <body>
     <!--
-      The whole "xerox" look is this one filter. It blurs the source twice — a
+      The "xerox" look is this one filter. It blurs the source twice — a
       slight blur everywhere, a heavy blur revealed only through patches of
-      fractal-noise — so the toner reads as uneven. Applied to .backdrop via
-      `filter: url(#xerox-blur)`; the sharp .front sits on top of it.
+      fractal noise — so the toner reads as uneven. Applied to the .xerox-back
+      ghost (a live clone of #app, see src/demo/xerox.ts) via
+      `filter: url(#xerox-blur)`; the sharp #app sits on top of it.
       Tunables live in feGaussianBlur stdDeviation, feTurbulence baseFrequency/
-      seed, and the feColorMatrix alpha row (gain 0.55×3, threshold −0.49).
+      seed, and the feColorMatrix alpha row (gain 0.6×3, threshold −0.63).
     -->
     <svg class="xerox-defs" aria-hidden="true" focusable="false">
       <filter id="xerox-blur" x="-5%" y="-5%" width="110%" height="110%"
         color-interpolation-filters="sRGB">
         <!-- slight blur everywhere, faded back so it reads as a haze -->
-        <feGaussianBlur id="fx-soft" in="SourceGraphic" stdDeviation="0.8" result="soft-blur" />
+        <feGaussianBlur id="fx-soft" in="SourceGraphic" stdDeviation="0.3" result="soft-blur" />
         <feColorMatrix id="fx-soft-fade" in="soft-blur" type="matrix"
-          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.65 0" result="soft" />
+          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.95 0" result="soft" />
         <!-- heavy blur revealed only through the noise patches, also faded, so it
              BLENDS with the soft haze underneath instead of replacing it -->
-        <feGaussianBlur id="fx-heavy" in="SourceGraphic" stdDeviation="17.5" result="heavy-blur" />
-        <feTurbulence id="fx-turb" type="fractalNoise" baseFrequency="0.025" numOctaves="5"
-          seed="69" result="noise" />
+        <feGaussianBlur id="fx-heavy" in="SourceGraphic" stdDeviation="12.5" result="heavy-blur" />
+        <feTurbulence id="fx-turb" type="fractalNoise" baseFrequency="0.0165" numOctaves="1"
+          seed="14" result="noise" />
         <feColorMatrix id="fx-matrix" in="noise" type="matrix"
           values="0 0 0 0 0
                   0 0 0 0 0
                   0 0 0 0 0
-                  0.583 0.583 0.583 0 -0.37" result="patches" />
+                  0.6 0.6 0.6 0 -0.63" result="patches" />
         <feComposite in="heavy-blur" in2="patches" operator="in" result="heavy-clip" />
         <feColorMatrix id="fx-heavy-fade" in="heavy-clip" type="matrix"
-          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.65 0" result="heavy-patches" />
+          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.8 0" result="heavy-patches" />
         <feMerge>
           <feMergeNode in="soft" />
           <feMergeNode in="heavy-patches" />
@@ -48,18 +50,18 @@
       </filter>
 
       <!-- The same fractal noise, as alpha patches, INVERTED, used to mask the
-           sharp front layer: the text stays crisp between the patches and
-           dissolves into the blurred backdrop inside them. Turbulence params
-           mirror #xerox-blur and are kept in sync by the effects panel. -->
+           sharp canvas: the content stays crisp between the patches and
+           dissolves into the blurred ghost inside them. Turbulence params
+           mirror #xerox-blur. -->
       <filter id="fx-patches" x="0" y="0" width="100%" height="100%"
         color-interpolation-filters="sRGB">
-        <feTurbulence id="fx-mask-turb" type="fractalNoise" baseFrequency="0.025"
-          numOctaves="5" seed="69" result="noise" />
+        <feTurbulence id="fx-mask-turb" type="fractalNoise" baseFrequency="0.0165"
+          numOctaves="1" seed="14" result="noise" />
         <feColorMatrix id="fx-mask-matrix" in="noise" type="matrix"
           values="0 0 0 0 0
                   0 0 0 0 0
                   0 0 0 0 0
-                  0.583 0.583 0.583 0 -0.36" result="alpha" />
+                  0.6 0.6 0.6 0 -0.7" result="alpha" />
         <feComponentTransfer in="alpha">
           <feFuncA type="table" tableValues="1 0" />
         </feComponentTransfer>
@@ -71,34 +73,66 @@
       </mask>
     </svg>
 
-    <!-- back and front carry identical DOM; the backdrop is the blurred ghost. -->
-    <div class="layer layer--backdrop" aria-hidden="true">
-      <div class="layout">
-        <div class="sidebar">
+    <div id="app">
+    <aside class="rail">
+      <div class="rail__viz">
+        <div id="wheel" class="viz-pane"></div>
+        <div id="slice-mini" class="viz-pane" hidden></div>
+        <div class="axis-toggle" role="group" aria-label="Sidebar figure">
+          <button type="button" data-axis="chroma" aria-selected="true">chroma</button>
+          <button type="button" data-axis="lightness" aria-selected="false">lightness</button>
+          <button type="button" data-axis="slice" aria-selected="false">slice</button>
         </div>
-        <main>
-          <h1>CuspHanger</h1>
-          <p>
-            Balanced color palettes from a few simple controls — consistent across every hue, and always true to what shows on
-            screen.
-          </p>
-        </main>
+        <span class="marks" aria-hidden="true"></span>
       </div>
-    </div>
-    <div class="layer layer--front">
-      
-      <div class="layout">
-        <div class="sidebar">
-        </div>
 
-        <main><h1>CuspHanger</h1>
-        <p>
-          Balanced color palettes from a few simple controls — consistent across every hue, and always true to what shows on
-          screen.
+      <nav class="tabs" role="tablist" aria-label="Palette type"><span class="marks" aria-hidden="true"></span></nav>
+      <form class="controls" aria-label="Palette parameters"></form>
+
+      <label class="gamut">
+        <input type="checkbox" />
+        <span class="control__row">
+          <span class="control__label">gamut</span>
+          <span class="gamut__value">sRGB</span>
+        </span>
+      </label>
+    </aside>
+
+    <main class="canvas">
+      <header class="masthead">
+        <p class="eyebrow">Wijffelaars et&nbsp;al. 2009 · OKLCH</p>
+        <h1 class="wordmark">CuspHanger</h1>
+        <p class="intro" data-ghost="none">
+          Sequential and diverging palettes from a few intuitive parameters — a
+          quadratic Bézier path through the gamut triangle of a hue, sampled at
+          perceptual lightness steps — plus a RampenSau-style
+          <code>ramp()</code> that sends a hue trajectory through the same
+          model. This page is colored by the palette you make.
         </p>
-        </main>
+        <p class="links">
+          <a href="https://github.com/meodai/cusphanger">Github</a>
+          <a href="https://doi.org/10.1111/j.1467-8659.2009.01342.x">The paper</a>
+        </p>
+      </header>
+
+      <section class="hanger" aria-label="The palette. Click a color to copy its oklch value."></section>
+
+      <div class="canvas__body">
+        <figure class="figure--comps">
+          <div class="compo-tools">
+            <button type="button" class="compo-regen">regenerate all</button>
+            <label class="compo-hue"><input type="checkbox" /> randomize hue</label>
+          </div>
+          <div class="compositions"></div>
+          <figcaption>fig. 1 — the palette in use, random blocks. click a tile to reshuffle</figcaption>
+        </figure>
+
+        <section class="export" aria-label="Export"></section>
+        <p class="hint">Click any color in the palette above to copy its oklch() value.</p>
       </div>
+    </main>
     </div>
-    <script type="module" src="/src/demo/effects-panel.ts"></script>
+
+    <script type="module" src="/src/demo/main.ts"></script>
   </body>
 </html>

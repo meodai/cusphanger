@@ -1,0 +1,933 @@
+/* ── CuspHanger demo — components. Tokens only; no raw values. ─────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--chrome-bg); /* overscroll shows the dark tint */
+}
+
+body {
+  margin: 0;
+  position: relative; /* anchors the .xerox-back ghost */
+  min-height: 100vh;
+  background: var(--canvas-bg);
+  font-family: var(--font-display);
+  font-size: var(--text-s);
+  line-height: var(--leading);
+}
+
+/* ── xerox layering ────────────────────────────────────────────────────────
+   The page exists twice: #app is the sharp front; .xerox-back is a live
+   clone behind it (see xerox.ts), run through the #xerox-blur SVG filter
+   (index.html) and nudged for misregistration. Surfaces stay transparent —
+   the body carries the page color — so the ghost shows through the front. */
+
+/* off-screen holder for the SVG filter + mask definitions */
+.xerox-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* front and ghost share one layout so their content overlaps exactly */
+#app,
+.xerox-clone {
+  display: grid;
+  grid-template-columns: var(--rail-w) 1fr;
+  min-height: 100vh;
+}
+#app {
+  position: relative;
+  z-index: 1;
+}
+/* the sharp canvas dissolves into the blurred ghost through the noise
+   patches (mask in index.html). The rail is split by layer instead. */
+#app .canvas {
+  -webkit-mask: url(#fx-front-mask);
+  mask: url(#fx-front-mask);
+}
+.xerox-back {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  filter: url(#xerox-blur);
+  opacity: var(--xerox-opacity);
+  /* base misregistration plus the pointer drift (set by xerox.ts) */
+  transform: translate(
+    calc(var(--xerox-shift-x) + var(--xerox-mouse-x, 0px)),
+    calc(var(--xerox-shift-y) + var(--xerox-mouse-y, 0px))
+  );
+}
+
+:focus-visible {
+  outline: var(--line-w-strong) solid var(--canvas-accent);
+  outline-offset: calc(var(--line-w-strong) * 1);
+}
+
+/* scrollbars — thin and square, colored per surface (both props inherit) */
+:root {
+  scrollbar-width: thin;
+  scrollbar-color: var(--canvas-muted) var(--canvas-bg);
+}
+.rail {
+  scrollbar-color: var(--chrome-muted) var(--chrome-bg);
+}
+
+/* ── rail (chrome — same surface as the canvas, split across the layers) ──
+   Every rail piece paints on exactly one layer: frames and fills are printed
+   by the blurred ghost (fuzzy toner), type and value markers stay sharp in
+   the front. Both layers keep identical box metrics — only colors switch. */
+
+.rail {
+  /* front defaults: frames/fills invisible, ink sharp */
+  --frame: transparent;
+  --fill: transparent;
+  --fill-soft: transparent;
+  --ink: var(--chrome-ink);
+  --ink-muted: var(--chrome-muted);
+  --ink-inverse: var(--chrome-bg);
+  --cover: transparent; /* page-colored knockouts (marks, value badges) print in the ghost */
+
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  color: var(--ink);
+  /* a sliver of inline padding — exactly the room the corner registration
+     marks need to straddle the box frames without being clipped by the
+     rail's scrollport. The boxes carry their own full frames; their aligned
+     right edges are the sidebar's printed border. */
+  padding: var(--space-5) var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+/* ghost: frames/fills print, ink disappears. The scrollbar stays (its gutter
+   must reserve the same width as the front's) but is painted invisible. */
+.xerox-back .rail {
+  --frame: var(--chrome-ink);
+  --fill: var(--chrome-ink);
+  --fill-soft: rgb(from var(--chrome-ink) r g b / 0.18);
+  --ink: transparent;
+  --ink-muted: transparent;
+  --ink-inverse: transparent;
+  --cover: var(--chrome-bg);
+  scrollbar-color: transparent transparent;
+}
+.rail :focus-visible {
+  outline-color: var(--chrome-ink);
+}
+
+/* the viz box — the hue wheel in a bordered frame, its axis switch attached.
+   (.viz-pane, not an id: the ghost clone drops ids, metrics must match.) */
+.rail__viz {
+  border: var(--line-w) solid var(--frame);
+}
+.rail__viz .viz-pane {
+  padding: var(--space-2);
+}
+.rail .wheel-svg,
+.rail .slice-svg {
+  color: var(--chrome-ink);
+}
+/* color planes and tile art marked data-ghost-keep print only in the ghost;
+   the sharp front keeps linework, type and marks */
+#app [data-ghost-keep] {
+  opacity: 0;
+}
+.rail .slice-svg .dot {
+  fill: var(--chrome-bg);
+}
+.rail .slice-svg .tick,
+.rail .slice-svg .axis,
+.rail .slice-svg .label {
+  fill: var(--chrome-muted);
+}
+.rail .wheel-fade-in {
+  stop-color: var(--chrome-bg);
+}
+.rail .wheel-fade-out {
+  stop-color: var(--chrome-bg);
+}
+.rail .wheel-dot {
+  fill: var(--chrome-bg);
+}
+.axis-toggle {
+  display: flex;
+  border-top: var(--line-w) solid var(--frame);
+}
+.axis-toggle button {
+  flex: 1;
+  font-family: var(--font-chrome);
+  font-size: var(--text-xs);
+  padding: var(--space-2) 0;
+  background: transparent;
+  color: var(--ink-muted);
+  border: 0;
+  cursor: pointer;
+}
+.axis-toggle button + button {
+  border-left: var(--line-w) solid var(--frame);
+}
+.axis-toggle button[aria-selected='true'] {
+  background: var(--fill);
+  color: var(--ink-inverse);
+}
+.axis-toggle button[data-flipped]::after {
+  content: ' \21C4'; /* ⇄ */
+}
+
+/* tabs — segmented switch */
+.tabs {
+  display: flex;
+  border: var(--line-w) solid var(--frame);
+}
+.tabs button {
+  flex: 1;
+  font: inherit;
+  font-weight: 700;
+  font-size: var(--text-xs);
+  padding: var(--space-2) 0;
+  background: transparent;
+  color: var(--ink);
+  border: 0;
+  cursor: pointer;
+}
+.tabs button + button {
+  border-left: var(--line-w) solid var(--frame);
+}
+.tabs button[aria-selected='true'] {
+  background: var(--fill);
+  color: var(--ink-inverse);
+}
+
+/* controls — a slider is a bordered box; the input is invisible and the value
+   reads as a fill (::before) scaled to --valueRel with a hard right edge */
+.controls {
+  display: flex;
+  flex-direction: column;
+}
+.control {
+  display: block;
+  position: relative;
+  font-size: var(--text-xs);
+}
+.control + .control {
+  margin-top: var(--space-3);
+}
+.control--range + .control--range {
+  margin-top: calc(-1 * var(--line-w-strong)); /* share the border between boxes */
+}
+.control__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+.control__label {
+  font-weight: 700;
+}
+.control__value,
+.gamut__value {
+  color: var(--ink-muted);
+  font-family: var(--font-chrome);
+  font-variant-numeric: tabular-nums;
+}
+/* knock-out behind the number — printed in the ghost (like the marks'
+   knockouts), so it punches the toner fill out around the value and its
+   edges blur and shift with the print */
+.control--range .control__value {
+  padding: 0 var(--space-1);
+  background: var(--cover);
+}
+
+/* the frame and the fill print on the ghost; the marker line (the fill's hard
+   right edge) rides sharp on the front */
+.control--range {
+  border: var(--line-w-strong) solid var(--frame);
+  padding: var(--space-2) var(--space-3);
+}
+.control--range::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--fill-soft);
+  border-right: var(--line-w-strong) solid var(--ink);
+  transform-origin: left center;
+  transform: scaleX(var(--valueRel, 0)) scaleY(0.8);
+  transition: transform var(--dur-1) var(--ease);
+}
+.control--range:hover::before,
+.control--range:focus-within::before,
+.control--range:active::before {
+  transform: scaleX(var(--valueRel, 0)) scaleY(1);
+}
+/* hue sliders differ only in the ghost fill: the OKLCH rainbow,
+   counter-scaled (background-size 100%/valueRel) so it stays fixed-size and
+   the fill window reveals hues 0..current instead of squishing the spectrum */
+.xerox-back .control--hue::before {
+  background-image: var(--hue-rainbow);
+  background-size: calc(100% / var(--valueRel, 1)) 100%;
+  background-position: left center;
+  background-repeat: no-repeat;
+}
+.control--range input {
+  -webkit-appearance: none;
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: ew-resize;
+}
+
+.control--select .control__row {
+  padding-inline: var(--space-3);
+}
+/* the select sits in a relative box so its .marks can ride its frame */
+.control__selectbox {
+  display: block;
+  position: relative;
+  margin-top: var(--space-1);
+}
+.control--select select {
+  display: block;
+  width: 100%;
+  font-family: var(--font-chrome);
+  font-size: var(--text-xs);
+  color: var(--ink);
+  background: transparent;
+  border: var(--line-w) solid var(--frame);
+  padding: var(--space-1) var(--space-2);
+}
+
+/* gamut toggle */
+.gamut {
+  display: block;
+  border-top: var(--line-w) solid var(--frame);
+  padding: var(--space-4) var(--space-3) 0;
+  cursor: pointer;
+}
+.gamut input {
+  position: absolute;
+  opacity: 0;
+}
+.gamut .control__row {
+  margin: 0;
+  font-size: var(--text-xs);
+}
+.gamut .control__label {
+  font-weight: 700;
+}
+.gamut__value::after {
+  content: ' \21C4'; /* ⇄ — escaped; the file may be served without a charset */
+  color: var(--ink-muted);
+}
+.gamut:has(input:focus-visible) .control__row {
+  outline: var(--line-w-strong) solid var(--chrome-ink);
+  outline-offset: var(--space-1);
+}
+
+/* ── registration marks ────────────────────────────────────────────────────
+   Where two printed lines meet, the joint is knocked out of the GHOST with a
+   page-colored copy of the cross, fattened by --xm-o on every side
+   (--cover: part of the print, so it blurs and shifts with it). The front
+   layer sets the sharp + inside that outline — the same stroke as the lines.
+   Each layer resolves the other's colors to transparent.
+   A .marks span (absolute, inert) rides inside each framed box; its two
+   pseudos are full-width strips centered on the top and bottom rules, each
+   painting the pair of corner marks as stacked background layers (cross arms
+   over the cover square). .gamut and .axis-toggle only have a top rule, so
+   they draw the same strip on their own ::before instead. */
+.rail__viz,
+.axis-toggle,
+.tabs,
+.gamut {
+  position: relative;
+}
+.marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.marks::before,
+.marks::after,
+.axis-toggle::before,
+.gamut::before {
+  /* mark bounds, cross length (arm thickness = --line-w-strong, like the
+     lines), knockout outline, and the strip's outward overhang that centers
+     the marks on the border line */
+  --xm-s: 14px;
+  --xm-c: 8px;
+  --xm-o: 2px;
+  --xm-pad: calc((var(--xm-s) - var(--xm-c)) / 2);
+  --xm-mid: calc((var(--xm-s) - var(--line-w-strong)) / 2);
+  --xm-off: calc((var(--xm-s) + var(--line-w-strong)) / -2);
+  --xm-cl: calc(var(--xm-c) + var(--xm-o) * 2); /* knockout arm length */
+  --xm-cw: calc(var(--line-w-strong) + var(--xm-o) * 2); /* knockout arm width */
+  content: '';
+  position: absolute;
+  left: var(--xm-off);
+  right: var(--xm-off);
+  height: var(--xm-s);
+  background-image: linear-gradient(var(--ink) 0 0), linear-gradient(var(--ink) 0 0),
+    linear-gradient(var(--ink) 0 0), linear-gradient(var(--ink) 0 0),
+    linear-gradient(var(--cover) 0 0), linear-gradient(var(--cover) 0 0),
+    linear-gradient(var(--cover) 0 0), linear-gradient(var(--cover) 0 0);
+  background-size:
+    var(--xm-c) var(--line-w-strong),
+    var(--line-w-strong) var(--xm-c),
+    var(--xm-c) var(--line-w-strong),
+    var(--line-w-strong) var(--xm-c),
+    var(--xm-cl) var(--xm-cw),
+    var(--xm-cw) var(--xm-cl),
+    var(--xm-cl) var(--xm-cw),
+    var(--xm-cw) var(--xm-cl);
+  background-position:
+    left var(--xm-pad) center,
+    left var(--xm-mid) center,
+    right var(--xm-pad) center,
+    right var(--xm-mid) center,
+    left calc(var(--xm-pad) - var(--xm-o)) center,
+    left calc(var(--xm-mid) - var(--xm-o)) center,
+    right calc(var(--xm-pad) - var(--xm-o)) center,
+    right calc(var(--xm-mid) - var(--xm-o)) center;
+  background-repeat: no-repeat;
+}
+.marks::before,
+.axis-toggle::before,
+.gamut::before {
+  top: var(--xm-off);
+}
+.marks::after {
+  bottom: var(--xm-off);
+}
+
+/* ── fx panel (TEMP) — live tuner for the xerox filter, fx-panel.ts ───────
+   Sharp front only: its ghost copy is blanked but keeps its space, so the
+   layers stay aligned. Uses chrome tokens directly, not the layer split. */
+.xerox-back [data-ghost='none'] {
+  visibility: hidden;
+}
+.fx-panel {
+  border-top: var(--line-w) solid var(--chrome-line);
+  padding: var(--space-4) var(--space-3) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-family: var(--font-chrome);
+  font-size: var(--text-xs);
+}
+.fx-panel__title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chrome-muted);
+}
+.fx-row {
+  display: grid;
+  grid-template-columns: 6.5em 1fr 3.5em;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--chrome-muted);
+}
+.fx-row input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--chrome-ink);
+}
+.fx-row__val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--chrome-ink);
+}
+.fx-panel__out {
+  margin: var(--space-2) 0 0;
+  padding-top: var(--space-2);
+  border-top: var(--line-w) solid var(--chrome-line);
+  font-size: var(--text-xs);
+  line-height: var(--leading);
+  white-space: pre-wrap;
+  color: var(--chrome-muted);
+  cursor: copy;
+}
+
+/* ── canvas (the palette's light end) ─────────────────────────────────── */
+
+.canvas {
+  /* no background — the body carries the page color, so the ghost print
+     underneath stays visible through the front's noise-mask holes */
+  color: var(--canvas-ink);
+  min-width: 0;
+}
+
+/* masthead — the name, huge, on the canvas */
+.masthead {
+  padding: var(--space-8) var(--space-6) var(--space-7);
+  max-width: 68rem;
+}
+.eyebrow {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-chrome);
+  font-size: var(--text-xs);
+  color: var(--canvas-muted);
+  letter-spacing: 0.04em;
+}
+.wordmark {
+  margin: 0 0 var(--space-4) -0.04em;
+  font-size: clamp(3.25rem, 7.5vw, 6.5rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.intro {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-m);
+  max-width: 46ch;
+}
+.intro code {
+  font-family: var(--font-chrome);
+  font-size: 0.85em;
+}
+.links {
+  margin: 0;
+  display: flex;
+  gap: var(--space-4);
+}
+.links a {
+  color: inherit;
+  font-weight: 700;
+}
+.links a::after {
+  content: ' \2197'; /* ↗ */
+}
+
+/* the hanger — bands anchored left (aligned with the masthead), reaching
+   right by their darkness; the label rides the stepped edge.
+   Layer split, same contract as the rail: the bands' outlines print in the
+   ghost; the swatch color and the type stay sharp in the front, with the
+   registration + at every corner. */
+.hanger {
+  --frame: transparent;
+  --ink: var(--ink-print); /* the + marks match the always-black frames */
+  --cover: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 68rem; /* same measure as the masthead and the figures below */
+  padding-inline: var(--space-6);
+}
+.xerox-back .hanger {
+  --frame: var(--ink-print);
+  --ink: transparent;
+  --cover: var(--canvas-bg);
+}
+/* the band is a full-width framed box (the ghost prints the frame edge to
+   edge); the swatch color reaches --reach inside it, slider-style, and the
+   label rides the fill's stepped edge */
+.hanger__band {
+  display: block;
+  width: 100%;
+  position: relative;
+  background: none;
+  border: var(--line-w-strong) solid var(--frame);
+  padding: 0;
+  cursor: copy;
+  font-family: var(--font-display);
+}
+.hanger__band + .hanger__band {
+  margin-top: calc(-1 * var(--line-w-strong)); /* bands share the rule between them */
+}
+.hanger__fill {
+  display: block;
+  width: calc(var(--reach) * 100%);
+  min-height: var(--space-7);
+  background: var(--swatch);
+  padding: var(--space-2) var(--space-4);
+  text-align: right;
+  transition:
+    width var(--dur-2) var(--ease),
+    background var(--dur-2) var(--ease);
+}
+/* the swatch color itself is part of the print — only the label (and the
+   + marks) stay sharp in the front */
+#app .hanger__fill {
+  background: none;
+}
+.xerox-back .hanger__label {
+  color: transparent;
+}
+.hanger__label {
+  font-weight: 800;
+  font-size: clamp(var(--text-m), 2vw, var(--text-l));
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--canvas-bg); /* light ink on a dark band */
+}
+.hanger__band--light .hanger__label {
+  color: var(--canvas-ink);
+}
+.hanger__band[data-copied] .hanger__label::after {
+  content: ' — copied';
+  font-weight: 400;
+}
+
+.canvas__body {
+  padding: var(--space-7) var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  max-width: 68rem;
+}
+
+/* figures — academic figure vernacular, mono captions */
+.canvas__body figure {
+  margin: 0;
+}
+.canvas__body figcaption {
+  margin-top: var(--space-2);
+  font-family: var(--font-chrome);
+  font-size: var(--text-xs);
+  color: var(--canvas-muted);
+}
+
+/* composition toolbar — regenerate + hue toggle */
+.compo-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+  font-family: var(--font-chrome);
+  font-size: var(--text-xs);
+}
+.compo-regen {
+  font: inherit;
+  color: var(--canvas-ink);
+  background: transparent;
+  border: var(--line-w-strong) solid currentColor;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+.compo-regen:hover {
+  background: var(--canvas-ink);
+  color: var(--canvas-bg);
+}
+/* the ghost prints only the button's frame — its label stays sharp in front
+   (the border keeps its color; it rides currentColor otherwise) */
+.xerox-back .compo-regen {
+  color: transparent;
+  border-color: var(--canvas-ink);
+}
+.compo-hue {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--canvas-muted);
+  cursor: pointer;
+}
+.compo-hue input {
+  accent-color: var(--canvas-accent);
+  cursor: pointer;
+}
+
+/* composition tiles — random blocks, painted live by the --pal-* tokens */
+.compositions {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-4);
+}
+@media (max-width: 44rem) {
+  .compositions {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.tile {
+  display: block;
+  /* fixed padding = the ground border around the block; same width whether the
+     tile is 1x1 or 2x2 (the block SVG fills the padded content box) */
+  padding: var(--space-4);
+  aspect-ratio: 1;
+  background: var(--tile-ground, none); /* set per tile by compositions.ts */
+  border: none;
+  cursor: pointer;
+}
+/* the tile's ground and the block's color live in the ghost; the front
+   redraws just the block as a sharp line drawing over the print */
+#app .tile {
+  background: none;
+}
+/* the sharp wireframe — one path, every edge drawn once */
+.tile-lines {
+  fill: none;
+  stroke: var(--ink-print);
+  stroke-width: var(--line-w-strong);
+  stroke-linecap: round;
+}
+/* soften the printed block a touch more than the global soft-blur, so its
+   color edges can't read as a second contour beside the sharp outline */
+.xerox-back .tile svg {
+  filter: blur(2px);
+}
+/* the second tile is a 2x2 feature block */
+.tile--big {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+.tile svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ported slice/wheel internals, restyled onto the tinted tokens */
+.slice-svg,
+.wheel-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  color: var(--canvas-ink);
+}
+.slice-svg .grid {
+  stroke: currentColor;
+  stroke-opacity: 0.1;
+  stroke-width: 1;
+}
+.slice-svg .axis-center {
+  stroke: currentColor;
+  stroke-opacity: 0.5;
+  stroke-width: 1.5;
+}
+.slice-svg .tick,
+.slice-svg .axis,
+.slice-svg .label {
+  fill: var(--canvas-muted);
+  font-size: 9px;
+  font-family: var(--font-chrome);
+}
+.slice-svg .title {
+  fill: currentColor;
+  font-size: 11px;
+  font-family: var(--font-chrome);
+}
+/* background chrome fades in on hover; the gamut itself stays */
+.slice-svg .grid,
+.slice-svg .tick,
+.slice-svg .label,
+.slice-svg .title,
+.slice-svg .axis {
+  opacity: 0;
+  transition: opacity var(--dur-1) linear;
+}
+.slice-svg:hover .grid,
+.slice-svg:hover .tick,
+.slice-svg:hover .label,
+.slice-svg:hover .title,
+.slice-svg:hover .axis {
+  opacity: 1;
+}
+.slice-svg .env-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.6;
+  stroke-width: 1.5;
+}
+.slice-svg .tri {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.5;
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.slice-svg .tri-model {
+  fill: currentColor;
+  fill-opacity: 0.04;
+  stroke: currentColor;
+  stroke-opacity: 0.55;
+  stroke-width: 1;
+}
+.slice-svg .guide {
+  stroke: currentColor;
+  stroke-opacity: 0.16;
+  stroke-width: 1;
+}
+.slice-svg .traj {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.4;
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+.slice-svg .dot {
+  fill: var(--canvas-bg);
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+.slice-svg .cusp {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.9;
+  stroke-width: 1.5;
+}
+.slice-legend {
+  display: none;
+}
+
+.wheel-grid-dot {
+  fill: currentColor;
+  fill-opacity: 0.12;
+}
+.wheel-fade-in {
+  stop-color: var(--canvas-bg);
+  stop-opacity: 1;
+}
+.wheel-fade-out {
+  stop-color: var(--canvas-bg);
+  stop-opacity: 0;
+}
+.wheel-boundary {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.7;
+  stroke-width: 1;
+}
+.wheel-ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.12;
+  stroke-width: 1;
+}
+.wheel-cusp-ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+}
+.wheel-cusp-min,
+.wheel-cusp {
+  stroke-opacity: 0.55;
+  stroke-dasharray: 5 4;
+}
+.wheel-cusp-avg {
+  stroke-opacity: 0.3;
+  stroke-dasharray: 2 4;
+}
+.wheel-cusp-max {
+  stroke-opacity: 0.3;
+  stroke-dasharray: 1 4;
+}
+.wheel-cusp-label,
+.wheel-tag {
+  fill: var(--chrome-muted);
+  font-size: 9px;
+  font-family: var(--font-chrome);
+}
+.wheel-tag {
+  font-size: 11px;
+}
+.wheel-traj {
+  stroke-width: 2;
+  stroke-opacity: 0.95;
+}
+.wheel-dot {
+  fill: var(--canvas-bg);
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+/* export */
+.export {
+  border: var(--line-w) solid var(--canvas-line);
+}
+.export__bar {
+  display: flex;
+  border-bottom: var(--line-w) solid var(--canvas-line);
+}
+.export__bar button {
+  font: inherit;
+  font-weight: 700;
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--canvas-muted);
+  border: 0;
+  cursor: pointer;
+}
+.export__bar [data-format][aria-selected='true'] {
+  color: var(--canvas-ink);
+  box-shadow: inset 0 calc(-1 * var(--line-w-strong)) 0 var(--canvas-accent);
+}
+.export__copy {
+  margin-left: auto;
+  border-left: var(--line-w) solid var(--canvas-line) !important;
+}
+.export__copy:hover {
+  color: var(--canvas-ink);
+}
+.export__copy[data-copied]::after {
+  content: ' \2713'; /* ✓ */
+}
+.export__code {
+  margin: 0;
+  padding: var(--space-4);
+  font-family: var(--font-chrome);
+  font-size: var(--text-xs);
+  line-height: var(--leading);
+  overflow-x: auto;
+  color: var(--canvas-ink);
+}
+.hint {
+  margin: calc(-1 * var(--space-5)) 0 0;
+  font-family: var(--font-chrome);
+  font-size: var(--text-xs);
+  color: var(--canvas-muted);
+}
+/* the ghost prints only the export block's frames (and the selected tab's
+   accent underline) — the tab labels and the code stay sharp in front */
+.xerox-back .export button,
+.xerox-back .export__code {
+  color: transparent;
+}
+
+a {
+  color: inherit;
+}
+::selection {
+  background: var(--canvas-ink);
+  color: var(--canvas-bg);
+}
+
+/* ── responsive ───────────────────────────────────────────────────────── */
+
+@media (max-width: 56rem) {
+  #app,
+  .xerox-clone {
+    grid-template-columns: 1fr;
+  }
+  .rail {
+    position: static;
+    height: auto;
+    border-bottom: var(--line-w-strong) solid var(--frame);
+  }
+  .masthead {
+    padding: var(--space-6) var(--space-4) var(--space-5);
+  }
+  .canvas__body {
+    padding-inline: var(--space-4);
+  }
+  .hanger {
+    padding-inline: var(--space-4);
+  }
+  .hanger__band {
+    min-height: var(--space-6);
+  }
+}

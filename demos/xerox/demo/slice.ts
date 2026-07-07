@@ -158,9 +158,7 @@ export function renderSlice(
     }
 
     const triEl = drawTri ? `<path d="${tri}" class="tri"/>` : '';
-    // the colored gamut fill (gradients ride inside the group) prints only in
-    // the xerox ghost; the linework stays on the sharp front (see demo.css)
-    const str = `<g data-ghost-keep>${fill}</g>${triEl}<path d="${envLine}" class="env-line"/>${cuspMark}${cTicks}`;
+    const str = `${fill}${triEl}<path d="${envLine}" class="env-line"/>${cuspMark}${cTicks}`;
     sliceBgCache.set(key, str);
     return str;
   };

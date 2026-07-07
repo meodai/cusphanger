@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CuspHanger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Imbue:opsz,wght@10..100,100..900&display=swap"
+    />
+    <link rel="stylesheet" href="/src/demo/xerox.css" />
+  </head>
+  <body>
+    <!--
+      The whole "xerox" look is this one filter. It blurs the source twice — a
+      slight blur everywhere, a heavy blur revealed only through patches of
+      fractal-noise — so the toner reads as uneven. Applied to .backdrop via
+      `filter: url(#xerox-blur)`; the sharp .front sits on top of it.
+      Tunables live in feGaussianBlur stdDeviation, feTurbulence baseFrequency/
+      seed, and the feColorMatrix alpha row (gain 0.55×3, threshold −0.49).
+    -->
+    <svg class="xerox-defs" aria-hidden="true" focusable="false">
+      <filter id="xerox-blur" x="-5%" y="-5%" width="110%" height="110%"
+        color-interpolation-filters="sRGB">
+        <!-- slight blur everywhere, faded back so it reads as a haze -->
+        <feGaussianBlur id="fx-soft" in="SourceGraphic" stdDeviation="0.8" result="soft-blur" />
+        <feColorMatrix id="fx-soft-fade" in="soft-blur" type="matrix"
+          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.65 0" result="soft" />
+        <!-- heavy blur revealed only through the noise patches, also faded, so it
+             BLENDS with the soft haze underneath instead of replacing it -->
+        <feGaussianBlur id="fx-heavy" in="SourceGraphic" stdDeviation="17.5" result="heavy-blur" />
+        <feTurbulence id="fx-turb" type="fractalNoise" baseFrequency="0.025" numOctaves="5"
+          seed="69" result="noise" />
+        <feColorMatrix id="fx-matrix" in="noise" type="matrix"
+          values="0 0 0 0 0
+                  0 0 0 0 0
+                  0 0 0 0 0
+                  0.583 0.583 0.583 0 -0.37" result="patches" />
+        <feComposite in="heavy-blur" in2="patches" operator="in" result="heavy-clip" />
+        <feColorMatrix id="fx-heavy-fade" in="heavy-clip" type="matrix"
+          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.65 0" result="heavy-patches" />
+        <feMerge>
+          <feMergeNode in="soft" />
+          <feMergeNode in="heavy-patches" />
+        </feMerge>
+      </filter>
+
+      <!-- The same fractal noise, as alpha patches, INVERTED, used to mask the
+           sharp front layer: the text stays crisp between the patches and
+           dissolves into the blurred backdrop inside them. Turbulence params
+           mirror #xerox-blur and are kept in sync by the effects panel. -->
+      <filter id="fx-patches" x="0" y="0" width="100%" height="100%"
+        color-interpolation-filters="sRGB">
+        <feTurbulence id="fx-mask-turb" type="fractalNoise" baseFrequency="0.025"
+          numOctaves="5" seed="69" result="noise" />
+        <feColorMatrix id="fx-mask-matrix" in="noise" type="matrix"
+          values="0 0 0 0 0
+                  0 0 0 0 0
+                  0 0 0 0 0
+                  0.583 0.583 0.583 0 -0.36" result="alpha" />
+        <feComponentTransfer in="alpha">
+          <feFuncA type="table" tableValues="1 0" />
+        </feComponentTransfer>
+      </filter>
+      <mask id="fx-front-mask" mask-type="alpha" maskUnits="userSpaceOnUse" x="0" y="0"
+        width="4000" height="4000">
+        <rect x="0" y="0" width="4000" height="4000" fill="#fff"
+          filter="url(#fx-patches)" />
+      </mask>
+    </svg>
+
+    <!-- back and front carry identical DOM; the backdrop is the blurred ghost. -->
+    <div class="layer layer--backdrop" aria-hidden="true">
+      <div class="layout">
+        <div class="sidebar">
+        </div>
+        <main>
+          <h1>CuspHanger</h1>
+          <p>
+            Balanced color palettes from a few simple controls — consistent across every hue, and always true to what shows on
+            screen.
+          </p>
+        </main>
+      </div>
+    </div>
+    <div class="layer layer--front">
+      
+      <div class="layout">
+        <div class="sidebar">
+        </div>
+
+        <main><h1>CuspHanger</h1>
+        <p>
+          Balanced color palettes from a few simple controls — consistent across every hue, and always true to what shows on
+          screen.
+        </p>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="/src/demo/effects-panel.ts"></script>
+  </body>
+</html>

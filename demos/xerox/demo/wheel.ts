@@ -82,7 +82,7 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
       : `<stop offset="0%" class="wheel-fade-in"/><stop offset="46%" class="wheel-fade-out"/>`;
     svg = `
       <rect width="${SIZE}" height="${SIZE}" fill="url(#wheelDots)"/>
-      <g data-ghost-keep>${wedges}</g>
+      <g>${wedges}</g>
       <radialGradient id="wheelFadeBg" cx="50%" cy="50%" r="50%">${fadeStops}</radialGradient>
       <circle cx="${CT}" cy="${CT}" r="${R}" fill="url(#wheelFadeBg)"/>
       <path d="${boundary}Z" class="wheel-boundary"/>`;
@@ -115,7 +115,7 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
       .join('');
     svg = `
       <defs>${defs}</defs>
-      <g data-ghost-keep>${wedges}</g>
+      <g>${wedges}</g>
       ${rings}
       <path d="${contour}Z" class="wheel-boundary"/>`;
     legend = `radius = lightness (${flip ? 'dark center → white rim' : 'white center → dark rim'}) · boundary = per-hue cusp lightness · dots = palette`;

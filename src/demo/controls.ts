@@ -1,3 +1,6 @@
+// The rail's parameter controls: labelled range sliders (with the paper's
+// symbols) and named-choice selects. The slider fill tracks --valueRel; a
+// 0..360 slider is a hue slider and gets the OKLCH rainbow track.
 export interface FieldSpec {
   key: string;
   label: string;
@@ -7,8 +10,6 @@ export interface FieldSpec {
   value: number;
 }
 
-// A per-tab dropdown of named choices (e.g. easing functions). The selected
-// string is passed back to the tab so it can map it to a value/function.
 export interface ChoiceSpec {
   key: string;
   label: string;
@@ -28,102 +29,68 @@ export function buildControls(
   onChange: (v: ControlValues) => void,
 ): void {
   host.innerHTML = '';
-  const state: Record<string, number> = {};
+  const values: Record<string, number> = {};
   const choices: Record<string, string> = {};
-  for (const f of fields) state[f.key] = f.value;
+  for (const f of fields) values[f.key] = f.value;
   for (const c of choiceFields) choices[c.key] = c.value;
 
-  const emit = () => onChange({ values: { ...state }, choices: { ...choices } });
+  const emit = () => onChange({ values: { ...values }, choices: { ...choices } });
 
-  // the shared `.control` wrapper with a `.row` holding the label; returns the
-  // row so callers can append a value readout / select / etc.
-  const makeControl = (labelText: string, controlType?: string) => {
+  for (const f of fields) {
     const wrap = document.createElement('label');
-    const classes = ['control', 'control--' + (controlType ?? 'select')];
-    wrap.classList.add(...classes);
-    const row = document.createElement('span');
-    row.classList.add('row');
-    const labelEl = document.createElement('span');
-    labelEl.textContent = labelText;
-    row.appendChild(labelEl);
-    wrap.appendChild(row);
-    return { wrap, row };
-  };
-
-  // a labelled range slider with a live value readout
-  const addRange = (fld: FieldSpec, onSet: (v: number) => void) => {
-    const { wrap, row } = makeControl(fld.label, 'range');
-    // a 0..360 slider is a hue slider — give its fill an OKLCH rainbow
-    if (fld.min === 0 && fld.max === 360) wrap.classList.add('control--hue');
+    wrap.className = 'control control--range';
+    if (f.min === 0 && f.max === 360) wrap.classList.add('control--hue');
+    wrap.innerHTML = `
+      <span class="control__row">
+        <span class="control__label">${f.label}</span>
+        <span class="control__value">${f.value}</span>
+      </span>
+      <span class="marks" aria-hidden="true"></span>`;
     const input = document.createElement('input');
     input.type = 'range';
-    input.min = String(fld.min);
-    input.max = String(fld.max);
-    input.step = String(fld.step);
-    input.value = String(fld.value);
+    input.min = String(f.min);
+    input.max = String(f.max);
+    input.step = String(f.step);
+    input.value = String(f.value);
+    wrap.appendChild(input);
 
-    wrap.prepend(input); // before the row, regardless of makeControl's order
-
-    const valueLabel = document.createElement('span');
-    valueLabel.textContent = String(fld.value);
-    valueLabel.classList.add('control__value');
-    row.appendChild(valueLabel);
-
-    const rel = (v: number) => String((v - fld.min) / (fld.max - fld.min));
-    wrap.style.setProperty('--valueRel', rel(fld.value));
+    const readout = wrap.querySelector('.control__value') as HTMLElement;
+    const rel = (v: number) => String((v - f.min) / (f.max - f.min));
+    wrap.style.setProperty('--valueRel', rel(f.value));
 
     input.addEventListener('input', () => {
       const v = Number(input.value);
-      onSet(v);
-      valueLabel.textContent = input.value;
+      values[f.key] = v;
+      readout.textContent = input.value;
       wrap.style.setProperty('--valueRel', rel(v));
       emit();
     });
-
     host.appendChild(wrap);
-  };
+  }
 
-  const addSelect = (
-    label: string,
-    options: readonly string[],
-    current: string,
-    onSet: (v: string) => void,
-    describe?: Record<string, string>,
-  ) => {
-    const { wrap } = makeControl(label);
+  for (const c of choiceFields) {
+    const wrap = document.createElement('label');
+    wrap.className = 'control control--select';
+    wrap.innerHTML = `<span class="control__row"><span class="control__label">${c.label}</span></span>`;
     const select = document.createElement('select');
-    for (const o of options) {
+    for (const o of c.options) {
       const opt = document.createElement('option');
       opt.value = o;
       opt.textContent = o;
-      if (o === current) opt.selected = true;
+      opt.selected = o === c.value;
       select.appendChild(opt);
     }
-    wrap.appendChild(select);
-
-    let hint: HTMLElement | undefined;
-    if (describe) {
-      hint = document.createElement('small');
-      hint.classList.add('control__hint');
-      hint.textContent = describe[current] ?? '';
-      wrap.appendChild(hint);
-    }
-
     select.addEventListener('change', () => {
-      const v = select.value;
-      onSet(v);
-      if (hint && describe) hint.textContent = describe[v] ?? '';
+      choices[c.key] = select.value;
       emit();
     });
+    // the select sits in a relative box so its corner .marks can frame it
+    const box = document.createElement('span');
+    box.className = 'control__selectbox';
+    box.appendChild(select);
+    box.insertAdjacentHTML('beforeend', '<span class="marks" aria-hidden="true"></span>');
+    wrap.appendChild(box);
     host.appendChild(wrap);
-  };
-
-  // numeric parameters
-  for (const f of fields) addRange(f, (v) => (state[f.key] = v));
-
-  // per-tab choice fields (e.g. easings)
-  for (const c of choiceFields) {
-    addSelect(c.label, c.options, c.value, (v) => (choices[c.key] = v));
   }
 
   emit();
