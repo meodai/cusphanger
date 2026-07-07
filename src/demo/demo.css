@@ -446,7 +446,8 @@ body {
   line-height: 1;
   letter-spacing: -0.02em;
 }
-.intro {
+.intro,
+.cite {
   margin: 0 0 var(--space-3);
   font-size: var(--text-m);
   max-width: 46ch;
