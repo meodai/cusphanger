@@ -872,22 +872,8 @@ body {
 }
 
 .export {
-  --frame: transparent;
-  --fill: transparent;
-  --ink: var(--canvas-ink);
-  --ink-muted: var(--canvas-muted);
-  --ink-inverse: var(--canvas-bg);
-  --cover: transparent;
   position: relative;
   border: var(--line-w) solid var(--frame);
-}
-.xerox-back .export {
-  --frame: var(--ink-print);
-  --fill: var(--ink-print);
-  --ink: transparent;
-  --ink-muted: transparent;
-  --ink-inverse: transparent;
-  --cover: var(--canvas-bg);
 }
 .export__bar {
   border-width: 0 0 var(--line-w);

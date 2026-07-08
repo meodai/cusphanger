@@ -15,14 +15,14 @@ export function initExport(
     { id: 'usage', label: 'usage', print: () => usage },
     {
       id: 'css',
-      label: 'CSS variables',
+      label: 'css',
       print: () =>
         [':root {', ...palette.map((c, i) => `  --pal-${i}: ${cssOf(c)};`), '}'].join('\n'),
     },
-    { id: 'oklch', label: 'oklch() list', print: () => palette.map(cssOf).join('\n') },
+    { id: 'oklch', label: 'oklch', print: () => palette.map(cssOf).join('\n') },
     {
       id: 'js',
-      label: 'JS array',
+      label: 'js',
       print: () =>
         ['export const palette = [', ...palette.map((c) => `  '${hexOf(c)}',`), '];'].join('\n'),
     },
