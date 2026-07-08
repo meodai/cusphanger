@@ -229,8 +229,8 @@ body {
 .rail__strip {
   display: flex;
   height: 0.5rem;
-  /* sit flush on the tabs despite the rail's column gap */
-  margin-bottom: calc(-1 * var(--space-5));
+  /* sit flush under the export tabs despite the rail's column gap */
+  margin-top: calc(-1 * var(--space-5));
 }
 .rail__strip span {
   flex: 1;
