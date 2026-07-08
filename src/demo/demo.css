@@ -93,6 +93,8 @@ body {
   color: var(--ink);
 
   padding: var(--space-5) var(--space-2);
+  /* mirror the rail → content gap (rail padding + masthead inline padding) */
+  padding-inline-start: calc(var(--space-2) + var(--space-6));
   /* eyebrow + wordmark heights, so the controls start roughly level with the intro */
   padding-top: calc(var(--space-8) + var(--space-2) + var(--space-4) + 1.1rem + clamp(3.25rem, 7.5vw, 6.5rem));
   display: flex;
@@ -934,6 +936,7 @@ a {
     position: static;
     height: auto;
     padding-top: var(--space-5);
+    padding-inline-start: var(--space-2);
     border-bottom: var(--line-w-strong) solid var(--frame);
   }
   .masthead {
