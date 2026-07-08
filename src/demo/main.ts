@@ -1,6 +1,7 @@
 import { sequential, ramp, diverging, type OklchColor, type TriangleMode } from '../lib/index';
 import { oklchSrgb, oklchP3, toCss, type Lut } from 'nutelch';
-import { buildControls, type FieldSpec, type ChoiceSpec } from './controls';
+import { buildControls, type FieldSpec, type ChoiceSpec, type ControlsApi } from './controls';
+import { initCurveControl } from './curve-control';
 import { applyTheme } from './theme';
 import { renderHanger } from './hanger';
 import { renderSlice } from './slice';
@@ -154,6 +155,10 @@ const updateExport = initExport($('.export'));
 
 let activeTab: Tab = TABS[0]!;
 let lut: Lut = oklchSrgb;
+let controlsApi: ControlsApi = { set: () => {} };
+const renderCurveControl = initCurveControl($('.rail-curve'), (patch) =>
+  controlsApi.set(patch),
+);
 const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
 let lastValues: Record<string, number> = {};
 let lastChoices: Record<string, string> = {};
@@ -176,6 +181,22 @@ function renderAll(): void {
     .map((c, i) => `<span style="--swatch: var(--pal-${i}, ${toCss(c)})"></span>`)
     .join('');
   renderSlice(sliceMiniHost, palette, lut, activeTab.forceMirror ?? false);
+  renderCurveControl(
+    activeTab.id === 'ramp'
+      ? null
+      : {
+          hues:
+            activeTab.id === 'diverging'
+              ? [lastValues.hStart!, lastValues.hEnd!]
+              : [lastValues.hStart!],
+          palette,
+          s: lastValues.s!,
+          b: lastValues.b!,
+          c: lastValues.c!,
+          w: lastValues.w!,
+          lut,
+        },
+  );
   for (const axis of ['chroma', 'lightness'] as const) {
     renderWheel(wheelHosts[axis], palette, lut, axis, wheelFlip[axis]);
   }
@@ -187,7 +208,7 @@ const tabButtons: HTMLButtonElement[] = [];
 const selectTab = (tab: Tab) => {
   activeTab = tab;
   tabButtons.forEach((b, i) => b.setAttribute('aria-selected', String(TABS[i]!.id === tab.id)));
-  buildControls(controlsHost, tab.fields, tab.choices ?? [], ({ values, choices }) => {
+  controlsApi = buildControls(controlsHost, tab.fields, tab.choices ?? [], ({ values, choices }) => {
     lastValues = values;
     lastChoices = choices;
     renderAll();

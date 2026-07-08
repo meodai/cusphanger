@@ -226,6 +226,84 @@ body {
   background: var(--cover);
 }
 
+/* the paper's fig. 5 as a control: palette bar + gamut triangle + Bézier path,
+   with draggable endpoints (lightness range → b/c) and the q1 point on the
+   median (its fraction = saturation s) */
+.rail-curve {
+  position: relative;
+  border: var(--line-w) solid var(--frame);
+  padding: var(--space-2);
+}
+.rail-curve svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--ink);
+  overflow: visible;
+}
+.rail-curve [data-handle] {
+  cursor: grab;
+  touch-action: none;
+}
+.rail-curve [data-handle='dark'],
+.rail-curve [data-handle='light'],
+.rail-curve[data-dragging='dark'],
+.rail-curve[data-dragging='light'] {
+  cursor: ns-resize;
+}
+.rail-curve[data-dragging='sat'] {
+  cursor: grabbing;
+}
+.cc-tri {
+  fill: none;
+  stroke: var(--ink-muted);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+.cc-median {
+  stroke: var(--ink-muted);
+  stroke-dasharray: 2 4;
+}
+.cc-chord {
+  stroke: var(--ink-muted);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+.cc-ghost {
+  fill: none;
+  stroke: var(--ink-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  opacity: 0.7;
+}
+.cc-curve {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.cc-q {
+  fill: var(--chrome-bg);
+  stroke: var(--ink-muted);
+}
+.cc-handle {
+  fill: var(--chrome-bg);
+  stroke: currentColor;
+  stroke-width: 2;
+  transition: r var(--dur-1) var(--ease);
+}
+.rail-curve [data-handle]:hover .cc-handle {
+  r: 6.5;
+}
+.cc-hit {
+  fill: transparent;
+}
+.cc-label {
+  font-family: var(--font-chrome);
+  font-size: 10px;
+  fill: var(--ink-muted);
+}
+
 .rail__strip {
   display: flex;
   height: 0.75rem;
@@ -617,6 +695,7 @@ body {
   content: ' — copied';
   font-weight: 400;
 }
+
 
 .canvas__body {
   padding: var(--space-7) var(--space-6) var(--space-8);

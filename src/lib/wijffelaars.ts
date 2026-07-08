@@ -18,7 +18,7 @@ const BRIGHT_POINT = { l: 0.968, c: 0.211, h: 109.77 };
 //   to OKLab L through Y (for neutrals OKLab L = Y^(1/3) exactly), so the
 //   palette hits the same physical lightnesses the paper calibrated on Brewer.
 
-interface LCH {
+export interface LCH {
   l: number;
   c: number;
   h: number; // degrees, may be unwrapped (kept near the base hue for interpolation)
@@ -54,7 +54,7 @@ const okToCieL = (L: number): number => {
 
 // L(t): the paper's lightness sampling (its '0.2^…' contrast curve, in CIE L*
 // units), converted to OKLab lightness.
-const lightnessAt = (t: number, b: number, c: number): number => {
+export const lightnessAt = (t: number, b: number, c: number): number => {
   const lStar = 125 - 125 * Math.pow(0.2, (1 - c) * b + t * c);
   return Math.min(1, Math.max(0, cieLToOk(lStar)));
 };
@@ -68,7 +68,7 @@ const lightnessToX = (L: number): number => {
 // Convert an [minLight, maxLight] range into the paper's (b, c), so lRange and
 // brightness/contrast are two views of the same lightness curve (the 0.2^x
 // perceptual spacing between the endpoints is identical either way).
-function bcFromLRange([a, z]: [number, number]): { b: number; c: number } {
+export function bcFromLRange([a, z]: [number, number]): { b: number; c: number } {
   const xMin = lightnessToX(Math.min(a, z));
   const xMax = lightnessToX(Math.max(a, z));
   const c = Math.max(0, Math.min(1, xMax - xMin));
@@ -84,15 +84,16 @@ function triangleChromaAt(l: number, hue: number, lut: Lut): number {
   return peak.l >= 1 ? 0 : ((1 - l) / (1 - peak.l)) * peak.c;
 }
 
-interface Tri {
+export interface Tri {
   p0: LCH;
+  p1: LCH; // the cusp / MSC corner (not a curve control point)
   q0: LCH;
   q1: LCH;
   q2: LCH;
   p2: LCH;
 }
 
-function buildTriangle(hue: number, s: number, w: number, lut: Lut): Tri {
+export function buildTriangle(hue: number, s: number, w: number, lut: Lut): Tri {
   const peak = cusp(hue, lut);
   const p0: LCH = { l: 0, c: 0, h: hue }; // black
   const p1: LCH = { l: peak.l, c: peak.c, h: hue }; // MSC(h)
@@ -113,7 +114,7 @@ function buildTriangle(hue: number, s: number, w: number, lut: Lut): Tri {
   const q0 = mixP(p0, p1, s); // (1-s)p0 + s·MSC
   const q2 = mixP(p2, p1, s); // (1-s)p2 + s·MSC
   const q1 = midP(q0, q2);
-  return { p0, q0, q1, q2, p2 };
+  return { p0, p1, q0, q1, q2, p2 };
 }
 
 // A hue-agnostic triangle from a given cusp (L, C) — used by the shared
@@ -125,11 +126,11 @@ function buildTriangleFromCusp(cuspL: number, cuspC: number, s: number): Tri {
   const q0 = mixP(p0, p1, s);
   const q2 = mixP(p2, p1, s);
   const q1 = midP(q0, q2);
-  return { p0, q0, q1, q2, p2 };
+  return { p0, p1, q0, q1, q2, p2 };
 }
 
 // C_seq(t): two quadratic Béziers, black→…→MSC→…→white
-function cSeq(t: number, tri: Tri): LCH {
+export function cSeq(t: number, tri: Tri): LCH {
   const { p0, q0, q1, q2, p2 } = tri;
   if (t <= 0.5) {
     const u = 2 * t;
@@ -148,7 +149,7 @@ function cSeq(t: number, tri: Tri): LCH {
 }
 
 // T(ℓ): curve parameter for a target lightness (invert the L-component)
-function tForLightness(l: number, tri: Tri): number {
+export function tForLightness(l: number, tri: Tri): number {
   const { p0, q0, q1, q2, p2 } = tri;
   const u = l <= q1.l ? 0.5 * bezInv(p0.l, q0.l, q1.l, l) : 0.5 * bezInv(q1.l, q2.l, p2.l, l) + 0.5;
   return Math.min(1, Math.max(0, u));

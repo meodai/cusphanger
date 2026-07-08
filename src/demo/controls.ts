@@ -19,15 +19,21 @@ export interface ControlValues {
   choices: Record<string, string>;
 }
 
+export interface ControlsApi {
+  /** programmatic update (e.g. from the curve control): moves the sliders and emits once */
+  set(patch: Record<string, number>): void;
+}
+
 export function buildControls(
   host: HTMLElement,
   fields: FieldSpec[],
   choiceFields: ChoiceSpec[],
   onChange: (v: ControlValues) => void,
-): void {
+): ControlsApi {
   host.innerHTML = '';
   const values: Record<string, number> = {};
   const choices: Record<string, string> = {};
+  const setters = new Map<string, (v: number) => void>();
   for (const f of fields) values[f.key] = f.value;
   for (const c of choiceFields) choices[c.key] = c.value;
 
@@ -62,6 +68,12 @@ export function buildControls(
       wrap.style.setProperty('--valueRel', rel(v));
       emit();
     });
+    setters.set(f.key, (v) => {
+      values[f.key] = v;
+      input.value = String(v);
+      readout.textContent = String(v);
+      wrap.style.setProperty('--valueRel', rel(v));
+    });
     host.appendChild(wrap);
   }
 
@@ -87,4 +99,11 @@ export function buildControls(
   }
 
   emit();
+
+  return {
+    set(patch) {
+      for (const [key, v] of Object.entries(patch)) setters.get(key)?.(v);
+      emit();
+    },
+  };
 }
