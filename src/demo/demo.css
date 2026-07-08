@@ -489,6 +489,40 @@ body {
   content: ' \2197';
 }
 
+.viz-row {
+  --frame: transparent;
+  --fill: transparent;
+  --ink: var(--ink-print);
+  --ink-muted: var(--canvas-muted);
+  --ink-inverse: var(--canvas-bg);
+  --cover: transparent;
+  display: flex;
+  max-width: 68rem;
+  padding-inline: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+.xerox-back .viz-row {
+  --frame: var(--ink-print);
+  --fill: var(--ink-print);
+  --ink: transparent;
+  --ink-muted: transparent;
+  --ink-inverse: transparent;
+  --cover: var(--canvas-bg);
+}
+.viz-cell {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border: var(--line-w) solid var(--frame);
+}
+/* flush cells: collapse the shared border so the corner crosses coincide */
+.viz-cell + .viz-cell {
+  margin-left: calc(-1 * var(--line-w));
+}
+.viz-cell .viz-pane {
+  padding: var(--space-2);
+}
+
 .hanger {
   --frame: transparent;
   --ink: var(--ink-print);
@@ -889,6 +923,14 @@ a {
   }
   .hanger {
     padding-inline: var(--space-4);
+  }
+  .viz-row {
+    flex-direction: column;
+    padding-inline: var(--space-4);
+  }
+  .viz-cell + .viz-cell {
+    margin-left: 0;
+    margin-top: calc(-1 * var(--line-w));
   }
   .hanger__band {
     min-height: var(--space-6);

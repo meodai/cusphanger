@@ -99,19 +99,6 @@
 
     <div id="app">
     <aside class="rail">
-      <div class="rail__viz">
-        <button type="button" class="viz-flip" aria-label="invert the radial direction">&#x21C4;</button>
-        <button type="button" class="viz-gamut" aria-label="toggle gamut (sRGB / Display P3)">sRGB</button>
-        <div id="wheel" class="viz-pane"></div>
-        <div id="slice-mini" class="viz-pane" hidden></div>
-        <div class="axis-toggle" role="group" aria-label="Sidebar figure">
-          <button type="button" data-axis="chroma" aria-selected="true">chroma</button>
-          <button type="button" data-axis="lightness" aria-selected="false">lightness</button>
-          <button type="button" data-axis="slice" aria-selected="false">slice</button>
-        </div>
-        <span class="marks" aria-hidden="true"></span>
-      </div>
-
       <nav class="tabs" role="tablist" aria-label="Palette type"></nav>
       <form class="controls" aria-label="Palette parameters"></form>
 
@@ -133,6 +120,24 @@
           <a href="https://web.archive.org/web/20240628033734/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=097749c130c1cf35b8b9c236916de3b0455ffce0">The paper</a>
         </p>
       </header>
+
+      <section class="viz-row" aria-label="Palette views">
+        <div class="viz-cell">
+          <button type="button" class="viz-flip" data-axis="chroma" aria-label="invert the radial direction">&#x21C4;</button>
+          <div id="wheel" class="viz-pane"></div>
+          <span class="marks" aria-hidden="true"></span>
+        </div>
+        <div class="viz-cell">
+          <button type="button" class="viz-flip" data-axis="lightness" aria-label="invert the radial direction">&#x21C4;</button>
+          <div id="wheel-lightness" class="viz-pane"></div>
+          <span class="marks" aria-hidden="true"></span>
+        </div>
+        <div class="viz-cell">
+          <button type="button" class="viz-gamut" aria-label="toggle gamut (sRGB / Display P3)">sRGB</button>
+          <div id="slice-mini" class="viz-pane"></div>
+          <span class="marks" aria-hidden="true"></span>
+        </div>
+      </section>
 
       <section class="hanger" aria-label="The palette. Click a color to copy its oklch value."></section>
 

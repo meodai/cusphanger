@@ -140,16 +140,16 @@ const $ = (sel: string) => document.querySelector(sel) as HTMLElement;
 
 const hangerHost = $('.hanger');
 const sliceMiniHost = $('#slice-mini');
-const wheelHost = $('#wheel');
+const wheelHosts: Record<WheelAxis, HTMLElement> = {
+  chroma: $('#wheel'),
+  lightness: $('#wheel-lightness'),
+};
 const tabsNav = $('.tabs');
 const controlsHost = $('.controls');
 const updateExport = initExport($('.export'));
 
-type VizView = WheelAxis | 'slice';
 let activeTab: Tab = TABS[0]!;
 let lut: Lut = oklchSrgb;
-let vizView: VizView = 'chroma';
-let wheelAxis: WheelAxis = 'chroma';
 const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
 let lastValues: Record<string, number> = {};
 let lastChoices: Record<string, string> = {};
@@ -169,7 +169,9 @@ function renderAll(): void {
   applyTheme(document.documentElement, palette);
   renderHanger(hangerHost, palette);
   renderSlice(sliceMiniHost, palette, lut, activeTab.forceMirror ?? false);
-  renderWheel(wheelHost, palette, lut, wheelAxis, wheelFlip[wheelAxis]);
+  for (const axis of ['chroma', 'lightness'] as const) {
+    renderWheel(wheelHosts[axis], palette, lut, axis, wheelFlip[axis]);
+  }
   updateCompositions(palette.length);
   updateExport(palette, activeTab.usage(lastValues, lastChoices, lut === oklchP3 ? 'oklchP3' : 'oklchSrgb'));
 }
@@ -205,40 +207,14 @@ vizGamut.addEventListener('click', () => {
   renderAll();
 });
 
-const axisBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.axis-toggle button'));
-const flipBtn = $('.viz-flip') as HTMLButtonElement;
-const syncVizButtons = () => {
-  flipBtn.hidden = vizView === 'slice';
-  flipBtn.toggleAttribute('data-flipped', vizView !== 'slice' && wheelFlip[wheelAxis]);
-  for (const b of axisBtns) {
-    const ba = b.dataset.axis as VizView;
-    b.setAttribute('aria-selected', String(ba === vizView));
-    b.toggleAttribute(
-      'data-flipped',
-      ba !== 'slice' && ba === vizView && wheelFlip[ba as WheelAxis],
-    );
-  }
-};
-for (const btn of axisBtns) {
+for (const btn of document.querySelectorAll<HTMLButtonElement>('.viz-flip')) {
+  const axis = btn.dataset.axis as WheelAxis;
   btn.addEventListener('click', () => {
-    const a = btn.dataset.axis as VizView;
-    if (a !== 'slice') {
-      if (a === vizView) wheelFlip[a] = !wheelFlip[a];
-      wheelAxis = a;
-      renderWheel(wheelHost, palette, lut, wheelAxis, wheelFlip[wheelAxis]);
-    }
-    vizView = a;
-    wheelHost.hidden = vizView === 'slice';
-    sliceMiniHost.hidden = vizView !== 'slice';
-    syncVizButtons();
+    wheelFlip[axis] = !wheelFlip[axis];
+    btn.toggleAttribute('data-flipped', wheelFlip[axis]);
+    renderWheel(wheelHosts[axis], palette, lut, axis, wheelFlip[axis]);
   });
 }
-flipBtn.addEventListener('click', () => {
-  wheelFlip[wheelAxis] = !wheelFlip[wheelAxis];
-  renderWheel(wheelHost, palette, lut, wheelAxis, wheelFlip[wheelAxis]);
-  syncVizButtons();
-});
-syncVizButtons();
 
 selectTab(TABS.find((t) => t.id === 'diverging') ?? TABS[0]!);
 
