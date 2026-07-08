@@ -91,8 +91,10 @@ body {
   height: 100vh;
   overflow-y: auto;
   /* rtl on the scroll container puts the scrollbar on the left edge;
-     children restore ltr for the actual content */
+     children restore ltr for the actual content. The gutter is reserved
+     even without overflow so the rail width never jumps. */
   direction: rtl;
+  scrollbar-gutter: stable;
   color: var(--ink);
 
   padding: var(--space-5) var(--space-2);
@@ -241,6 +243,10 @@ body {
   border: var(--line-w) solid var(--frame);
   padding: var(--space-2);
 }
+/* tabs · strip · curve panel read as one connected block */
+.rail__strip + .rail-curve {
+  margin-top: calc(-1 * var(--space-5));
+}
 .rail-curve svg {
   display: block;
   width: 100%;
@@ -318,8 +324,11 @@ body {
 
 .rail__strip {
   display: flex;
-  height: 0.75rem;
-  /* sit flush under the export tabs despite the rail's column gap */
+  /* match the slider rows: their text line + space-2 vertical padding */
+  height: calc(2 * var(--space-2) + 1.5 * var(--text-xs) + 2 * var(--line-w-strong));
+  flex: none; /* the rail column overflows; don't let the strip shrink away */
+  border-inline: var(--line-w-strong) solid var(--frame);
+  /* sit flush under the tabs despite the rail's column gap */
   margin-top: calc(-1 * var(--space-5));
 }
 .rail__strip span {

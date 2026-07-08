@@ -41,10 +41,10 @@ const f = (n: number) => n.toFixed(2);
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
+// square, like the other viz panes
 const W = 240;
-const H = 290;
+const H = 240;
 const PAD = 16; // room at the ends for the endpoint handles
-const STRIP_W = 14; // width of the mini palette bar(s)
 const L_GAP = 0.04; // minimum lightness gap between the two endpoints
 const SEG = 24; // polyline samples for the solid (used) curve segment
 
@@ -90,18 +90,6 @@ const gamutFill = (hue: number, xOf: (c: number) => number, lut: Lut, arm: numbe
 const diamond = (x: number, y: number, r: number, fill: string): string =>
   `<polygon points="${f(x)},${f(y - r)} ${f(x + r)},${f(y)} ${f(x)},${f(y + r)} ${f(x - r)},${f(y)}" fill="${fill}" class="cc-dot"/>`;
 
-const strip = (colors: OklchColor[], x: number): string => {
-  const span = H - 2 * PAD;
-  const hRow = span / colors.length;
-  // bottom-up: first color (the arm's dark end) sits at the bottom
-  return colors
-    .map(
-      (col, i) =>
-        `<rect x="${f(x)}" y="${f(H - PAD - (i + 1) * hRow)}" width="${STRIP_W}" height="${f(hRow + 0.5)}" fill="${cssOf(col)}"/>`,
-    )
-    .join('');
-};
-
 export function initCurveControl(
   host: HTMLElement,
   onInput: (patch: Record<string, number>) => void,
@@ -127,25 +115,19 @@ export function initCurveControl(
     const tris = hues.map((h) => buildTriangle(h, s, w, lut));
     const maxCusp = Math.max(...tris.map((t) => t.p1.c), 0.01);
 
-    // sequential: bar left, one triangle pointing right.
-    // diverging: shared axis in the middle, arms pointing outward, bars at the edges.
-    let bars = '';
+    // sequential: one triangle pointing right.
+    // diverging: shared axis in the middle, arms pointing outward.
     if (!mirror) {
-      const x0 = 30 + STRIP_W + 22;
+      const x0 = 38;
       const xScale = (W - 18 - x0) / maxCusp;
       arms = [{ tri: tris[0]!, xOf: (c) => x0 + c * xScale }];
-      bars = strip(palette, 30);
     } else {
       const x0 = W / 2;
-      const xScale = (x0 - STRIP_W - 20) / maxCusp;
+      const xScale = (x0 - 20) / maxCusp;
       arms = [
         { tri: tris[0]!, xOf: (c) => x0 - c * xScale },
         { tri: tris[1]!, xOf: (c) => x0 + c * xScale },
       ];
-      const N = palette.length;
-      bars =
-        strip(palette.slice(0, Math.ceil(N / 2)), 4) +
-        strip(palette.slice(Math.floor(N / 2)).reverse(), W - 4 - STRIP_W);
     }
 
     let out = '';
@@ -207,9 +189,9 @@ export function initCurveControl(
 
     const fills = arms.map((arm, i) => gamutFill(hues[i]!, arm.xOf, lut, i)).join('');
 
-    // the bars and gamut fill ride the xerox ghost layer, like every other color fill
+    // the gamut fill rides the xerox ghost layer, like every other color fill
     host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
-      <g data-ghost-keep>${fills}${bars}</g>${out}</svg>
+      <g data-ghost-keep>${fills}</g>${out}</svg>
       <span class="marks" aria-hidden="true"></span>`;
   }
 
