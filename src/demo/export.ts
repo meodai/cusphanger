@@ -7,7 +7,7 @@ type FormatId = 'usage' | 'oklch' | 'hex';
 export function initExport(
   host: HTMLElement,
 ): (palette: OklchColor[], usage: string) => void {
-  let active: FormatId = 'usage';
+  let active: FormatId | null = null;
   let palette: OklchColor[] = [];
   let usage = '';
 
@@ -30,20 +30,29 @@ export function initExport(
     <span class="marks" aria-hidden="true"></span>`;
 
   const code = host.querySelector('code') as HTMLElement;
+  const codePre = host.querySelector('.export__code') as HTMLElement;
   const tabs = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-format]'));
   const copyBtn = host.querySelector('.export__copy') as HTMLButtonElement;
 
   const print = () => {
-    code.textContent = FORMATS.find((f) => f.id === active)!.print();
+    code.textContent = FORMATS.find((f) => f.id === active)?.print() ?? '';
+  };
+  const sync = () => {
+    host.classList.toggle('export--open', active !== null);
+    codePre.hidden = active === null;
+    copyBtn.hidden = active === null;
+    for (const t of tabs) t.setAttribute('aria-selected', String(t.dataset.format === active));
+    print();
   };
   for (const tab of tabs) {
     tab.addEventListener('click', () => {
-      active = tab.dataset.format as FormatId;
-      for (const t of tabs) t.setAttribute('aria-selected', String(t === tab));
-      print();
+      const id = tab.dataset.format as FormatId;
+      active = id === active ? null : id;
+      sync();
     });
   }
   copyBtn.addEventListener('click', () => copyText(code.textContent ?? '', copyBtn));
+  sync();
 
   return (p, u) => {
     palette = p;

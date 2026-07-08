@@ -876,6 +876,9 @@ body {
   border: var(--line-w) solid var(--frame);
 }
 .export__bar {
+  border-width: 0;
+}
+.export--open .export__bar {
   border-width: 0 0 var(--line-w);
 }
 .export .export__copy {
