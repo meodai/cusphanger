@@ -9,7 +9,9 @@ import {
   type Tri,
   type LCH,
 } from '../lib/wijffelaars';
-import { cssOf } from './color';
+import { css, cssOf } from './color';
+import { maxChromaAt } from './gamut';
+import { oklchP3 } from 'nutelch';
 
 // The paper's fig. 5 as a rail control: the palette bar beside the gamut
 // triangle (p0 black · p1 cusp · p2 white) with the Bézier path through it.
@@ -55,6 +57,38 @@ const handle = (x: number, y: number, kind: HandleKind, arm: number): string =>
      <circle class="cc-hit" cx="${f(x)}" cy="${f(y)}" r="13"/>
      <circle class="cc-handle" cx="${f(x)}" cy="${f(y)}" r="5"/>
    </g>`;
+
+// the real gamut slice under the triangle, as in the slice view: one gradient
+// row (neutral → max chroma) per lightness band
+const fillCache = new Map<string, string>();
+const gamutFill = (hue: number, xOf: (c: number) => number, lut: Lut, arm: number): string => {
+  const key = `${lut === oklchP3 ? 'p3' : 'srgb'}|${hue.toFixed(1)}|${arm}|${xOf(0.1).toFixed(2)}`;
+  const hit = fillCache.get(key);
+  if (hit) return hit;
+  const ROWS = 48;
+  const x0 = xOf(0);
+  const idBase = `cc-${lut === oklchP3 ? 'p' : 's'}-${Math.round(hue)}-${arm}`;
+  let grads = '';
+  let polys = '';
+  for (let i = 0; i < ROWS; i++) {
+    const L0 = i / ROWS;
+    const L1 = (i + 1) / ROWS;
+    const Lm = (L0 + L1) / 2;
+    const maxC = maxChromaAt(hue, Lm, lut);
+    if (maxC <= 0) continue;
+    const xE0 = xOf(maxChromaAt(hue, L0, lut));
+    const xE1 = xOf(maxChromaAt(hue, L1, lut));
+    const gid = `${idBase}-${i}`;
+    grads += `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${f(x0)}" y1="0" x2="${f((xE0 + xE1) / 2)}" y2="0"><stop offset="0%" stop-color="${css(Lm, 0, hue)}"/><stop offset="100%" stop-color="${css(Lm, maxC, hue)}"/></linearGradient>`;
+    polys += `<polygon points="${f(x0)},${f(yOf(L0))} ${f(xE0)},${f(yOf(L0))} ${f(xE1)},${f(yOf(L1))} ${f(x0)},${f(yOf(L1))}" fill="url(#${gid})"/>`;
+  }
+  const str = grads + polys;
+  fillCache.set(key, str);
+  return str;
+};
+
+const diamond = (x: number, y: number, r: number, fill: string): string =>
+  `<polygon points="${f(x)},${f(y - r)} ${f(x + r)},${f(y)} ${f(x)},${f(y + r)} ${f(x - r)},${f(y)}" fill="${fill}" class="cc-dot"/>`;
 
 const strip = (colors: OklchColor[], x: number): string => {
   const span = H - 2 * PAD;
@@ -154,6 +188,13 @@ export function initCurveControl(
         out += `<text x="${f(qx + sign * 10)}" y="${f(qy - 9)}" class="cc-label" text-anchor="${sign < 0 ? 'end' : 'start'}">s ${f(s)}</text>`;
       }
 
+      // palette samples on the curve, like the slice view's diamonds
+      for (const [pi, col] of palette.entries()) {
+        const side = mirror ? (pi < palette.length / 2 ? 0 : 1) : 0;
+        if (side !== i) continue;
+        out += diamond(arm.xOf(col.c), yOf(col.l), 3.5, cssOf(col));
+      }
+
       const [xd, yd] = curvePoint(arm, l0);
       handles += handle(xd, yd, 'dark', i);
       if (i === 0) {
@@ -164,9 +205,11 @@ export function initCurveControl(
     });
     out += handles;
 
-    // the bars ride the xerox ghost layer, like every other color fill
+    const fills = arms.map((arm, i) => gamutFill(hues[i]!, arm.xOf, lut, i)).join('');
+
+    // the bars and gamut fill ride the xerox ghost layer, like every other color fill
     host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
-      <g data-ghost-keep>${bars}</g>${out}</svg>
+      <g data-ghost-keep>${fills}${bars}</g>${out}</svg>
       <span class="marks" aria-hidden="true"></span>`;
   }
 

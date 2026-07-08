@@ -286,6 +286,11 @@ body {
   fill: var(--chrome-bg);
   stroke: var(--ink-muted);
 }
+.cc-dot {
+  /* fill carries the sample's own color (inline attribute) */
+  stroke: currentColor;
+  stroke-width: 0.5;
+}
 .cc-handle {
   fill: var(--chrome-bg);
   stroke: currentColor;
