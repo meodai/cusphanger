@@ -521,7 +521,8 @@ body {
   display: flex;
   max-width: 68rem;
   padding-inline: var(--space-6);
-  margin-bottom: var(--space-6);
+  /* same gap as rail → content */
+  margin-bottom: calc(var(--space-2) + var(--space-6));
 }
 .xerox-back .viz-row {
   --frame: var(--ink-print);
