@@ -2,7 +2,9 @@
 
 A faithful OKLCH implementation of Wijffelaars, Vliegen, van Wijk & van der Linden,
 *"Generating Color Palettes using Intuitive Parameters"*
-([Computer Graphics Forum 28:3, EuroVis 2009](https://web.archive.org/web/20240628033734/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=097749c130c1cf35b8b9c236916de3b0455ffce0)).
+([Computer Graphics Forum 28:3, EuroVis 2009](https://web.archive.org/web/20240628033734/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=097749c130c1cf35b8b9c236916de3b0455ffce0)),
+meant to cover more or less the same API as
+[RampenSau](https://github.com/meodai/rampensau).
 
 The paper generates **sequential** and **diverging** palettes from a few intuitive parameters by
 walking a quadratic-Bézier path through the gamut triangle (black · cusp · white) of a hue. It was

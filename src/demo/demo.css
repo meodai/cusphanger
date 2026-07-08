@@ -10,6 +10,8 @@ body {
   margin: 0;
   position: relative;
   min-height: 100vh;
+  /* the xerox ghost's mouse shift can poke past the viewport; never scroll for it */
+  overflow-x: clip;
   background: var(--canvas-bg);
   font-family: var(--font-display);
   font-size: var(--text-s);
