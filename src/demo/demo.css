@@ -662,8 +662,14 @@ body {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--canvas-muted);
+  color: var(--canvas-ink);
+  border: var(--line-w-strong) solid currentColor;
+  padding: var(--space-2) var(--space-3);
   cursor: pointer;
+}
+.xerox-back .compo-hue {
+  color: transparent;
+  border-color: var(--canvas-ink);
 }
 .compo-hue input {
   accent-color: var(--canvas-accent);
