@@ -47,8 +47,12 @@ const TABS: Tab[] = [
         hStart: v.hStart!, total: v.total!, saturation: v.s!,
         brightness: v.b!, contrast: v.c!, coolWarm: v.w!, lut,
       }),
-    usage: (v, _c, lutName) => `import { sequential } from 'cusphanger';
-import { ${lutName} } from 'nutelch';
+    usage: (v, _c, lutName) => `import {
+  sequential
+} from 'cusphanger';
+import {
+  ${lutName}
+} from 'nutelch';
 
 const palette = sequential({
   hStart: ${v.hStart},
@@ -78,8 +82,12 @@ const palette = sequential({
         hStart: v.hStart!, hEnd: v.hEnd!, total: v.total!,
         saturation: v.s!, brightness: v.b!, contrast: v.c!, coolWarm: v.w!, lut,
       }),
-    usage: (v, _c, lutName) => `import { diverging } from 'cusphanger';
-import { ${lutName} } from 'nutelch';
+    usage: (v, _c, lutName) => `import {
+  diverging
+} from 'cusphanger';
+import {
+  ${lutName}
+} from 'nutelch';
 
 const palette = diverging({
   hStart: ${v.hStart},
@@ -118,8 +126,12 @@ const palette = diverging({
         triangleMode: c.triangleMode as TriangleMode,
         lut,
       }),
-    usage: (v, c, lutName) => `import { ramp } from 'cusphanger';
-import { ${lutName} } from 'nutelch';
+    usage: (v, c, lutName) => `import {
+  ramp
+} from 'cusphanger';
+import {
+  ${lutName}
+} from 'nutelch';
 
 const palette = ramp({
   hStart: ${v.hStart},
