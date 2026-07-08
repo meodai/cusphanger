@@ -93,6 +93,8 @@ body {
   color: var(--ink);
 
   padding: var(--space-5) var(--space-2);
+  /* eyebrow + wordmark heights, so the controls start roughly level with the intro */
+  padding-top: calc(var(--space-8) + var(--space-2) + var(--space-4) + 1.1rem + clamp(3.25rem, 7.5vw, 6.5rem));
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
@@ -931,6 +933,7 @@ a {
   .rail {
     position: static;
     height: auto;
+    padding-top: var(--space-5);
     border-bottom: var(--line-w-strong) solid var(--frame);
   }
   .masthead {
