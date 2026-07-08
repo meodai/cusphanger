@@ -26,6 +26,7 @@
   --line-w-strong: 2px;
   --radius-1: 2px;
   --rail-w: max(19rem, 20vw);
+  --content-w: 55rem;
 
   --ease: cubic-bezier(0.3, 0.7, 0, 1);
   --dur-1: 120ms;
