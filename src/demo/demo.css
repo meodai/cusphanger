@@ -324,8 +324,8 @@ body {
 
 .rail__strip {
   display: flex;
-  /* match the slider rows: their text line + space-2 vertical padding */
-  height: calc(2 * var(--space-2) + 1.5 * var(--text-xs) + 2 * var(--line-w-strong));
+  /* a touch shorter than the tabs row, so it reads as a band, not another row */
+  height: calc(var(--space-2) + 1.5 * var(--text-xs) + 2 * var(--line-w));
   flex: none; /* the rail column overflows; don't let the strip shrink away */
   border-inline: var(--line-w-strong) solid var(--frame);
   /* sit flush under the tabs despite the rail's column gap */
@@ -518,6 +518,47 @@ body {
     right calc(var(--xm-mid) - var(--xm-o)) center;
   background-repeat: no-repeat;
 }
+/* the halo must always sit on top of neighbouring frame lines: later DOM
+   siblings otherwise paint their borders over an earlier element's marks */
+.marks,
+.tabs__tab[aria-selected='true']::before,
+.tabs__tab[aria-selected='true']::after,
+.axis-toggle button[aria-selected='true']::before,
+.axis-toggle button[aria-selected='true']::after {
+  z-index: 1;
+}
+
+/* experiment: dots instead of crosses at the joints — same corner centers
+   (the cross center sits at --xm-mid + half a line into the pseudo), same
+   --cover halo punching a hole in the frame underneath */
+.marks::before,
+.marks::after,
+.tabs__tab[aria-selected='true']::before,
+.tabs__tab[aria-selected='true']::after,
+.axis-toggle button[aria-selected='true']::before,
+.axis-toggle button[aria-selected='true']::after {
+  --xm-d: 4px;
+  --xm-dh: 10px; /* the halo keeps its size; only the ink dot shrank */
+  --xm-ctr: calc(var(--xm-mid) + var(--line-w-strong) / 2);
+  --xm-dp: calc(var(--xm-ctr) - var(--xm-d) / 2);
+  --xm-dhp: calc(var(--xm-ctr) - var(--xm-dh) / 2);
+  background-image:
+    radial-gradient(circle closest-side, var(--ink) 97%, transparent),
+    radial-gradient(circle closest-side, var(--ink) 97%, transparent),
+    radial-gradient(circle closest-side, var(--cover) 97%, transparent),
+    radial-gradient(circle closest-side, var(--cover) 97%, transparent);
+  background-size:
+    var(--xm-d) var(--xm-d),
+    var(--xm-d) var(--xm-d),
+    var(--xm-dh) var(--xm-dh),
+    var(--xm-dh) var(--xm-dh);
+  background-position:
+    left var(--xm-dp) center,
+    right var(--xm-dp) center,
+    left var(--xm-dhp) center,
+    right var(--xm-dhp) center;
+}
+
 .marks::before,
 .tabs__tab[aria-selected='true']::before,
 .axis-toggle button[aria-selected='true']::before {
