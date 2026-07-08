@@ -101,6 +101,13 @@
     <aside class="rail">
       <nav class="tabs" role="tablist" aria-label="Palette type"></nav>
       <form class="controls" aria-label="Palette parameters"></form>
+      <button type="button" class="control control--gamut" aria-label="toggle gamut (sRGB / Display P3)">
+        <span class="control__row">
+          <span class="control__label">gamut</span>
+          <span class="control__value">sRGB</span>
+        </span>
+        <span class="marks" aria-hidden="true"></span>
+      </button>
 
     </aside>
 
@@ -133,7 +140,6 @@
           <span class="marks" aria-hidden="true"></span>
         </div>
         <div class="viz-cell">
-          <button type="button" class="viz-gamut" aria-label="toggle gamut (sRGB / Display P3)">sRGB</button>
           <div id="slice-mini" class="viz-pane"></div>
           <span class="marks" aria-hidden="true"></span>
         </div>

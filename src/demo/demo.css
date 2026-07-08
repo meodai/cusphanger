@@ -204,6 +204,24 @@ body {
   content: ' \21C4';
 }
 
+.control--gamut {
+  width: 100%;
+  text-align: left;
+  border: var(--line-w-strong) solid var(--frame);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+}
+.control--gamut[data-active] {
+  background: var(--fill-soft);
+}
+.control--gamut .control__value {
+  padding: 0 var(--space-1);
+  background: var(--cover);
+}
+
 .tabs {
   display: flex;
   border: var(--line-w) solid var(--frame);

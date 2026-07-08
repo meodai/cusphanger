@@ -197,12 +197,13 @@ for (const tab of TABS) {
   tabsNav.appendChild(b);
 }
 
-const vizGamut = $('.viz-gamut') as HTMLButtonElement;
+const vizGamut = $('.control--gamut') as HTMLButtonElement;
+const vizGamutValue = vizGamut.querySelector('.control__value') as HTMLElement;
 let p3 = false;
 vizGamut.addEventListener('click', () => {
   p3 = !p3;
   lut = p3 ? oklchP3 : oklchSrgb;
-  vizGamut.textContent = p3 ? 'P3' : 'sRGB';
+  vizGamutValue.textContent = p3 ? 'P3' : 'sRGB';
   vizGamut.toggleAttribute('data-active', p3);
   renderAll();
 });
