@@ -228,7 +228,7 @@ body {
 
 .rail__strip {
   display: flex;
-  height: 1rem;
+  height: 0.75rem;
   /* sit flush under the export tabs despite the rail's column gap */
   margin-top: calc(-1 * var(--space-5));
 }
