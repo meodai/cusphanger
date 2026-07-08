@@ -878,9 +878,14 @@ body {
 .export__bar {
   border-width: 0 0 var(--line-w);
 }
-.export__copy {
-  margin-left: auto;
-  border-left: var(--line-w) solid var(--frame);
+.export .export__copy {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding-inline: var(--space-3);
+  border-top: var(--line-w) solid var(--frame);
+  border-right: var(--line-w) solid var(--frame);
+  background: var(--cover);
 }
 .export__copy:hover {
   color: var(--ink);
@@ -891,6 +896,8 @@ body {
 .export__code {
   margin: 0;
   padding: var(--space-4);
+  /* keep the last lines clear of the floating copy button */
+  padding-bottom: var(--space-7);
   font-family: var(--font-chrome);
   font-size: var(--text-xs);
   line-height: var(--leading);

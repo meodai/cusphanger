@@ -2,7 +2,7 @@ import type { OklchColor } from '../lib/index';
 import { cssOf, hexOf } from './color';
 import { copyText } from './clipboard';
 
-type FormatId = 'usage' | 'css' | 'oklch' | 'js';
+type FormatId = 'usage' | 'css' | 'js';
 
 export function initExport(
   host: HTMLElement,
@@ -16,10 +16,8 @@ export function initExport(
     {
       id: 'css',
       label: 'css',
-      print: () =>
-        [':root {', ...palette.map((c, i) => `  --pal-${i}: ${cssOf(c)};`), '}'].join('\n'),
+      print: () => palette.map((c, i) => `--pal-${i}: ${cssOf(c)};`).join('\n'),
     },
-    { id: 'oklch', label: 'oklch', print: () => palette.map(cssOf).join('\n') },
     {
       id: 'js',
       label: 'js',
@@ -35,9 +33,9 @@ export function initExport(
           `<button type="button" class="tabs__tab" role="tab" data-format="${f.id}"
              aria-selected="${f.id === active}">${f.label}</button>`,
       ).join('')}
-      <button type="button" class="tabs__tab export__copy">copy</button>
     </div>
     <pre class="export__code"><code></code></pre>
+    <button type="button" class="tabs__tab export__copy">copy</button>
     <span class="marks" aria-hidden="true"></span>`;
 
   const code = host.querySelector('code') as HTMLElement;
