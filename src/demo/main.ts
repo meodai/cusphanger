@@ -10,13 +10,6 @@ import { initCompositions } from './compositions';
 import { initXerox } from './xerox';
 import { initFxPanel } from './fx-panel';
 
-const HUE_EASINGS: Record<string, (t: number) => number> = {
-  linear: (t) => t,
-  'ease-in': (t) => t * t,
-  'ease-out': (t) => 1 - (1 - t) * (1 - t),
-  sine: (t) => 0.5 - 0.5 * Math.cos(Math.PI * t),
-};
-
 type TabId = 'sequential' | 'diverging' | 'ramp';
 
 interface Tab {
@@ -115,14 +108,13 @@ const palette = diverging({
       { key: 'w', label: 'cool/warm w', min: 0, max: 1, step: 0.01, value: 0 },
     ],
     choices: [
-      { key: 'hEasing', label: 'hue easing', options: Object.keys(HUE_EASINGS), value: 'linear' },
       { key: 'triangleMode', label: 'triangle', options: ['perHue', 'min', 'avg', 'max'], value: 'perHue' },
     ],
     build: (v, c, lut) =>
       ramp({
         hStart: v.hStart!, total: v.total!,
         sRange: [v.sMin!, v.sMax!], lRange: [v.minLight!, v.maxLight!], coolWarm: v.w!,
-        hCycles: v.hCycles!, hStartCenter: v.hStartCenter!, hEasing: HUE_EASINGS[c.hEasing!],
+        hCycles: v.hCycles!, hStartCenter: v.hStartCenter!,
         triangleMode: c.triangleMode as TriangleMode,
         lut,
       }),
@@ -138,7 +130,6 @@ const palette = ramp({
   total: ${v.total},
   hCycles: ${v.hCycles},
   hStartCenter: ${v.hStartCenter},
-  hEasing: ${HUE_EASINGS[c.hEasing!]}, // ${c.hEasing}
   sRange: [${v.sMin}, ${v.sMax}],
   lRange: [${v.minLight}, ${v.maxLight}],
   coolWarm: ${v.w},

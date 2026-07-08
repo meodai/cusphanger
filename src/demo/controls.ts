@@ -68,7 +68,8 @@ export function buildControls(
   for (const c of choiceFields) {
     const wrap = document.createElement('label');
     wrap.className = 'control control--select';
-    wrap.innerHTML = `<span class="control__row"><span class="control__label">${c.label}</span></span>`;
+    wrap.innerHTML = `<span class="control__label">${c.label}</span>
+      <span class="marks" aria-hidden="true"></span>`;
     const select = document.createElement('select');
     for (const o of c.options) {
       const opt = document.createElement('option');
@@ -81,12 +82,7 @@ export function buildControls(
       choices[c.key] = select.value;
       emit();
     });
-
-    const box = document.createElement('span');
-    box.className = 'control__selectbox';
-    box.appendChild(select);
-    box.insertAdjacentHTML('beforeend', '<span class="marks" aria-hidden="true"></span>');
-    wrap.appendChild(box);
+    wrap.appendChild(select);
     host.appendChild(wrap);
   }
 
