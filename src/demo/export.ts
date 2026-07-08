@@ -2,7 +2,7 @@ import type { OklchColor } from '../lib/index';
 import { cssOf, hexOf } from './color';
 import { copyText } from './clipboard';
 
-type FormatId = 'usage' | 'css' | 'js';
+type FormatId = 'usage' | 'oklch' | 'hex';
 
 export function initExport(
   host: HTMLElement,
@@ -13,17 +13,8 @@ export function initExport(
 
   const FORMATS: Array<{ id: FormatId; label: string; print: () => string }> = [
     { id: 'usage', label: 'usage', print: () => usage },
-    {
-      id: 'css',
-      label: 'css',
-      print: () => palette.map((c, i) => `--pal-${i}: ${cssOf(c)};`).join('\n'),
-    },
-    {
-      id: 'js',
-      label: 'js',
-      print: () =>
-        ['export const palette = [', ...palette.map((c) => `  '${hexOf(c)}',`), '];'].join('\n'),
-    },
+    { id: 'oklch', label: 'oklch', print: () => palette.map(cssOf).join('\n') },
+    { id: 'hex', label: 'hex', print: () => palette.map(hexOf).join('\n') },
   ];
 
   host.innerHTML = `
