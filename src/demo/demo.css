@@ -226,6 +226,20 @@ body {
   background: var(--cover);
 }
 
+.rail__strip {
+  display: flex;
+  height: 0.5rem;
+  /* sit flush on the tabs despite the rail's column gap */
+  margin-bottom: calc(-1 * var(--space-5));
+}
+.rail__strip span {
+  flex: 1;
+  background: var(--swatch);
+}
+#app .rail__strip span {
+  background: none;
+}
+
 .tabs {
   display: flex;
   border: var(--line-w) solid var(--frame);

@@ -151,6 +151,7 @@ const palette = ramp({
 const $ = (sel: string) => document.querySelector(sel) as HTMLElement;
 
 const hangerHost = $('.hanger');
+const stripHost = $('.rail__strip');
 const sliceMiniHost = $('#slice-mini');
 const wheelHosts: Record<WheelAxis, HTMLElement> = {
   chroma: $('#wheel'),
@@ -180,6 +181,9 @@ function renderAll(): void {
   palette = activeTab.build(lastValues, lastChoices, lut);
   applyTheme(document.documentElement, palette);
   renderHanger(hangerHost, palette);
+  stripHost.innerHTML = palette
+    .map((c, i) => `<span style="--swatch: var(--pal-${i}, ${toCss(c)})"></span>`)
+    .join('');
   renderSlice(sliceMiniHost, palette, lut, activeTab.forceMirror ?? false);
   for (const axis of ['chroma', 'lightness'] as const) {
     renderWheel(wheelHosts[axis], palette, lut, axis, wheelFlip[axis]);
