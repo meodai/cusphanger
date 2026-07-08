@@ -12,6 +12,13 @@ const CT = SIZE / 2;
 const PAD = 26;
 const R = CT - PAD;
 const STEP = 2;
+const INNER = 0.2; // hollow center so near-neutral / near-white hues don't pile onto one point
+const R_INNER = INNER * R - 8; // guide circle + hue-span arc, tucked inside the hole
+
+const radial = (flip: boolean) => {
+  const pad = INNER * R;
+  return (t: number) => pad + (flip ? 1 - t : t) * (R - pad);
+};
 
 const pt = (hue: number, r: number): [number, number] => {
   const a = (hue * Math.PI) / 180;
@@ -35,7 +42,7 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
   const cached = bgCache.get(key);
   if (cached) return cached;
 
-  const rad = (t: number) => (flip ? 1 - t : t) * R;
+  const rad = radial(flip);
 
   const peaks: Array<{ hue: number; c: number; l: number }> = [];
   let maxCusp = 0;
@@ -68,14 +75,19 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
       boundary += `${i === 0 ? 'M' : 'L'} ${f(a1x)},${f(a1y)} `;
     }
 
+    // fade offsets live inside the [INNER, 1] ring; the hard step at the inner
+    // edge keeps the hole transparent so the dot grid shows through like outside the rim
+    const edge = INNER * 100;
+    const scale = (t: number) => f(edge + t * (100 - edge));
     const fadeStops = flip
-      ? `<stop offset="54%" class="wheel-fade-out"/><stop offset="100%" class="wheel-fade-in"/>`
-      : `<stop offset="0%" class="wheel-fade-in"/><stop offset="46%" class="wheel-fade-out"/>`;
+      ? `<stop offset="${scale(0.54)}%" class="wheel-fade-out"/><stop offset="100%" class="wheel-fade-in"/>`
+      : `<stop offset="${scale(0)}%" class="wheel-fade-out"/><stop offset="${scale(0)}%" class="wheel-fade-in"/><stop offset="${scale(0.46)}%" class="wheel-fade-out"/>`;
     svg = `
       <rect width="${SIZE}" height="${SIZE}" fill="url(#wheelDots)"/>
       <g data-ghost-keep>${wedges}</g>
       <radialGradient id="wheelFadeBg" cx="50%" cy="50%" r="50%">${fadeStops}</radialGradient>
       <circle cx="${CT}" cy="${CT}" r="${R}" fill="url(#wheelFadeBg)"/>
+      <circle cx="${CT}" cy="${CT}" r="${f(R_INNER)}" class="wheel-inner-edge"/>
       <path d="${boundary}Z" class="wheel-boundary"/>`;
     legend = `boundary = per-hue cusp chroma (peaks &amp; valleys) · ${flip ? 'colorful center → neutral rim' : 'neutral center → colorful rim'} · dots = palette`;
   } else {
@@ -92,22 +104,26 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
       const tCusp = 1 - a.l;
       const cuspOff = ((rad(tCusp) / R) * 100).toFixed(1);
       defs += `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${CT}" cy="${CT}" r="${R}">
-        <stop offset="0%" stop-color="${flip ? cLo : cHi}"/>
+        <stop offset="${f(INNER * 100)}%" stop-color="${flip ? cLo : cHi}"/>
         <stop offset="${cuspOff}%" stop-color="${cCusp}"/>
         <stop offset="100%" stop-color="${flip ? cHi : cLo}"/></radialGradient>`;
+      const [a0x, a0y] = pt(a.hue, INNER * R);
       const [ax, ay] = pt(a.hue, R);
       const [bx, by] = pt(bHue(i), R);
-      wedges += `<path d="M ${CT},${CT} L ${f(ax)},${f(ay)} L ${f(bx)},${f(by)} Z" fill="url(#${id})"/>`;
+      const [b0x, b0y] = pt(bHue(i), INNER * R);
+      wedges += `<path d="M ${f(a0x)},${f(a0y)} L ${f(ax)},${f(ay)} L ${f(bx)},${f(by)} L ${f(b0x)},${f(b0y)} Z" fill="url(#${id})"/>`;
       const [cx, cy] = pt(a.hue, rad(tCusp));
       contour += `${i === 0 ? 'M' : 'L'} ${f(cx)},${f(cy)} `;
     }
     const rings = [0.25, 0.5, 0.75]
-      .map((g) => `<circle cx="${CT}" cy="${CT}" r="${f(g * R)}" class="wheel-ring"/>`)
+      .map((g) => `<circle cx="${CT}" cy="${CT}" r="${f(rad(g))}" class="wheel-ring"/>`)
       .join('');
     svg = `
+      <rect width="${SIZE}" height="${SIZE}" fill="url(#wheelDots)"/>
       <defs>${defs}</defs>
       <g data-ghost-keep>${wedges}</g>
       ${rings}
+      <circle cx="${CT}" cy="${CT}" r="${f(R_INNER)}" class="wheel-inner-edge"/>
       <path d="${contour}Z" class="wheel-boundary"/>`;
     legend = `radius = lightness (${flip ? 'dark center → white rim' : 'white center → dark rim'}) · boundary = per-hue cusp lightness · dots = palette`;
   }
@@ -130,7 +146,7 @@ export function renderWheel(
   }
 
   const bg = buildBg(lut, axis, flip);
-  const rad = (t: number) => (flip ? 1 - t : t) * R;
+  const rad = radial(flip);
   const radius =
     axis === 'chroma'
       ? (col: OklchColor) => rad(col.c / bg.maxCusp)
@@ -144,6 +160,39 @@ export function renderWheel(
     traj += `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="${cssOf(palette[i]!)}" class="wheel-traj"/>`;
   }
   const dots = pts.map(([x, y]) => diamond(x, y, 5, 'wheel-dot')).join('');
+
+  // hue-span arc on the inner edge: smallest arc enclosing all palette hues
+  let hueSpan = '';
+  {
+    const hs = [...new Set(palette.map((c) => Math.round((((c.h % 360) + 360) % 360) * 2) / 2))]
+      .sort((a, b) => a - b);
+    const hueDot = (h: number) => {
+      const [x, y] = pt(h, R_INNER);
+      return `<circle cx="${f(x)}" cy="${f(y)}" r="2.5" class="wheel-hue-dot"/>`;
+    };
+    if (hs.length === 1) {
+      hueSpan = hueDot(hs[0]!);
+    } else {
+      let gapI = 0;
+      let gapMax = -1;
+      for (let i = 0; i < hs.length; i++) {
+        const gap = (hs[(i + 1) % hs.length]! - hs[i]! + 360) % 360;
+        if (gap > gapMax) {
+          gapMax = gap;
+          gapI = i;
+        }
+      }
+      const h0 = hs[(gapI + 1) % hs.length]!;
+      const h1 = hs[gapI]!;
+      const sweep = (h1 - h0 + 360) % 360;
+      const [sx, sy] = pt(h0, R_INNER);
+      const [ex, ey] = pt(h1, R_INNER);
+      hueSpan =
+        `<path d="M ${f(sx)},${f(sy)} A ${f(R_INNER)} ${f(R_INNER)} 0 ${sweep > 180 ? 1 : 0} 0 ${f(ex)},${f(ey)}" class="wheel-hue-arc"/>` +
+        hueDot(h0) +
+        hueDot(h1);
+    }
+  }
 
   let cuspRings = '';
   let ringNote = '';
@@ -182,6 +231,7 @@ export function renderWheel(
       </defs>
       ${bg.svg}
       ${cuspRings}
+      ${hueSpan}
       ${traj}
       ${dots}
     </svg>

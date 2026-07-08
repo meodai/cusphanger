@@ -755,6 +755,23 @@ body {
   stop-color: var(--canvas-bg);
   stop-opacity: 0;
 }
+.wheel-inner-edge {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.35;
+  stroke-width: 1;
+}
+.wheel-hue-arc {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.8;
+  stroke-width: 1;
+}
+.wheel-hue-dot {
+  fill: #000;
+  stroke: #fff;
+  stroke-width: 1;
+}
 .wheel-boundary {
   fill: none;
   stroke: currentColor;
