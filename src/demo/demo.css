@@ -897,11 +897,11 @@ body {
 }
 .export .export__copy {
   position: absolute;
-  left: 0;
+  right: 0;
   bottom: 0;
   padding-inline: var(--space-3);
   border-top: var(--line-w) solid var(--frame);
-  border-right: var(--line-w) solid var(--frame);
+  border-left: var(--line-w) solid var(--frame);
   background: var(--cover);
 }
 .export__copy:hover {
