@@ -1,5 +1,13 @@
 import { cusp, maxChromaAt } from './gamut';
-import type { Lut, OklchColor, SequentialOptions, RampOptions, DivergingOptions } from './types';
+import type {
+  Lut,
+  OklchColor,
+  SequentialOptions,
+  RampOptions,
+  DivergingOptions,
+  FromColorOptions,
+  FromColorResult,
+} from './types';
 
 // OKLCH of the paper's 'bright point' (sRGB yellow #ffff00) — Table 2 default.
 const BRIGHT_POINT = { l: 0.968, c: 0.211, h: 109.77 };
@@ -52,12 +60,18 @@ const okToCieL = (L: number): number => {
   return y > EPS ? 116 * Math.cbrt(y) - 16 : KAPPA * y;
 };
 
-// L(t): the paper's lightness sampling (its '0.2^…' contrast curve, in CIE L*
-// units), converted to OKLab lightness.
-export const lightnessAt = (t: number, b: number, c: number): number => {
-  const lStar = 125 - 125 * Math.pow(0.2, (1 - c) * b + t * c);
+// L(x): the lightness the paper's curve yields for exponent x. L(t) below is
+// L(x) on the affine exponent x(t) = (1−c)·b + t·c; x lives in [0, 1] (x = 0
+// is black, x = 1 is white), which is what fromColor's endpoint solve rides on.
+const lightnessFromX = (x: number): number => {
+  const lStar = 125 - 125 * Math.pow(0.2, x);
   return Math.min(1, Math.max(0, cieLToOk(lStar)));
 };
+
+// L(t): the paper's lightness sampling (its '0.2^…' contrast curve, in CIE L*
+// units), converted to OKLab lightness.
+export const lightnessAt = (t: number, b: number, c: number): number =>
+  lightnessFromX((1 - c) * b + t * c);
 
 // Inverse of L(t)'s curve: the exponent x that yields a given OKLCH lightness.
 const lightnessToX = (L: number): number => {
@@ -329,4 +343,109 @@ export function diverging(o: DivergingOptions): OklchColor[] {
   }
 
   return [...left.slice(0, side), ...center, ...right.slice(0, side).reverse()];
+}
+
+// fromColor(): the inverse problem — find the sequential model that meets a
+// given color. The constraints decouple: hue is exact (at w = 0 the whole
+// curve lives in the target's hue plane, so hStart = target.h), tension is a
+// monotone 1D root-find (as s goes 0 → 1 the curve sweeps from the gray axis
+// out to the triangle edges, so its chroma at the target's lightness only
+// grows — bisect), and the lightness endpoints then shift so that sample
+// `index` lands on the target's lightness exactly. Returns options for
+// sequential(), not colors, so the solve stays inspectable and tweakable.
+// coolWarm is deliberately absent: w > 0 drifts hue along the curve, which
+// breaks the hue decoupling (meeting a color under w would be a 2D solve).
+
+// Shift the lightness exponents [x0, x1] (endpoints of x(t), see lightnessAt)
+// as little as possible so the sample at fraction t lands on xT: move the
+// endpoint on the target's side, hold the other — and when the held one is in
+// the way (target outside the current span) it yields too, pinned at black
+// (x = 0) or white (x = 1). Every branch satisfies (1−t)·x0 + t·x1 = xT
+// exactly; x and xT living in [0, 1] keeps a solution reachable always.
+function solveXEnds(x0: number, x1: number, t: number, xT: number): [number, number] {
+  if (t <= 0) return [xT, Math.max(xT, x1)];
+  if (t >= 1) return [Math.min(x0, xT), xT];
+  if (t <= 0.5) {
+    const a = (xT - t * x1) / (1 - t);
+    if (a < 0) return [0, xT / t]; // a < 0 ⇒ xT < t·x1 ⇒ xT/t < x1 ≤ 1
+    if (a <= x1) return [a, x1];
+    const z = (xT - (1 - t) * x0) / t; // a > x1 ⇒ target above the held light end
+    return z <= 1 ? [x0, z] : [(xT - t) / (1 - t), 1];
+  }
+  const z = (xT - (1 - t) * x0) / t;
+  if (z > 1) return [(xT - t) / (1 - t), 1]; // z > 1 ⇒ xT > t ⇒ x0 stays in [0, 1]
+  if (z >= x0) return [x0, z];
+  const a = (xT - t * x1) / (1 - t); // z < x0 ⇒ target below the held dark end
+  return a >= 0 ? [a, x1] : [0, xT / t];
+}
+
+export function fromColor(target: OklchColor, opts: FromColorOptions): FromColorResult {
+  const { total: N, lut } = opts;
+  const h = ((target.h % 360) + 360) % 360;
+  const l = Math.min(1, Math.max(0, target.l));
+  // reachable chroma at (l, h): under the triangle edge (the curve's own
+  // ceiling) AND the real shell (sample()'s "little clamping" would take back
+  // anything past it) — the sliver between edge and shell is out of reach.
+  const reach = Math.min(triangleChromaAt(l, h, lut), maxChromaAt(h, l, lut));
+  const c = Math.min(Math.max(0, target.c), reach);
+  const clamped = target.c - c > 1e-9 || l !== target.l;
+
+  // tension: bisect s on the curve's chroma at the target's lightness
+  const chromaAt = (s: number): number => {
+    const tri = buildTriangle(h, s, 0, lut);
+    return cSeq(tForLightness(l, tri), tri).c;
+  };
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 48; i++) {
+    const mid = (lo + hi) / 2;
+    if (chromaAt(mid) < c) lo = mid;
+    else hi = mid;
+  }
+  const saturation = (lo + hi) / 2;
+
+  // the lightness spacing 'nearest' is judged against: the held lRange, or
+  // the paper defaults
+  let b: number;
+  let con: number;
+  if (opts.lRange) {
+    ({ b, c: con } = bcFromLRange(opts.lRange));
+  } else {
+    b = 0.75;
+    con = Math.min(0.88, 0.34 + 0.06 * N);
+  }
+  const tOf = (i: number) => (N <= 1 ? 0 : i / (N - 1));
+  let index: number;
+  if (typeof opts.index === 'number') {
+    index = Math.min(N - 1, Math.max(0, Math.round(opts.index)));
+  } else {
+    index = 0;
+    let best = Infinity;
+    for (let i = 0; i < N; i++) {
+      const d = Math.abs(lightnessAt(tOf(i), b, con) - l);
+      if (d < best) {
+        best = d;
+        index = i;
+      }
+    }
+  }
+
+  // a held lRange is kept verbatim (the continuous curve still meets the
+  // target; the sample only lands near it) — otherwise nudge the endpoints so
+  // sample `index` hits the target's lightness exactly.
+  let lRange: [number, number];
+  if (opts.lRange) {
+    lRange = opts.lRange;
+  } else {
+    const x0 = (1 - con) * b;
+    const [a, z] = solveXEnds(x0, x0 + con, tOf(index), lightnessToX(l));
+    lRange = [lightnessFromX(a), lightnessFromX(z)];
+  }
+
+  return {
+    options: { total: N, hStart: h, saturation, lRange, lut },
+    index,
+    color: { mode: 'oklch', l, c, h },
+    clamped,
+  };
 }

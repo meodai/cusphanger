@@ -323,6 +323,48 @@ body {
   font-size: 10px;
   fill: var(--ink-muted);
 }
+/* the sample the fromColor solve landed the target on */
+.cc-match {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+/* fromColor: type a color, the sequential curve is re-solved through it */
+.control--from {
+  border: var(--line-w-strong) solid var(--frame);
+  padding: var(--space-2) var(--space-3);
+  /* tucks under the curve panel, so curve · from · sliders read as one block */
+  margin-top: calc(-1 * var(--space-5));
+}
+.control--from:focus-within {
+  background: var(--fill-soft);
+}
+.control--from .control__row {
+  pointer-events: auto;
+}
+.control--from input {
+  font-family: var(--font-chrome);
+  font-size: var(--text-xs);
+  width: 60%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: right;
+}
+.control--from input:focus {
+  outline: none; /* the wrap's focus-within fill carries the state */
+}
+.control--from[data-invalid] .control__label::after,
+.control--from[data-clamped] .control__label::after {
+  content: ' — not a color';
+  color: var(--ink-muted);
+  font-weight: 400;
+}
+.control--from[data-clamped] .control__label::after {
+  content: ' — out of reach, clamped';
+}
 
 .rail__strip {
   display: flex;

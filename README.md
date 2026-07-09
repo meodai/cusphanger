@@ -45,7 +45,7 @@ dependency-free), so you pass the gamut **LUT** in (just like nutelch) — `oklc
 ## Usage
 
 ```ts
-import { sequential, ramp, diverging } from 'cusphanger';
+import { sequential, ramp, diverging, fromColor } from 'cusphanger';
 import { oklchSrgb, oklchP3, toCss } from 'nutelch';
 
 // single-hue sequential (paper, Table 1)
@@ -73,6 +73,10 @@ ramp({ hStart: 260, total: 9, sRange: [0, 1], lut: oklchSrgb }); // gray dark �
 // an explicit hue per color (RampenSau-style hueList) — pairs with RampenSau's
 // uniqueRandomHues / colorHarmonies. Overrides total and the hue trajectory.
 ramp({ hStart: 0, total: 9, hueList: [10, 120, 240], lut: oklchSrgb });
+
+// fromColor() — the inverse: solve the model so the palette meets a color you
+// already have (see "fromColor" below)
+fromColor({ mode: 'oklch', l: 0.58, c: 0.09, h: 155 }, { total: 9, lut: oklchSrgb });
 ```
 
 `sequential()` and `diverging()` are the paper's surface, nothing else. `ramp()` is the
@@ -106,6 +110,44 @@ For a hex string or gamut flags (interchange, contrast math), use [culori](https
 
 Also exported, both taking a nutelch LUT: `cusp(hue, lut)` (the MSC apex) and
 `maxChromaAt(hue, l, lut)` (the gamut shell at a lightness).
+
+## fromColor — meet a color you already have
+
+The inverse problem: you have a color (a brand green, a chart accent) and want the ramp that
+passes through it. `fromColor` solves the sequential model for it and returns **options, not
+colors**, so the solve stays inspectable and tweakable:
+
+```ts
+import { fromColor, sequential } from 'cusphanger';
+import { oklchSrgb } from 'nutelch';
+
+const target = { mode: 'oklch', l: 0.58, c: 0.09, h: 155 };
+
+const { options, index, color, clamped } = fromColor(target, { total: 9, lut: oklchSrgb });
+const palette = sequential(options);
+palette[index]; // === target (exactly, when reachable)
+```
+
+Nothing is fitted — the constraints decouple. The hue is taken exactly (`hStart = target.h`, the
+whole curve lives in the target's hue plane), `saturation` is bisected until the curve's chroma at
+the target's lightness matches (as `s` goes 0 → 1 the curve sweeps from the gray axis out to the
+triangle edges, so that chroma only grows), and the lightness endpoints shift minimally so sample
+`index` lands on the target's lightness exactly.
+
+- **`index`** — which palette entry carries the target. Defaults to `'nearest'` (the sample whose
+  default-spacing lightness is closest, so the endpoints move least); pass a number to pin it.
+- **`lRange`** — hold the lightness endpoints, and only hue + tension are solved. The continuous
+  curve still passes through the target; `index` then reports the nearest sample.
+- **`clamped`** — reachability is the triangle (∩ the shell), not the full gamut. An unreachable
+  target never throws: it is met at the same-lightness boundary point instead, returned as
+  `color`, with `clamped: true`.
+- **`coolWarm`** is deliberately absent — `w > 0` drifts hue along the curve, which breaks the hue
+  decoupling. It is held at 0.
+
+The target is the same OKLCH object the generators emit — no color parsing or conversion ships in
+the library. A hex or CSS string is one [culori](https://culorijs.org) call away:
+`converter('oklch')('#4a8a62')`. The demo's *from color* field is this solve, live: it snaps the
+sliders to the returned options and rings the sample that carries the color.
 
 ## RampenSau interop, and what's left out on purpose
 

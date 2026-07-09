@@ -28,6 +28,7 @@ export interface CurveParams {
   c: number;
   w: number;
   lut: Lut;
+  matchIndex?: number | null; // the sample fromColor solved onto — gets a marker dot
 }
 
 interface ArmGeom {
@@ -170,11 +171,16 @@ export function initCurveControl(
         out += `<text x="${f(qx + sign * 10)}" y="${f(qy - 9)}" class="cc-label" text-anchor="${sign < 0 ? 'end' : 'start'}">s ${f(s)}</text>`;
       }
 
-      // palette samples on the curve, like the slice view's diamonds
+      // palette samples on the curve, like the slice view's diamonds — the
+      // fromColor match gets a ring so the met sample is findable at a glance
       for (const [pi, col] of palette.entries()) {
         const side = mirror ? (pi < palette.length / 2 ? 0 : 1) : 0;
         if (side !== i) continue;
-        out += diamond(arm.xOf(col.c), yOf(col.l), 3.5, cssOf(col));
+        const x = arm.xOf(col.c);
+        out += diamond(x, yOf(col.l), 3.5, cssOf(col));
+        if (pi === params!.matchIndex) {
+          out += `<circle cx="${f(x)}" cy="${f(yOf(col.l))}" r="7" class="cc-match"/>`;
+        }
       }
 
       const [xd, yd] = curvePoint(arm, l0);

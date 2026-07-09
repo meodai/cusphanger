@@ -102,6 +102,19 @@
       <nav class="tabs" role="tablist" aria-label="Palette type"></nav>
       <div class="rail__strip" aria-hidden="true"></div>
       <div class="rail-curve" aria-label="Bézier curve through the gamut triangle. Drag the endpoints to set the lightness range, the point on the median to set saturation."></div>
+      <label class="control control--from">
+        <span class="control__row">
+          <span class="control__label">from color</span>
+          <input
+            type="text"
+            placeholder="#hex / oklch()"
+            spellcheck="false"
+            autocomplete="off"
+            aria-label="Meet a color: any CSS color; the sequential curve is re-solved to pass through it and the matching sample is marked"
+          />
+        </span>
+        <span class="marks" aria-hidden="true"></span>
+      </label>
       <form class="controls" aria-label="Palette parameters"></form>
       <button type="button" class="control control--gamut" aria-label="toggle gamut (sRGB / Display P3)">
         <span class="control__row">

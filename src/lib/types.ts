@@ -65,6 +65,33 @@ export interface RampOptions extends SequentialOptions {
   triangleMode?: TriangleMode; // chroma envelope for multi-hue ramps. default 'perHue'
 }
 
+// fromColor(): meet a given OKLCH color with the sequential model (the
+// inverse problem). Everything beyond total/lut is a knob you HOLD — whatever
+// you don't pass gets solved. coolWarm is deliberately absent: w > 0 drifts
+// hue along the curve, so meeting a color under it would be a 2D solve; it is
+// held at 0.
+export interface FromColorOptions {
+  total: number; // N — number of colors
+  lut: Lut; // a nutelch OKLCH LUT (oklchSrgb / oklchP3) — which gamut to target
+  // which palette entry lands on the target. 'nearest' picks the sample whose
+  // default-spacing lightness is closest, so the endpoints move the least.
+  // default 'nearest'
+  index?: number | 'nearest';
+  // hold the lightness endpoints → only hue + tension are solved. The
+  // continuous curve still meets the target; `index` then reports the nearest
+  // sample instead of an exact hit.
+  lRange?: [number, number];
+}
+
+export interface FromColorResult {
+  options: SequentialOptions; // hStart, saturation, lRange — feed to sequential()
+  index: number; // the sample that carries the target
+  color: OklchColor; // what was actually met — equals the target unless clamped
+  // the target sat outside the triangle (or the gamut shell); it was met at
+  // the same-lightness boundary point instead — never a throw
+  clamped: boolean;
+}
+
 // Diverging: two sequential palettes joined through a shared neutral point.
 // The arms are plain single-hue sequentials (the paper's construction), so no
 // hue-trajectory options — but the arm tension may ramp (sRange/sEasing, a
