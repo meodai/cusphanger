@@ -170,16 +170,48 @@ button {
   background: var(--swatch);
 }
 
-/* ---------------------------------------------------------------- sheet */
+/* ---------------------------------------------------------------- layout —
+   a sticky control sidebar beside the scrolling sheet */
 
-.sheet,
+.layout,
 .colophon {
-  width: min(76rem, 100% - clamp(2rem, 8vw, 5rem));
+  width: min(90rem, 100% - clamp(2rem, 6vw, 4rem));
   margin-inline: auto;
 }
 
+.layout {
+  display: grid;
+  grid-template-columns: clamp(280px, 24vw, 340px) minmax(0, 1fr);
+  gap: clamp(1.75rem, 4vw, 4.5rem);
+  align-items: start;
+}
+
+.side {
+  position: sticky;
+  top: 2.9rem; /* just under the topbar */
+  max-height: calc(100vh - 2.9rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 1.5rem 1.5rem 2.5rem 0;
+  border-right: 1px solid var(--line);
+}
+
+.side .tabs {
+  margin-bottom: 1.25rem;
+}
+.side .tabs__tab {
+  flex: 1;
+}
+
+.side__curve {
+  margin: 0 0 1.25rem;
+}
+.side__curve[hidden] {
+  display: none;
+}
+
 .hero {
-  padding: clamp(3rem, 9vh, 7rem) 0 clamp(2.5rem, 6vh, 5rem);
+  padding: clamp(2rem, 6vh, 4.5rem) 0 clamp(2.5rem, 6vh, 5rem);
 }
 
 .wordmark {
@@ -247,7 +279,6 @@ button {
   text-transform: uppercase;
 }
 
-.sec__head .tabs,
 .sec__head .compo-tools {
   margin-left: auto;
 }
@@ -321,28 +352,12 @@ button {
   color: var(--accent);
 }
 
-/* -------------------------------------------------------- 02 · parameters */
-
-.params {
-  display: flex;
-  gap: clamp(2rem, 5vw, 4.5rem);
-  align-items: flex-start;
-  flex-wrap: wrap;
-}
-
-.params__curve {
-  margin: 0;
-  flex: 0 1 380px;
-  min-width: 260px;
-}
-.params__curve[hidden] {
-  display: none;
-}
+/* ------------------------------------------------------------ parameters */
 
 .curve-pane {
   border: 1px solid var(--line);
   background: color-mix(in oklch, var(--fg) 3%, transparent);
-  padding: 1rem;
+  padding: 0.75rem;
 }
 .curve-pane svg {
   display: block;
@@ -355,11 +370,6 @@ button {
 .curve-pane[data-dragging],
 .curve-pane[data-dragging] [data-handle] {
   cursor: grabbing;
-}
-
-.params__panel {
-  flex: 1 1 24rem;
-  min-width: min(100%, 20rem);
 }
 
 /* the sliders read as table rows */
@@ -845,6 +855,17 @@ button {
 /* ------------------------------------------------------------- responsive */
 
 @media (max-width: 900px) {
+  .layout {
+    display: block;
+  }
+  .side {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 1.5rem 0 2rem;
+  }
   .viz-row {
     grid-template-columns: 1fr;
   }

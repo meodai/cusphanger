@@ -156,7 +156,7 @@ const updateExport = initExport($('.export'));
 let activeTab: Tab = TABS[0]!;
 let lut: Lut = oklchSrgb;
 let controlsApi: ControlsApi = { set: () => {} };
-const curveFigure = $('.params__curve');
+const curveFigure = $('.side__curve');
 const renderCurveControl = initCurveControl($('.curve-pane'), (patch) =>
   controlsApi.set(patch),
 );
