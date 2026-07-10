@@ -10,8 +10,6 @@ import { renderSlice } from './slice';
 import { renderWheel, type WheelAxis } from './wheel';
 import { initExport } from './export';
 import { initCompositions } from './compositions';
-import { initXerox } from './xerox';
-import { initFxPanel } from './fx-panel';
 
 type TabId = 'sequential' | 'diverging' | 'ramp';
 
@@ -145,7 +143,7 @@ const palette = ramp({
 const $ = (sel: string) => document.querySelector(sel) as HTMLElement;
 
 const hangerHost = $('.hanger');
-const stripHost = $('.rail__strip');
+const stripHost = $('.topbar__strip');
 const sliceMiniHost = $('#slice-mini');
 const wheelHosts: Record<WheelAxis, HTMLElement> = {
   chroma: $('#wheel'),
@@ -158,15 +156,16 @@ const updateExport = initExport($('.export'));
 let activeTab: Tab = TABS[0]!;
 let lut: Lut = oklchSrgb;
 let controlsApi: ControlsApi = { set: () => {} };
-const renderCurveControl = initCurveControl($('.rail-curve'), (patch) =>
+const curveFigure = $('.params__curve');
+const renderCurveControl = initCurveControl($('.curve-pane'), (patch) =>
   controlsApi.set(patch),
 );
 const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
 let lastValues: Record<string, number> = {};
 let lastChoices: Record<string, string> = {};
 let palette: OklchColor[] = [];
-// fromColor: the sample the solve landed the target on (marked in the rail
-// curve); any hand-driven parameter change voids the guarantee and clears it
+// fromColor: the sample the solve landed the target on (marked in the
+// curve pane); any hand-driven parameter change voids the guarantee and clears it
 let match: number | null = null;
 let applyingMatch = false;
 
@@ -187,6 +186,7 @@ function renderAll(): void {
     .map((c, i) => `<span style="--swatch: var(--pal-${i}, ${toCss(c)})"></span>`)
     .join('');
   renderSlice(sliceMiniHost, palette, lut, activeTab.forceMirror ?? false);
+  curveFigure.hidden = activeTab.id === 'ramp';
   renderCurveControl(
     activeTab.id === 'ramp'
       ? null
@@ -235,7 +235,7 @@ for (const tab of TABS) {
 
 // fromColor: parse anything CSS calls a color, re-solve the sequential model
 // through it (the solve lives on the paper's surface, so it lands on the seq
-// tab), and remember which sample carries it for the rail's marker.
+// tab), and remember which sample carries it for the curve pane's marker.
 const parseAsOklch = converter('oklch') as unknown as (raw: string) => Oklch | undefined;
 const fromWrap = $('.control--from');
 const fromInput = fromWrap.querySelector('input') as HTMLInputElement;
@@ -300,18 +300,3 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>('.viz-flip')) {
 }
 
 selectTab(TABS.find((t) => t.id === 'diverging') ?? TABS[0]!);
-
-initXerox(document.getElementById('app') as HTMLElement);
-
-const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
-let konamiAt = 0;
-window.addEventListener('keydown', (e) => {
-  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  konamiAt = key === KONAMI[konamiAt] ? konamiAt + 1 : key === KONAMI[0] ? 1 : 0;
-  if (konamiAt < KONAMI.length) return;
-  konamiAt = 0;
-  const panel = document.querySelector('#app .fx-panel') as HTMLElement | null;
-  if (panel) panel.hidden = !panel.hidden;
-  else initFxPanel();
-});
-

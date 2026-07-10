@@ -32,160 +32,135 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Space+Mono:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap"
     />
-    <link rel="stylesheet" href="./tokens.css" />
-    <link rel="stylesheet" href="./demo.css" />
+    <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <!--
-      The "xerox" look is this one filter. It blurs the source twice — a
-      slight blur everywhere, a heavy blur revealed only through patches of
-      fractal noise — so the toner reads as uneven. Applied to the .xerox-back
-      ghost (a live clone of #app, see src/demo/xerox.ts) via
-      `filter: url(#xerox-blur)`; the sharp #app sits on top of it.
-      Tunables live in feGaussianBlur stdDeviation, feTurbulence baseFrequency/
-      seed, and the feColorMatrix alpha row (gain 0.65×3, threshold −0.63).
-    -->
-    <svg class="xerox-defs" aria-hidden="true" focusable="false">
-      <filter id="xerox-blur" x="-5%" y="-5%" width="110%" height="110%"
-        color-interpolation-filters="sRGB">
-        <!-- slight blur everywhere, faded back so it reads as a haze -->
-        <feGaussianBlur id="fx-soft" in="SourceGraphic" stdDeviation="0.5" result="soft-blur" />
-        <feColorMatrix id="fx-soft-fade" in="soft-blur" type="matrix"
-          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.95 0" result="soft" />
-        <!-- heavy blur revealed only through the noise patches, also faded, so it
-             BLENDS with the soft haze underneath instead of replacing it -->
-        <feGaussianBlur id="fx-heavy" in="SourceGraphic" stdDeviation="10.5" result="heavy-blur" />
-        <feTurbulence id="fx-turb" type="fractalNoise" baseFrequency="0.0135" numOctaves="1"
-          seed="14" result="noise" />
-        <feColorMatrix id="fx-matrix" in="noise" type="matrix"
-          values="0 0 0 0 0
-                  0 0 0 0 0
-                  0 0 0 0 0
-                  0.65 0.65 0.65 0 -0.63" result="patches" />
-        <feComposite in="heavy-blur" in2="patches" operator="in" result="heavy-clip" />
-        <feColorMatrix id="fx-heavy-fade" in="heavy-clip" type="matrix"
-          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="heavy-patches" />
-        <feMerge>
-          <feMergeNode in="soft" />
-          <feMergeNode in="heavy-patches" />
-        </feMerge>
-      </filter>
-
-      <!-- The same fractal noise, as alpha patches, INVERTED, used to mask the
-           sharp canvas: the content stays crisp between the patches and
-           dissolves into the blurred ghost inside them. Turbulence params
-           mirror #xerox-blur. -->
-      <filter id="fx-patches" x="0" y="0" width="100%" height="100%"
-        color-interpolation-filters="sRGB">
-        <feTurbulence id="fx-mask-turb" type="fractalNoise" baseFrequency="0.0135"
-          numOctaves="1" seed="14" result="noise" />
-        <feColorMatrix id="fx-mask-matrix" in="noise" type="matrix"
-          values="0 0 0 0 0
-                  0 0 0 0 0
-                  0 0 0 0 0
-                  0.65 0.65 0.65 0 -0.7" result="alpha" />
-        <feComponentTransfer in="alpha">
-          <feFuncA type="table" tableValues="1 0" />
-        </feComponentTransfer>
-      </filter>
-      <mask id="fx-front-mask" mask-type="alpha" maskUnits="userSpaceOnUse" x="0" y="0"
-        width="4000" height="4000">
-        <rect x="0" y="0" width="4000" height="4000" fill="#fff"
-          filter="url(#fx-patches)" />
-      </mask>
-    </svg>
-
-    <div id="app">
-    <aside class="rail">
-      <nav class="tabs" role="tablist" aria-label="Palette type"></nav>
-      <div class="rail__strip" aria-hidden="true"></div>
-      <div class="rail-curve" aria-label="Bézier curve through the gamut triangle. Drag the endpoints to set the lightness range, the point on the median to set saturation."></div>
-      <label class="control control--from">
-        <span class="control__row">
-          <span class="control__label">from color</span>
-          <input
-            type="text"
-            placeholder="#hex / oklch()"
-            spellcheck="false"
-            autocomplete="off"
-            aria-label="Meet a color: any CSS color; the sequential curve is re-solved to pass through it and the matching sample is marked"
-          />
-        </span>
-        <span class="marks" aria-hidden="true"></span>
-      </label>
-      <form class="controls" aria-label="Palette parameters"></form>
-      <button type="button" class="control control--gamut" aria-label="toggle gamut (sRGB / Display P3)">
-        <span class="control__row">
-          <span class="control__label">gamut</span>
-          <span class="control__value">sRGB</span>
-        </span>
-        <span class="marks" aria-hidden="true"></span>
+    <header class="topbar">
+      <a class="topbar__name" href="#top">CuspHanger</a>
+      <span class="topbar__strip" aria-hidden="true"></span>
+      <button
+        type="button"
+        class="control--gamut"
+        aria-label="toggle gamut (sRGB / Display P3)"
+      >
+        gamut&nbsp;<span class="control__value">sRGB</span>
       </button>
-      <section class="export" aria-label="Export"></section>
+    </header>
 
-    </aside>
-
-    <main class="canvas">
-      <header class="masthead">
-        <h1 class="wordmark">CuspHanger</h1>
-        <p class="intro" data-ghost="none">
+    <main class="sheet" id="top">
+      <section class="hero">
+        <h1 class="wordmark">Cusp&shy;Hanger</h1>
+        <p class="intro">
           A <a href="https://meodai.github.io/rampensau/" target="_blank" rel="noopener">RampenSau</a>-style API for creating sequential and diverging palettes
           from just a few intuitive parameters using a quadratic Bézier curve
           through a hue's gamut triangle, sampled at perceptual lightness
           steps.
         </p>
-        <p class="links" data-ghost="none">
+        <p class="links">
           <a href="https://github.com/meodai/cusphanger">Github</a>
           <a href="https://web.archive.org/web/20240628033734/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=097749c130c1cf35b8b9c236916de3b0455ffce0">The paper</a>
         </p>
-      </header>
+      </section>
 
-      <section class="viz-row" aria-label="Palette views">
-        <div class="viz-cell">
-          <button type="button" class="viz-flip" data-axis="chroma" aria-label="invert the radial direction">&#x21C4;</button>
-          <div id="wheel" class="viz-pane"></div>
-          <span class="marks" aria-hidden="true"></span>
-        </div>
-        <div class="viz-cell">
-          <button type="button" class="viz-flip" data-axis="lightness" aria-label="invert the radial direction">&#x21C4;</button>
-          <div id="wheel-lightness" class="viz-pane"></div>
-          <span class="marks" aria-hidden="true"></span>
-        </div>
-        <div class="viz-cell">
-          <div id="slice-mini" class="viz-pane"></div>
-          <span class="marks" aria-hidden="true"></span>
+      <section class="sec sec--output">
+        <header class="sec__head">
+          <span class="sec__no">01</span>
+          <h2 class="sec__title">the palette</h2>
+          <nav class="tabs" role="tablist" aria-label="Palette type"></nav>
+        </header>
+        <div class="hanger" aria-label="The palette. Click a color to copy its oklch value."></div>
+        <p class="sec__note">click a column to copy its oklch value</p>
+      </section>
+
+      <section class="sec sec--params">
+        <header class="sec__head">
+          <span class="sec__no">02</span>
+          <h2 class="sec__title">parameters</h2>
+        </header>
+        <div class="params">
+          <figure class="params__curve">
+            <div class="curve-pane" aria-label="Bézier curve through the gamut triangle. Drag the endpoints to set the lightness range, the point on the median to set saturation."></div>
+            <figcaption class="sec__note">
+              the paper's fig.&nbsp;5 — drag the endpoints for the lightness
+              range, the point on the median for saturation
+            </figcaption>
+          </figure>
+          <div class="params__panel">
+            <form class="controls" aria-label="Palette parameters"></form>
+            <label class="control control--from">
+              <span class="control__row">
+                <span class="control__label">from color</span>
+                <input
+                  type="text"
+                  placeholder="#hex / oklch()"
+                  spellcheck="false"
+                  autocomplete="off"
+                  aria-label="Meet a color: any CSS color; the sequential curve is re-solved to pass through it and the matching sample is marked"
+                />
+              </span>
+            </label>
+          </div>
         </div>
       </section>
 
-      <section class="hanger" aria-label="The palette. Click a color to copy its oklch value."></section>
+      <section class="sec sec--proj">
+        <header class="sec__head">
+          <span class="sec__no">03</span>
+          <h2 class="sec__title">projections</h2>
+        </header>
+        <div class="viz-row" aria-label="Palette views">
+          <figure class="viz-cell">
+            <button type="button" class="viz-flip" data-axis="chroma" aria-label="invert the radial direction">&#x21C4;</button>
+            <div id="wheel" class="viz-pane"></div>
+          </figure>
+          <figure class="viz-cell">
+            <button type="button" class="viz-flip" data-axis="lightness" aria-label="invert the radial direction">&#x21C4;</button>
+            <div id="wheel-lightness" class="viz-pane"></div>
+          </figure>
+          <figure class="viz-cell">
+            <div id="slice-mini" class="viz-pane"></div>
+          </figure>
+        </div>
+      </section>
 
-      <div class="canvas__body">
-        <figure class="figure--comps">
+      <section class="sec sec--use">
+        <header class="sec__head">
+          <span class="sec__no">04</span>
+          <h2 class="sec__title">in use</h2>
           <div class="compo-tools">
             <button type="button" class="compo-regen">regenerate all</button>
             <label class="compo-hue">randomize hue <input type="checkbox" checked /></label>
           </div>
-          <div class="compositions"></div>
-          <figcaption>fig. 1 — the palette in use, random blocks. click a tile to reshuffle</figcaption>
-        </figure>
+        </header>
+        <div class="compositions"></div>
+        <p class="sec__note">fig. 1 — the palette in use, random blocks. click a tile to reshuffle</p>
+      </section>
 
-        <p class="cite" data-ghost="none">
-          A faithful OKLCH implementation of Wijffelaars, Vliegen, van Wijk &amp; van der Linden,
-          <a href="https://web.archive.org/web/20240628033734/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=097749c130c1cf35b8b9c236916de3b0455ffce0" target="_blank" rel="noopener"
-            >&ldquo;Generating Color Palettes using Intuitive Parameters&rdquo;</a
-          >
-          (Computer Graphics Forum 28:3, EuroVis 2009). Also inspired by
-          <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener"
-            >Matt DesLauriers&rsquo;s OKLCH take</a
-          >
-          on the same paper. Gamut boundaries (the cusp / shell) come from
-          <a href="https://github.com/meodai/nutelch" target="_blank" rel="noopener">nutelch</a>.
-        </p>
-      </div>
+      <section class="sec sec--export">
+        <header class="sec__head">
+          <span class="sec__no">05</span>
+          <h2 class="sec__title">export</h2>
+        </header>
+        <div class="export" aria-label="Export"></div>
+      </section>
     </main>
-    </div>
+
+    <footer class="colophon">
+      <p class="cite">
+        A faithful OKLCH implementation of Wijffelaars, Vliegen, van Wijk &amp; van der Linden,
+        <a href="https://web.archive.org/web/20240628033734/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=097749c130c1cf35b8b9c236916de3b0455ffce0" target="_blank" rel="noopener"
+          >&ldquo;Generating Color Palettes using Intuitive Parameters&rdquo;</a
+        >
+        (Computer Graphics Forum 28:3, EuroVis 2009). Also inspired by
+        <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener"
+          >Matt DesLauriers&rsquo;s OKLCH take</a
+        >
+        on the same paper. Gamut boundaries (the cusp / shell) come from
+        <a href="https://github.com/meodai/nutelch" target="_blank" rel="noopener">nutelch</a>.
+      </p>
+    </footer>
 
     <script type="module" src="./main.ts"></script>
   </body>

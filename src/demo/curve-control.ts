@@ -195,7 +195,6 @@ export function initCurveControl(
 
     const fills = arms.map((arm, i) => gamutFill(hues[i]!, arm.xOf, lut, i)).join('');
 
-    // the gamut fill rides the xerox ghost layer, like every other color fill
     host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
       <g data-ghost-keep>${fills}</g>${out}</svg>
       <span class="marks" aria-hidden="true"></span>`;
