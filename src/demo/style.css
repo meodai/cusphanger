@@ -6,12 +6,24 @@
    --canvas-bg/-ink/-accent from the current palette, and everything here
    derives from those three. */
 
+/* Redaction Inclusive — Bye Bye Binary's post-binary cut of Redaction
+   (Kaphar/Young), self-hosted, SIL OFL. One weight: Regular. */
+@font-face {
+  font-family: 'Redaction Inclusive';
+  src:
+    url('./fonts/Redaction-Inclusive-Regular.woff2') format('woff2'),
+    url('./fonts/Redaction-Inclusive-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
 
   --font-mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas,
     monospace;
-  --font-title: "Pramukh Rounded", "Arial Rounded MT Bold", sans-serif;
+  --font-title: "Redaction Inclusive", Georgia, serif;
 
   /* set by theme.ts on every render; these are only the first-paint values */
   --canvas-bg: oklch(0.93 0.01 260);
@@ -155,8 +167,9 @@ button {
 
 .topbar__name {
   font-family: var(--font-title);
-  font-weight: 800;
-  font-size: 1.05rem;
+  font-weight: 400;
+  font-synthesis: none;
+  font-size: 1.15rem;
   text-transform: lowercase;
   text-decoration: none;
   white-space: nowrap;
@@ -220,7 +233,8 @@ button {
 .wordmark {
   margin: 0 0 2.5rem;
   font-family: var(--font-title);
-  font-weight: 800;
+  font-weight: 400;
+  font-synthesis: none;
   font-size: clamp(3.25rem, 9vw, 7.5rem);
   line-height: 0.95;
   letter-spacing: -0.015em;
@@ -284,7 +298,8 @@ button {
   margin: 0;
   font-family: var(--font-title);
   font-size: 1.4rem;
-  font-weight: 600;
+  font-weight: 400;
+  font-synthesis: none;
   letter-spacing: 0.01em;
 }
 .sec__title::before {
