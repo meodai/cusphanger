@@ -1,6 +1,6 @@
 {
   "name": "cusphanger",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Faithful OKLCH port of Wijffelaars et al. 'Generating Color Palettes using Intuitive Parameters' (sequential + diverging), gamut math via nutelch.",
   "type": "module",
   "license": "MIT",
