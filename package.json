@@ -24,7 +24,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm test && npm run build:lib"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
