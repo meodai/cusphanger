@@ -150,8 +150,8 @@ button {
 .tabs__tab + .tabs__tab {
   margin-left: -1px;
 }
-.tabs__tab:hover,
-.tabs__tab[aria-selected='true'] {
+.tabs .tabs__tab:hover,
+.tabs .tabs__tab[aria-selected='true'] {
   position: relative;
   z-index: 1;
 }
