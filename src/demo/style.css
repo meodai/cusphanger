@@ -164,7 +164,7 @@ button {
   font-size: var(--s-font-small);
   background: transparent;
   border: 1px solid var(--line-strong);
-  padding: 0.3em 0.85em;
+  padding: 1em 1.75em;
   cursor: pointer;
   transition:
     background-color var(--dur) linear,
@@ -261,7 +261,7 @@ button {
   top: 0;
   z-index: 2;
   margin-bottom: 0.75rem;
-  margin-top: 2.33rem;
+  margin-top: 1.8rem;
   margin-bottom: 0.5rem;
   background: var(--bg);
   transition: background-color var(--dur-theme) linear;
