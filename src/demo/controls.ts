@@ -60,6 +60,10 @@ export function buildControls(
     const readout = wrap.querySelector('.control__value') as HTMLElement;
     const rel = (v: number) => String((v - f.min) / (f.max - f.min));
     wrap.style.setProperty('--valueRel', rel(f.value));
+    // tick dots at the positions the thumb can land on; when the range is
+    // too fine to show every step, fall back to tenths
+    const steps = Math.round((f.max - f.min) / f.step);
+    wrap.style.setProperty('--tick-n', String(steps <= 30 ? steps : 10));
 
     input.addEventListener('input', () => {
       const v = Number(input.value);

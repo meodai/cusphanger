@@ -456,15 +456,17 @@ button {
   transition: background-color var(--dur-theme) linear;
 }
 
-/* tick dots across the box, one per tenth — the fill covers them as the
-   value advances, like the dot grid behind the projections */
+/* tick dots at the actual value positions (--tick-n set per control from
+   min/max/step) — the fill covers them as the value advances. The half-tile
+   shift lands the dot centers on 0 … i/n … 1, where the playhead can stop. */
 .control--range {
   background-image: radial-gradient(
     circle,
     color-mix(in oklch, var(--fg) 30%, transparent) 1px,
     transparent 1.5px
   );
-  background-size: calc(100% / 10) 100%;
+  background-size: calc(100% / var(--tick-n, 10)) 100%;
+  background-position: calc(-100% / (2 * var(--tick-n, 10) - 2)) center;
 }
 
 .control--range::before {
