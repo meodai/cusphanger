@@ -38,15 +38,7 @@
   </head>
   <body>
     <header class="topbar">
-      <a class="topbar__name" href="#top">CuspHanger</a>
       <span class="topbar__strip" aria-hidden="true"></span>
-      <button
-        type="button"
-        class="control--gamut"
-        aria-label="toggle gamut (sRGB / Display P3)"
-      >
-        gamut&nbsp;<span class="control__value">sRGB</span>
-      </button>
     </header>
 
     <section class="hero">
@@ -65,7 +57,16 @@
 
     <div class="layout">
       <aside class="side" aria-label="Palette controls">
-        <nav class="tabs" role="tablist" aria-label="Palette type"></nav>
+        <div class="side__tabs">
+          <nav class="tabs" role="tablist" aria-label="Palette type"></nav>
+          <button
+            type="button"
+            class="control--gamut"
+            aria-label="toggle gamut (sRGB / Display P3)"
+          >
+            <span class="control__value">sRGB</span>
+          </button>
+        </div>
         <figure class="side__curve">
           <div class="curve-pane" aria-label="Bézier curve through the gamut triangle. Drag the endpoints to set the lightness range, the point on the median to set saturation."></div>
         </figure>
