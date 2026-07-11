@@ -216,7 +216,7 @@ button {
   max-height: 100vh;
   overflow-y: auto;
   scrollbar-width: thin;
-  padding: 1.5rem 1.5rem 2.5rem var(--gutter);
+  padding: 0 1.5rem 2.5rem var(--gutter);
   border-right: 1px solid var(--line);
   /* rtl on the scroll container puts its scrollbar on the left; the
      children restore ltr so the content is unaffected */
@@ -231,14 +231,13 @@ button {
   max-width: 76rem;
 }
 
-/* the type tabs stay pinned while the sidebar scrolls; they grow up into
-   the sidebar's top padding so nothing shows through above them */
+/* the type tabs stay pinned while the sidebar scrolls; the opaque backing
+   masks the content passing beneath */
 .side .tabs {
   position: sticky;
   top: 0;
   z-index: 2;
-  margin-top: -1.5rem;
-  padding-block: 1.5rem 0.75rem;
+  padding-bottom: 0.75rem;
   margin-bottom: 0.5rem;
   background: var(--bg);
   transition: background-color var(--dur-theme) linear;
@@ -872,7 +871,7 @@ button {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 2rem;
   border-top: 1px solid var(--line);
   padding: 2.5rem var(--gutter) 4rem;
 }
@@ -927,8 +926,7 @@ button {
   }
   .side .tabs {
     position: static;
-    margin-top: 0;
-    padding-block: 0;
+    padding-bottom: 0;
     margin-bottom: 1.25rem;
   }
   .sheet {
