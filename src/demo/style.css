@@ -254,8 +254,10 @@ button {
   display: none;
 }
 
+/* full-width, above the sidebar/sheet columns */
 .hero {
-  padding: clamp(2rem, 6vh, 4.5rem) 0 clamp(2.5rem, 6vh, 5rem);
+  padding: clamp(2rem, 6vh, 4.5rem) var(--gutter) clamp(2.5rem, 6vh, 5rem);
+  border-bottom: 1px solid var(--line);
 }
 
 .wordmark {
