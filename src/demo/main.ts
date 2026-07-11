@@ -151,7 +151,7 @@ const wheelHosts: Record<WheelAxis, HTMLElement> = {
 };
 const tabsNav = $('.tabs');
 const controlsHost = $('.controls');
-const updateExport = initExport($('.export'));
+const updateExport = initExport($('.export'), $('.export-tools'));
 
 let activeTab: Tab = TABS[0]!;
 let lut: Lut = oklchSrgb;

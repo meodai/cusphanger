@@ -6,6 +6,7 @@ type FormatId = 'usage' | 'oklch' | 'hex';
 
 export function initExport(
   host: HTMLElement,
+  toolsHost: HTMLElement,
 ): (palette: OklchColor[], usage: string) => void {
   let active: FormatId = 'usage';
   let palette: OklchColor[] = [];
@@ -17,7 +18,7 @@ export function initExport(
     { id: 'hex', label: 'hex', print: () => palette.map(hexOf).join('\n') },
   ];
 
-  host.innerHTML = `
+  toolsHost.innerHTML = `
     <div class="export__bar tabs" role="tablist" aria-label="Export format">
       ${FORMATS.map(
         (f) =>
@@ -25,13 +26,12 @@ export function initExport(
              aria-selected="${f.id === active}">${f.label}</button>`,
       ).join('')}
     </div>
-    <pre class="export__code"><code></code></pre>
-    <button type="button" class="tabs__tab export__copy">copy</button>
-    <span class="marks" aria-hidden="true"></span>`;
+    <button type="button" class="tabs__tab export__copy">copy</button>`;
+  host.innerHTML = `<pre class="export__code"><code></code></pre>`;
 
   const code = host.querySelector('code') as HTMLElement;
-  const tabs = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-format]'));
-  const copyBtn = host.querySelector('.export__copy') as HTMLButtonElement;
+  const tabs = Array.from(toolsHost.querySelectorAll<HTMLButtonElement>('[data-format]'));
+  const copyBtn = toolsHost.querySelector('.export__copy') as HTMLButtonElement;
 
   const print = () => {
     code.textContent = FORMATS.find((f) => f.id === active)?.print() ?? '';

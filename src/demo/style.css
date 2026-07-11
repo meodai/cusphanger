@@ -356,7 +356,8 @@ button {
   height: 1px;
   background: var(--line);
 }
-.sec__head .compo-tools {
+.sec__head .compo-tools,
+.sec__head .export-tools {
   order: 3;
 }
 
@@ -888,22 +889,11 @@ button {
 
 /* ------------------------------------------------------------ 05 · export */
 
-.export {
-  position: relative;
-}
-/* the format tabs sit directly on the panel, sharing its top hairline */
-.export__bar {
+/* the format tabs + copy ride the section head line, like the in-use tools */
+.export-tools {
   display: flex;
-  margin-bottom: -1px;
-}
-.export__bar .tabs__tab {
-  position: relative;
-  z-index: 1;
-}
-.export__copy {
-  position: absolute;
-  top: 0;
-  right: 0;
+  align-items: center;
+  gap: 1.25rem;
 }
 .export__code {
   margin: 0;
