@@ -217,6 +217,7 @@ button {
 
 :root {
   --gutter: clamp(1rem, 3vw, 2rem);
+  --col-gap: clamp(1.75rem, 4vw, 4.5rem); /* between sidebar and sheet */
 }
 
 .layout {
@@ -224,7 +225,7 @@ button {
   /* the page gutter lives INSIDE the sidebar (its scrollbar sits on the
      viewport edge) and inside the sheet's right side */
   grid-template-columns: calc(clamp(280px, 24vw, 340px) + var(--gutter)) minmax(0, 1fr);
-  gap: clamp(1.75rem, 4vw, 4.5rem);
+  gap: var(--col-gap);
 }
 
 /* the aside stretches to the full content height (so its divider runs the
@@ -337,6 +338,16 @@ button {
   align-items: center;
   gap: 1.25rem;
   margin-bottom: 2.25rem;
+}
+/* a lead-in rule reaching back across the column gap to the sidebar's
+   divider; the flex gap keeps the title where it was */
+.sec__head::before {
+  content: '';
+  flex: none;
+  height: 1px;
+  width: calc(var(--col-gap) - 1.25rem);
+  margin-left: calc(-1 * var(--col-gap));
+  background: var(--line);
 }
 .sec__head::after {
   content: '';
@@ -975,6 +986,9 @@ button {
   }
   .sheet {
     padding-inline: var(--gutter);
+  }
+  .sec__head::before {
+    display: none;
   }
   .viz-row {
     grid-template-columns: 1fr;
