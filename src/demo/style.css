@@ -238,6 +238,7 @@ button {
   top: 0;
   z-index: 2;
   padding-bottom: 0.75rem;
+  padding-top: 2.1rem;
   margin-bottom: 0.5rem;
   background: var(--bg);
   transition: background-color var(--dur-theme) linear;
@@ -414,22 +415,27 @@ button {
   cursor: grabbing;
 }
 
-/* the sliders read as table rows */
+/* the controls stack as bordered boxes sharing hairlines, like the old
+   demo: the whole box IS the slider — a fill layer scales to --valueRel
+   behind the label, the invisible native input covers the box */
 .control {
   display: block;
-  padding: 0.55rem 0 0.7rem;
-  border-bottom: 1px solid var(--line);
+  position: relative;
+  border: 1px solid var(--line-strong);
+  padding: 0.55rem 0.75rem;
 }
-.controls .control:first-child {
-  border-top: 1px solid var(--line);
+.control + .control {
+  margin-top: -1px;
 }
 
 .control__row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 1rem;
-  margin-bottom: 0.3rem;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .control__label {
@@ -443,59 +449,48 @@ button {
   font-variant-numeric: tabular-nums;
   color: var(--accent);
 }
+/* readout keeps a page-colored backing so the fill's playhead line and the
+   rainbow never run through the digits */
+.control--range .control__value {
+  padding: 0 0.25rem;
+  background: var(--bg);
+  transition: background-color var(--dur-theme) linear;
+}
+
+.control--range::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklch, var(--accent) 20%, transparent);
+  border-right: 2px solid var(--accent);
+  transform-origin: left center;
+  transform: scaleX(var(--valueRel, 0)) scaleY(0.8);
+  transition: transform var(--dur) cubic-bezier(0.3, 0.7, 0, 1);
+}
+.control--range:hover::before,
+.control--range:focus-within::before,
+.control--range:active::before {
+  transform: scaleX(var(--valueRel, 0)) scaleY(1);
+}
+
+/* the rainbow spans the whole box; scaleX only reveals it up to the value */
+.control--hue::before {
+  background-image: var(--hue-rainbow);
+  background-size: calc(100% / var(--valueRel, 1)) 100%;
+  background-position: left center;
+  background-repeat: no-repeat;
+}
 
 .control--range input {
   -webkit-appearance: none;
   appearance: none;
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: 16px;
+  height: 100%;
   margin: 0;
-  background: transparent;
+  opacity: 0;
   cursor: ew-resize;
-}
-
-.control--range input::-webkit-slider-runnable-track {
-  height: 4px;
-  background: linear-gradient(
-    to right,
-    var(--accent) calc(var(--valueRel, 0) * 100%),
-    var(--line-strong) 0
-  );
-}
-.control--range input::-moz-range-track {
-  height: 4px;
-  background: linear-gradient(
-    to right,
-    var(--accent) calc(var(--valueRel, 0) * 100%),
-    var(--line-strong) 0
-  );
-}
-.control--hue input::-webkit-slider-runnable-track {
-  background: var(--hue-rainbow);
-}
-.control--hue input::-moz-range-track {
-  background: var(--hue-rainbow);
-}
-
-/* diamond thumbs, echoing the diamond samples in the plots */
-.control--range input::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 11px;
-  height: 11px;
-  margin-top: -3.5px;
-  border: 0;
-  border-radius: 0;
-  background: var(--fg);
-  rotate: 45deg;
-}
-.control--range input::-moz-range-thumb {
-  width: 11px;
-  height: 11px;
-  border: 0;
-  border-radius: 0;
-  background: var(--fg);
-  rotate: 45deg;
 }
 
 .control--select {
@@ -511,9 +506,11 @@ button {
   font: inherit;
   font-size: 0.6875rem;
   color: var(--fg);
-  background: var(--bg);
-  border: 1px solid var(--line-strong);
-  padding: 0.25em 0.5em;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: right;
+  cursor: pointer;
 }
 
 .control--from input {
