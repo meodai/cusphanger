@@ -12,8 +12,8 @@ const CT = SIZE / 2;
 const PAD = 26;
 const R = CT - PAD;
 const STEP = 2;
-const INNER = 0.2; // hollow center so near-neutral / near-white hues don't pile onto one point
-const R_INNER = INNER * R - 8; // guide circle + hue-span arc, tucked inside the hole
+const INNER = 0.2;
+const R_INNER = INNER * R - 8;
 
 const radial = (flip: boolean) => {
   const pad = INNER * R;
@@ -75,8 +75,6 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
       boundary += `${i === 0 ? 'M' : 'L'} ${f(a1x)},${f(a1y)} `;
     }
 
-    // fade offsets live inside the [INNER, 1] ring; the hard step at the inner
-    // edge keeps the hole transparent so the dot grid shows through like outside the rim
     const edge = INNER * 100;
     const scale = (t: number) => f(edge + t * (100 - edge));
     const fadeStops = flip
@@ -161,7 +159,6 @@ export function renderWheel(
   }
   const dots = pts.map(([x, y]) => diamond(x, y, 5, 'wheel-dot')).join('');
 
-  // hue-span arc on the inner edge: smallest arc enclosing all palette hues
   let hueSpan = '';
   {
     const hs = [...new Set(palette.map((c) => Math.round((((c.h % 360) + 360) % 360) * 2) / 2))]

@@ -13,22 +13,15 @@ import { css, cssOf } from './color';
 import { maxChromaAt } from './gamut';
 import { oklchP3 } from 'nutelch';
 
-// The paper's fig. 5 as a rail control: the palette bar beside the gamut
-// triangle (p0 black · p1 cusp · p2 white) with the Bézier path through it.
-// Three kinds of handles — the sampled curve's dark/light endpoints move
-// vertically and set the lightness range (→ brightness b + contrast c), and
-// q1 rides the dotted median from midpoint(p0,p2) to the cusp; its fraction
-// IS the paper's saturation s. Diverging mirrors two arms around the axis.
-
 export interface CurveParams {
-  hues: number[]; // one hue (sequential) or two (diverging arms)
+  hues: number[];
   palette: OklchColor[];
   s: number;
   b: number;
   c: number;
   w: number;
   lut: Lut;
-  matchIndex?: number | null; // the sample fromColor solved onto — gets a marker dot
+  matchIndex?: number | null;
 }
 
 interface ArmGeom {
@@ -42,14 +35,12 @@ const f = (n: number) => n.toFixed(2);
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-// square, like the other viz panes
 const W = 240;
 const H = 240;
-const PAD = 16; // room at the ends for the endpoint handles
-const L_GAP = 0.04; // minimum lightness gap between the two endpoints
-const SEG = 24; // polyline samples for the solid (used) curve segment
+const PAD = 16;
+const L_GAP = 0.04;
+const SEG = 24;
 
-// paper orientation: white on top, black at the bottom
 const yOf = (l: number) => PAD + (1 - l) * (H - 2 * PAD);
 const lOf = (y: number) => 1 - (y - PAD) / (H - 2 * PAD);
 
@@ -59,8 +50,6 @@ const handle = (x: number, y: number, kind: HandleKind, arm: number): string =>
      <circle class="cc-handle" cx="${f(x)}" cy="${f(y)}" r="5"/>
    </g>`;
 
-// the real gamut slice under the triangle, as in the slice view: one gradient
-// row (neutral → max chroma) per lightness band
 const fillCache = new Map<string, string>();
 const gamutFill = (hue: number, xOf: (c: number) => number, lut: Lut, arm: number): string => {
   const key = `${lut === oklchP3 ? 'p3' : 'srgb'}|${hue.toFixed(1)}|${arm}|${xOf(0.1).toFixed(2)}`;
@@ -98,7 +87,6 @@ export function initCurveControl(
   let params: CurveParams | null = null;
   let arms: ArmGeom[] = [];
 
-  // the sampled curve's endpoint lightnesses, clamped into the triangle
   const lEnds = (tri: Tri): [number, number] => [
     clamp(lightnessAt(0, params!.b, params!.c), tri.p0.l, tri.p2.l),
     clamp(lightnessAt(1, params!.b, params!.c), tri.p0.l, tri.p2.l),
@@ -116,8 +104,6 @@ export function initCurveControl(
     const tris = hues.map((h) => buildTriangle(h, s, w, lut));
     const maxCusp = Math.max(...tris.map((t) => t.p1.c), 0.01);
 
-    // sequential: one triangle pointing right.
-    // diverging: shared axis in the middle, arms pointing outward.
     if (!mirror) {
       const x0 = 38;
       const xScale = (W - 18 - x0) / maxCusp;
@@ -132,7 +118,7 @@ export function initCurveControl(
     }
 
     let out = '';
-    let handles = ''; // drawn after both arms, so no curve paints over a bullet
+    let handles = '';
     arms.forEach((arm, i) => {
       const { tri } = arm;
       const pt = (p: LCH) => `${f(arm.xOf(p.c))},${f(yOf(p.l))}`;
@@ -141,7 +127,6 @@ export function initCurveControl(
 
       out += `<polygon points="${pt(tri.p0)} ${pt(tri.p1)} ${pt(tri.p2)}" class="cc-tri"/>`;
       out += `<line x1="${f(arm.xOf(midC))}" y1="${f(yOf(midL))}" x2="${f(arm.xOf(tri.p1.c))}" y2="${f(yOf(tri.p1.l))}" class="cc-median"/>`;
-      // the control polygon's chord: q0 on the p0–p1 edge to q2 on the p2–p1 edge, through q1
       out += `<line x1="${f(arm.xOf(tri.q0.c))}" y1="${f(yOf(tri.q0.l))}" x2="${f(arm.xOf(tri.q2.c))}" y2="${f(yOf(tri.q2.l))}" class="cc-chord"/>`;
       out += `<path d="M ${pt(tri.p0)} Q ${pt(tri.q0)} ${pt(tri.q1)} Q ${pt(tri.q2)} ${pt(tri.p2)}" class="cc-ghost"/>`;
 
@@ -171,8 +156,6 @@ export function initCurveControl(
         out += `<text x="${f(qx + sign * 10)}" y="${f(qy - 9)}" class="cc-label" text-anchor="${sign < 0 ? 'end' : 'start'}">s ${f(s)}</text>`;
       }
 
-      // palette samples on the curve, like the slice view's diamonds — the
-      // fromColor match gets a ring so the met sample is findable at a glance
       for (const [pi, col] of palette.entries()) {
         const side = mirror ? (pi < palette.length / 2 ? 0 : 1) : 0;
         if (side !== i) continue;
@@ -223,7 +206,6 @@ export function initCurveControl(
     const y = ((e.clientY - rect.top) * H) / rect.height;
 
     if (drag.kind === 'sat') {
-      // project the pointer onto the median: its fraction is s exactly
       const { tri } = arm;
       const mx = arm.xOf((tri.p0.c + tri.p2.c) / 2);
       const my = yOf((tri.p0.l + tri.p2.l) / 2);

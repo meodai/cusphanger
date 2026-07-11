@@ -164,8 +164,6 @@ const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false 
 let lastValues: Record<string, number> = {};
 let lastChoices: Record<string, string> = {};
 let palette: OklchColor[] = [];
-// fromColor: the sample the solve landed the target on (marked in the
-// curve pane); any hand-driven parameter change voids the guarantee and clears it
 let match: number | null = null;
 let applyingMatch = false;
 
@@ -218,7 +216,7 @@ const selectTab = (tab: Tab) => {
   controlsApi = buildControls(controlsHost, tab.fields, tab.choices ?? [], ({ values, choices }) => {
     lastValues = values;
     lastChoices = choices;
-    if (!applyingMatch) match = null; // hand-tuned params: the meet is off
+    if (!applyingMatch) match = null;
     renderAll();
   });
 };
@@ -233,9 +231,6 @@ for (const tab of TABS) {
   tabsNav.appendChild(b);
 }
 
-// fromColor: parse anything CSS calls a color, re-solve the sequential model
-// through it (the solve lives on the paper's surface, so it lands on the seq
-// tab), and remember which sample carries it for the curve pane's marker.
 const parseAsOklch = converter('oklch') as unknown as (raw: string) => Oklch | undefined;
 const fromWrap = $('.control--from');
 const fromInput = fromWrap.querySelector('input') as HTMLInputElement;
@@ -260,7 +255,6 @@ const solveFrom = (): boolean => {
   const { b, c } = bcFromLRange(res.options.lRange!);
   match = res.index;
   applyingMatch = true;
-  // rounded for the readouts; the residual miss is ~1e-4 — far below visible
   const r4 = (v: number) => Math.round(v * 1e4) / 1e4;
   controlsApi.set({
     hStart: Math.round(res.options.hStart * 100) / 100,
@@ -274,7 +268,7 @@ const solveFrom = (): boolean => {
 };
 
 fromInput.addEventListener('change', () => {
-  if (!solveFrom()) renderAll(); // solve renders via the controls; a miss still clears the mark
+  if (!solveFrom()) renderAll();
 });
 fromInput.addEventListener('input', () => fromWrap.removeAttribute('data-invalid'));
 
@@ -286,11 +280,9 @@ vizGamut.addEventListener('click', () => {
   lut = p3 ? oklchP3 : oklchSrgb;
   vizGamutValue.textContent = p3 ? 'P3' : 'sRGB';
   vizGamut.toggleAttribute('data-active', p3);
-  // an active fromColor meet is per-gamut — re-solve it against the new LUT
   if (match === null || !solveFrom()) renderAll();
 });
 
-// one toggle inverts the radial direction of both wheels together
 const flipBtn = document.querySelector<HTMLButtonElement>('.viz-flip');
 flipBtn?.addEventListener('click', () => {
   const flipped = !wheelFlip.chroma;
