@@ -242,8 +242,6 @@ button {
   max-height: 100vh;
   overflow-y: auto;
   padding: 0 1.5rem 2.5rem var(--gutter);
-  /* rtl on the scroll container puts its scrollbar on the left; the
-     children restore ltr so the content is unaffected */
   direction: rtl;
 }
 .side__in > * {
@@ -305,7 +303,6 @@ button {
   display: none;
 }
 
-/* full-width, above the sidebar/sheet columns */
 .hero {
   padding: clamp(2rem, 6vh, 4.5rem) var(--gutter) clamp(2.5rem, 6vh, 5rem);
 }
@@ -343,21 +340,17 @@ button {
   color: var(--accent);
 }
 
-/* ---------------------------------------------------------------- sections */
-
 .sec {
   padding: 1.25rem 0 4rem;
 }
 
-/* the title leads, the rule runs out after it */
 .sec__head {
   display: flex;
   align-items: center;
   gap: 1.25rem;
   margin-bottom: 2.25rem;
 }
-/* a lead-in rule reaching back across the column gap to the sidebar's
-   divider; the flex gap keeps the title where it was */
+
 .sec__head::before {
   content: '';
   flex: none;
@@ -393,10 +386,6 @@ button {
   font-size: var(--s-font-small);
   color: var(--muted);
 }
-
-/* -------------------------------------------------------- 01 · the palette
-   bottom-anchored columns: height carries --reach (darker reaches higher),
-   click copies the oklch value. */
 
 .hanger {
   display: flex;
@@ -453,8 +442,6 @@ button {
   font-size: var(--s-font-small);
   color: var(--accent);
 }
-
-/* ------------------------------------------------------------ parameters */
 
 .curve-pane {
   padding: 0.25rem 0;
