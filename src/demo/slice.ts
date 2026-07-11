@@ -183,6 +183,12 @@ export function renderSlice(
   host.innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" class="slice-svg" role="img"
          aria-label="OKLCH chroma-lightness slice">
+      <defs>
+        <pattern id="sliceDots" width="22" height="22" patternUnits="userSpaceOnUse">
+          <circle cx="2" cy="2" r="1" class="wheel-grid-dot"/>
+        </pattern>
+      </defs>
+      <rect width="${W}" height="${H}" fill="url(#sliceDots)"/>
       ${titleEls}
       ${lTicks}
       ${axisLine}

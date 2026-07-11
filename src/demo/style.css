@@ -110,7 +110,16 @@ button {
 
 .tabs {
   display: flex;
-  gap: 0.375rem;
+}
+/* flush segments: collapse the doubled hairline between neighbours; the
+   hovered/selected tab wins the shared border */
+.tabs__tab + .tabs__tab {
+  margin-left: -1px;
+}
+.tabs__tab:hover,
+.tabs__tab[aria-selected='true'] {
+  position: relative;
+  z-index: 1;
 }
 
 .tabs__tab,
