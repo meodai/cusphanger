@@ -869,8 +869,36 @@ button {
 /* --------------------------------------------------------------- colophon */
 
 .colophon {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2rem 4rem;
   border-top: 1px solid var(--line);
   padding: 2.5rem var(--gutter) 4rem;
+}
+
+/* elastiq — colors ride the palette theme like everything else */
+.ellogo {
+  display: block;
+  flex: none;
+  width: clamp(6rem, 9vw, 8.5rem);
+}
+.ellogo svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.ellogo__font {
+  fill: var(--muted);
+  transition: fill var(--dur) linear;
+}
+.ellogo__logo {
+  stroke: var(--accent);
+  transition: stroke var(--dur-theme) linear;
+}
+.ellogo:hover .ellogo__font {
+  fill: var(--fg);
 }
 .cite {
   margin: 0;
