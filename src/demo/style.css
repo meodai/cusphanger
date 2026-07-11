@@ -270,18 +270,12 @@ button {
   padding: 1.25rem 0 4rem;
 }
 
-/* the title sits ON the rule, like the legend of a drawing frame */
+/* the title leads, the rule runs out after it */
 .sec__head {
   display: flex;
   align-items: center;
-  gap: 0.9rem;
+  gap: 1.25rem;
   margin-bottom: 2.25rem;
-}
-.sec__head::before {
-  content: '';
-  width: 1.5rem;
-  height: 1px;
-  background: var(--line-strong);
 }
 .sec__head::after {
   content: '';
@@ -297,17 +291,10 @@ button {
 .sec__title {
   margin: 0;
   font-family: var(--font-title);
-  font-size: 1.4rem;
+  font-size: clamp(1.6rem, 2.6vw, 2.1rem);
   font-weight: 400;
   font-synthesis: none;
   letter-spacing: 0.01em;
-}
-.sec__title::before {
-  content: '◆ ';
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: 0.6em;
-  vertical-align: 0.15em;
 }
 
 .sec__note {
