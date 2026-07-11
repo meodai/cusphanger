@@ -33,9 +33,11 @@
 
   --bg: color-mix(in oklch, var(--canvas-ink) 72%, oklch(0.13 0.01 270));
   --fg: color-mix(in oklch, var(--canvas-bg) 90%, white);
+
+  --dark: color-mix(in oklch, white 20%, var(--canvas-ink));
   --muted: color-mix(in oklch, var(--fg) 52%, var(--bg));
-  --line: color-mix(in oklch, var(--fg) 16%, transparent);
-  --line-strong: color-mix(in oklch, var(--fg) 34%, transparent);
+  --line: var(--dark);
+  --line-strong: var(--dark);
   --accent: oklch(from var(--canvas-accent) 0.76 min(c, 0.17) h);
 
   --hue-rainbow: linear-gradient(
@@ -440,7 +442,6 @@ button {
   font-size: 0.6875rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
 }
 
 .control__value {
