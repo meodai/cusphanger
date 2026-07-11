@@ -290,13 +290,16 @@ vizGamut.addEventListener('click', () => {
   if (match === null || !solveFrom()) renderAll();
 });
 
-for (const btn of document.querySelectorAll<HTMLButtonElement>('.viz-flip')) {
-  const axis = btn.dataset.axis as WheelAxis;
-  btn.addEventListener('click', () => {
-    wheelFlip[axis] = !wheelFlip[axis];
-    btn.toggleAttribute('data-flipped', wheelFlip[axis]);
+// one toggle inverts the radial direction of both wheels together
+const flipBtn = document.querySelector<HTMLButtonElement>('.viz-flip');
+flipBtn?.addEventListener('click', () => {
+  const flipped = !wheelFlip.chroma;
+  wheelFlip.chroma = flipped;
+  wheelFlip.lightness = flipped;
+  flipBtn.toggleAttribute('data-flipped', flipped);
+  for (const axis of ['chroma', 'lightness'] as const) {
     renderWheel(wheelHosts[axis], palette, lut, axis, wheelFlip[axis]);
-  });
-}
+  }
+});
 
 selectTab(TABS.find((t) => t.id === 'diverging') ?? TABS[0]!);

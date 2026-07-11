@@ -357,7 +357,8 @@ button {
   background: var(--line);
 }
 .sec__head .compo-tools,
-.sec__head .export-tools {
+.sec__head .export-tools,
+.sec__head .proj-tools {
   order: 3;
 }
 
@@ -617,10 +618,6 @@ button {
 }
 
 .viz-flip {
-  position: absolute;
-  top: 0.6rem;
-  right: 0.6rem;
-  z-index: 1;
   padding: 0.15em 0.55em;
 }
 
