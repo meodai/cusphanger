@@ -456,6 +456,17 @@ button {
   transition: background-color var(--dur-theme) linear;
 }
 
+/* tick dots across the box, one per tenth — the fill covers them as the
+   value advances, like the dot grid behind the projections */
+.control--range {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--fg) 30%, transparent) 1px,
+    transparent 1.5px
+  );
+  background-size: calc(100% / 10) 100%;
+}
+
 .control--range::before {
   content: '';
   position: absolute;
