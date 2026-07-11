@@ -369,9 +369,7 @@ button {
 /* ------------------------------------------------------------ parameters */
 
 .curve-pane {
-  border: 1px solid var(--line);
-  background: color-mix(in oklch, var(--fg) 3%, transparent);
-  padding: 0.75rem;
+  padding: 0.25rem 0;
 }
 .curve-pane svg {
   display: block;
