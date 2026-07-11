@@ -460,9 +460,11 @@ button {
    min/max/step) — the fill covers them as the value advances. The half-tile
    shift lands the dot centers on 0 … i/n … 1, where the playhead can stop. */
 .control--range {
+  /* the same ink as .wheel-grid-dot behind the projections:
+     currentColor (--fg) at 0.14 alpha */
   background-image: radial-gradient(
     circle,
-    color-mix(in oklch, var(--fg) 30%, transparent) 1px,
+    color-mix(in oklch, var(--fg) 14%, transparent) 1px,
     transparent 1.5px
   );
   background-size: calc(100% / var(--tick-n, 10)) 100%;
@@ -572,8 +574,6 @@ button {
   position: relative;
   margin: 0;
   padding: 1rem;
-  border: 1px solid var(--line);
-  background: color-mix(in oklch, var(--fg) 3%, transparent);
 }
 
 .viz-flip {
