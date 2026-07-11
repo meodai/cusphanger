@@ -262,7 +262,7 @@ button {
   z-index: 2;
   margin-bottom: 0.75rem;
   margin-top: 1.8rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
   background: var(--bg);
   transition: background-color var(--dur-theme) linear;
 
@@ -480,7 +480,7 @@ button {
   display: block;
   position: relative;
   border: 1px solid var(--line-strong);
-  padding: 0.55rem 0.75rem;
+  padding: 0.8rem 0.75rem;
 }
 .control + .control {
   margin-top: -1px;
@@ -635,7 +635,7 @@ button {
 }
 
 .viz-flip {
-  padding: 0.15em 0.55em;
+  padding: 1em 1.35em;
 }
 
 .slice-svg,
