@@ -433,6 +433,7 @@ button {
   display: block;
   width: 100%;
   height: auto;
+  overflow: visible;
 }
 .curve-pane [data-handle] {
   cursor: grab;
@@ -617,6 +618,7 @@ button {
   width: 100%;
   height: auto;
   color: var(--fg);
+  overflow: visible;
 }
 
 /* the datasheet shows its axes — no hover-reveal */
