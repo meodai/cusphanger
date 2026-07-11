@@ -473,7 +473,7 @@ button {
   content: '';
   position: absolute;
   inset: 0;
-  background: color-mix(in oklch, var(--accent) 25%, var(--bg));
+  background: color-mix(in oklch, var(--accent) 20%, transparent);
   border-right: 2px solid var(--accent);
   transform-origin: left center;
   transform: scaleX(var(--valueRel, 0)) scaleY(0.8);
