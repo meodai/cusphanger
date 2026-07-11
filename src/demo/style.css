@@ -532,7 +532,10 @@ button {
 .viz-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.25rem;
+}
+/* flush cells: one shared hairline between neighbours */
+.viz-cell + .viz-cell {
+  border-left: 0;
 }
 
 .viz-cell {
@@ -627,24 +630,7 @@ button {
 }
 
 .slice-legend {
-  margin: 0.75rem 0 0;
-  font-size: 0.625rem;
-  line-height: 1.7;
-  color: var(--muted);
-}
-.slice-legend .k {
-  display: inline-block;
-  width: 0.9em;
-  height: 2px;
-  vertical-align: middle;
-  background: var(--fg);
-}
-.slice-legend .k-tri {
-  background: repeating-linear-gradient(
-    to right,
-    var(--fg) 0 3px,
-    transparent 3px 5px
-  );
+  display: none;
 }
 
 .wheel-grid-dot {
@@ -892,6 +878,10 @@ button {
   }
   .viz-row {
     grid-template-columns: 1fr;
+  }
+  .viz-cell + .viz-cell {
+    border-left: 1px solid var(--line);
+    border-top: 0;
   }
   .compositions {
     grid-template-columns: repeat(4, 1fr);
