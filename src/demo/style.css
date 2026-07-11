@@ -130,7 +130,6 @@ button {
 .control--gamut {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
-  letter-spacing: 0.08em;
   background: transparent;
   border: 1px solid var(--line-strong);
   padding: 0.3em 0.85em;
@@ -286,7 +285,6 @@ button {
 }
 .links a {
   font-size: 0.6875rem;
-  letter-spacing: 0.08em;
 }
 .links a::after {
   content: ' ↗';
@@ -369,7 +367,6 @@ button {
   writing-mode: vertical-rl;
   padding: 0.9em 0;
   font-size: 0.625rem;
-  letter-spacing: 0.05em;
   white-space: nowrap;
   color: #fff;
   opacity: 0;
@@ -390,7 +387,6 @@ button {
   bottom: calc(var(--reach, 1) * 100% + 0.6em);
   translate: -50% 0;
   font-size: 0.625rem;
-  letter-spacing: 0.08em;
   color: var(--accent);
 }
 
@@ -437,7 +433,6 @@ button {
 
 .control__label {
   font-size: 0.6875rem;
-  letter-spacing: 0.08em;
 }
 
 .control__value {
@@ -803,7 +798,6 @@ button {
 }
 .compo-hue {
   font-size: 0.6875rem;
-  letter-spacing: 0.08em;
   color: var(--muted);
   cursor: pointer;
 }
