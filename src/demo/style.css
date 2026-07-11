@@ -193,22 +193,25 @@ button {
      viewport edge) and inside the sheet's right side */
   grid-template-columns: calc(clamp(280px, 24vw, 340px) + var(--gutter)) minmax(0, 1fr);
   gap: clamp(1.75rem, 4vw, 4.5rem);
-  align-items: start;
 }
 
+/* the aside stretches to the full content height (so its divider runs the
+   whole sheet); the inner wrapper does the sticking and scrolling */
 .side {
+  border-right: 1px solid var(--line);
+}
+.side__in {
   position: sticky;
   top: 0;
   max-height: 100vh;
   overflow-y: auto;
   scrollbar-width: thin;
   padding: 0 1.5rem 2.5rem var(--gutter);
-  border-right: 1px solid var(--line);
   /* rtl on the scroll container puts its scrollbar on the left; the
      children restore ltr so the content is unaffected */
   direction: rtl;
 }
-.side > * {
+.side__in > * {
   direction: ltr;
 }
 
@@ -915,11 +918,13 @@ button {
     display: block;
   }
   .side {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .side__in {
     position: static;
     max-height: none;
     overflow: visible;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
     padding: 1.5rem var(--gutter) 2rem;
   }
   .side__tabs {
