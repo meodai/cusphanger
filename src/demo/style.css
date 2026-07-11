@@ -46,6 +46,8 @@
     oklch(0.7 0.13 360)
   );
 
+  --s-font-small: 0.75rem;
+
   --dur: 160ms;
   --dur-theme: 400ms;
 }
@@ -107,6 +109,36 @@ button {
   display: none;
 }
 
+/* ------------------------------------------------------------ scrollbars —
+   square thumbs in the theme's line ink, inset from a page-colored track;
+   accent under the pointer. Firefox only understands the standard props —
+   scoped there so Chrome keeps the richer -webkit styling. */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--dark);
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+::-webkit-scrollbar-corner {
+  background: var(--bg);
+}
+
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--dark) transparent;
+  }
+}
+
 /* ---------------------------------------------------------------- chips —
    the one interactive style: tabs, toggles, flips, copy. */
 
@@ -129,7 +161,7 @@ button {
 .compo-regen,
 .control--gamut {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: var(--s-font-small);
   background: transparent;
   border: 1px solid var(--line-strong);
   padding: 0.3em 0.85em;
@@ -205,7 +237,6 @@ button {
   top: 0;
   max-height: 100vh;
   overflow-y: auto;
-  scrollbar-width: thin;
   padding: 0 1.5rem 2.5rem var(--gutter);
   /* rtl on the scroll container puts its scrollbar on the left; the
      children restore ltr so the content is unaffected */
@@ -268,7 +299,7 @@ button {
   font-synthesis: none;
   font-size: clamp(3.25rem, 9vw, 7.5rem);
   line-height: 0.95;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.05em;
 }
 
 .intro {
@@ -287,7 +318,7 @@ button {
   margin: 2rem 0 0;
 }
 .links a {
-  font-size: 0.6875rem;
+  font-size: var(--s-font-small);
 }
 .links a::after {
   content: ' ↗';
@@ -329,7 +360,7 @@ button {
 
 .sec__note {
   margin: 0.9rem 0 0;
-  font-size: 0.6875rem;
+  font-size: var(--s-font-small);
   color: var(--muted);
 }
 
@@ -369,7 +400,7 @@ button {
 .hanger__label {
   writing-mode: vertical-rl;
   padding: 0.9em 0;
-  font-size: 0.625rem;
+  font-size: var(--s-font-small);
   white-space: nowrap;
   color: #fff;
   opacity: 0;
@@ -389,7 +420,7 @@ button {
   left: 50%;
   bottom: calc(var(--reach, 1) * 100% + 0.6em);
   translate: -50% 0;
-  font-size: 0.625rem;
+  font-size: var(--s-font-small);
   color: var(--accent);
 }
 
@@ -435,7 +466,9 @@ button {
 }
 
 .control__label {
-  font-size: 0.6875rem;
+  font-size: var(--s-font-small);
+  line-height: 1.05;
+  white-space: nowrap;
 }
 
 .control__value {
@@ -512,7 +545,7 @@ button {
 }
 .control--select select {
   font: inherit;
-  font-size: 0.6875rem;
+  font-size: var(--s-font-small);
   color: var(--fg);
   background: transparent;
   border: 0;
@@ -601,12 +634,12 @@ button {
 .slice-svg .axis,
 .slice-svg .label {
   fill: var(--muted);
-  font-size: 9px;
+  font-size: var(--s-font-small);
   font-family: var(--font-mono);
 }
 .slice-svg .title {
   fill: currentColor;
-  font-size: 11px;
+  font-size: var(--s-font-small);
   font-family: var(--font-mono);
 }
 .slice-svg .env-line {
@@ -718,7 +751,7 @@ button {
 }
 .wheel-cusp-label {
   fill: var(--muted);
-  font-size: 9px;
+  font-size: var(--s-font-small);
   font-family: var(--font-mono);
 }
 .wheel-traj {
@@ -782,7 +815,7 @@ button {
 }
 .cc-label {
   fill: var(--muted);
-  font-size: 9px;
+  font-size: var(--s-font-small);
   font-family: var(--font-mono);
 }
 .cc-match {
@@ -800,7 +833,7 @@ button {
   gap: 1.25rem;
 }
 .compo-hue {
-  font-size: 0.6875rem;
+  font-size: var(--s-font-small);
   color: var(--muted);
   cursor: pointer;
 }
