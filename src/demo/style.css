@@ -870,18 +870,18 @@ button {
 
 .colophon {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 2rem 4rem;
+  gap: 1rem;
   border-top: 1px solid var(--line);
   padding: 2.5rem var(--gutter) 4rem;
 }
 
-/* elastiq — colors ride the palette theme like everything else */
+/* elastiq — leads the cite; colors ride the palette theme */
 .ellogo {
   display: block;
   flex: none;
+  order: -1;
   width: clamp(6rem, 9vw, 8.5rem);
 }
 .ellogo svg {
