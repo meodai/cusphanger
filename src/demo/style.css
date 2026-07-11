@@ -197,26 +197,26 @@ button {
 /* ---------------------------------------------------------------- layout —
    a sticky control sidebar beside the scrolling sheet */
 
-.layout,
-.colophon {
-  width: min(90rem, 100% - clamp(2rem, 6vw, 4rem));
-  margin-inline: auto;
+:root {
+  --gutter: clamp(1rem, 3vw, 2rem);
 }
 
 .layout {
   display: grid;
-  grid-template-columns: clamp(280px, 24vw, 340px) minmax(0, 1fr);
+  /* the page gutter lives INSIDE the sidebar (its scrollbar sits on the
+     viewport edge) and inside the sheet's right side */
+  grid-template-columns: calc(clamp(280px, 24vw, 340px) + var(--gutter)) minmax(0, 1fr);
   gap: clamp(1.75rem, 4vw, 4.5rem);
   align-items: start;
 }
 
 .side {
   position: sticky;
-  top: 2.9rem; /* just under the topbar */
-  max-height: calc(100vh - 2.9rem);
+  top: 0;
+  max-height: 100vh;
   overflow-y: auto;
   scrollbar-width: thin;
-  padding: 1.5rem 1.5rem 2.5rem 0.75rem;
+  padding: 1.5rem 1.5rem 2.5rem var(--gutter);
   border-right: 1px solid var(--line);
   /* rtl on the scroll container puts its scrollbar on the left; the
      children restore ltr so the content is unaffected */
@@ -226,8 +226,22 @@ button {
   direction: ltr;
 }
 
+.sheet {
+  padding-right: var(--gutter);
+  max-width: 76rem;
+}
+
+/* the type tabs stay pinned while the sidebar scrolls; they grow up into
+   the sidebar's top padding so nothing shows through above them */
 .side .tabs {
-  margin-bottom: 1.25rem;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin-top: -1.5rem;
+  padding-block: 1.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--bg);
+  transition: background-color var(--dur-theme) linear;
 }
 .side .tabs__tab {
   flex: 1;
@@ -854,7 +868,7 @@ button {
 
 .colophon {
   border-top: 1px solid var(--line);
-  padding: 2.5rem 0 4rem;
+  padding: 2.5rem var(--gutter) 4rem;
 }
 .cite {
   margin: 0;
@@ -879,7 +893,16 @@ button {
     overflow: visible;
     border-right: 0;
     border-bottom: 1px solid var(--line);
-    padding: 1.5rem 0 2rem;
+    padding: 1.5rem var(--gutter) 2rem;
+  }
+  .side .tabs {
+    position: static;
+    margin-top: 0;
+    padding-block: 0;
+    margin-bottom: 1.25rem;
+  }
+  .sheet {
+    padding-inline: var(--gutter);
   }
   .viz-row {
     grid-template-columns: 1fr;
