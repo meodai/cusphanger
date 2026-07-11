@@ -170,7 +170,6 @@ button {
   font-weight: 400;
   font-synthesis: none;
   font-size: 1.15rem;
-  text-transform: lowercase;
   text-decoration: none;
   white-space: nowrap;
 }
@@ -238,15 +237,16 @@ button {
   font-size: clamp(3.25rem, 9vw, 7.5rem);
   line-height: 0.95;
   letter-spacing: -0.015em;
-  text-transform: lowercase;
 }
 
 .intro {
   margin: 0;
-  max-width: 44em;
-  font-weight: 300;
-  font-size: clamp(0.9rem, 1.5vw, 1.1rem);
-  line-height: 1.7;
+  max-width: 36em;
+  font-family: var(--font-title);
+  font-weight: 400;
+  font-synthesis: none;
+  font-size: clamp(1.2rem, 2.2vw, 1.6rem);
+  line-height: 1.45;
 }
 
 .links {
@@ -860,9 +860,12 @@ button {
 }
 .cite {
   margin: 0;
-  max-width: 58em;
-  font-size: 0.6875rem;
-  line-height: 1.8;
+  max-width: 48em;
+  font-family: var(--font-title);
+  font-weight: 400;
+  font-synthesis: none;
+  font-size: 1rem;
+  line-height: 1.6;
   color: var(--muted);
 }
 
