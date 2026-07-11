@@ -631,16 +631,15 @@ button {
   stroke-width: 1.5;
 }
 .slice-svg .tick,
-.slice-svg .axis,
 .slice-svg .label {
   fill: var(--muted);
   font-size: var(--s-font-small);
   font-family: var(--font-mono);
 }
-.slice-svg .title {
-  fill: currentColor;
-  font-size: var(--s-font-small);
-  font-family: var(--font-mono);
+/* no headings or axis words in the pane — the plot speaks for itself */
+.slice-svg .title,
+.slice-svg .axis {
+  display: none;
 }
 .slice-svg .env-line {
   fill: none;
@@ -893,7 +892,9 @@ button {
   padding: 1.25rem;
   border: 1px solid var(--line);
   background: color-mix(in oklch, black 22%, transparent);
-  font-size: 0.75rem;
+  font-size: var(--s-font-small);
+  font-family: var(--font-mono);
+  white-space: pre;
   line-height: 1.7;
   max-height: 380px;
   overflow: auto;
