@@ -826,7 +826,6 @@ button {
 }
 .export__bar {
   display: flex;
-  gap: 0.375rem;
   margin-bottom: 1rem;
 }
 .export__copy {
