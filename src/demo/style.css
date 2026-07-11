@@ -216,8 +216,14 @@ button {
   max-height: calc(100vh - 2.9rem);
   overflow-y: auto;
   scrollbar-width: thin;
-  padding: 1.5rem 1.5rem 2.5rem 0;
+  padding: 1.5rem 1.5rem 2.5rem 0.75rem;
   border-right: 1px solid var(--line);
+  /* rtl on the scroll container puts its scrollbar on the left; the
+     children restore ltr so the content is unaffected */
+  direction: rtl;
+}
+.side > * {
+  direction: ltr;
 }
 
 .side .tabs {
