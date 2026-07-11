@@ -880,9 +880,14 @@ button {
 .export {
   position: relative;
 }
+/* the format tabs sit directly on the panel, sharing its top hairline */
 .export__bar {
   display: flex;
-  margin-bottom: 1rem;
+  margin-bottom: -1px;
+}
+.export__bar .tabs__tab {
+  position: relative;
+  z-index: 1;
 }
 .export__copy {
   position: absolute;
