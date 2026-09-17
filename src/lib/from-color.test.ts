@@ -114,4 +114,14 @@ describe('fromColor (inverse solve)', () => {
       expect(col.c).toBeLessThanOrEqual(maxChromaAt(col.h, col.l, lut) + 1e-9);
     }
   });
+
+  it('a held lEasing still lands the target on the indexed sample', () => {
+    const lEasing = (t: number) => t * t;
+    for (const l of [0.3, 0.55, 0.8]) {
+      const target = oklch(l, 0.5 * reachAt(l, 152, lut), 152);
+      const res = fromColor(target, { total: 9, lEasing, lut });
+      expect(res.options.lEasing).toBe(lEasing);
+      expectMeets(sequential(res.options)[res.index]!, target);
+    }
+  });
 });

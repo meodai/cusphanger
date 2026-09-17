@@ -7,6 +7,7 @@ export type BezierHandles = [number, number, number, number];
 export interface LEasingParams {
   handles: BezierHandles;
   palette: OklchColor[];
+  mirror?: boolean;
 }
 
 const f = (n: number) => n.toFixed(2);
@@ -47,19 +48,18 @@ export function initLEasingEditor(
     out += `<line x1="${xOf(1)}" y1="${yOf(1)}" x2="${f(xOf(x2))}" y2="${f(yOf(y2))}" class="cc-median"/>`;
     out += `<path d="M ${xOf(0)} ${yOf(0)} C ${f(xOf(x1))} ${f(yOf(y1))} ${f(xOf(x2))} ${f(yOf(y2))} ${xOf(1)} ${yOf(1)}" class="cc-curve"/>`;
 
-    // where each sample lands: input t on the bottom edge, eased t on the left
+    // where each sample lands: input t along the bottom, eased t on the side.
+    // mirrored (diverging): the easing runs per arm, dark end → neutral, so
+    // the right arm folds back onto the same curve and gets the right-hand axis
     for (const [i, col] of params.palette.entries()) {
-      const t = N <= 1 ? 0 : i / (N - 1);
+      const u = N <= 1 ? 0 : i / (N - 1);
+      const t = params.mirror ? 1 - Math.abs(1 - 2 * u) : u;
+      const folded = params.mirror === true && u > 0.5;
       const v = ease(t);
       const fill = cssOf(col);
-      out += `<circle cx="${f(xOf(t))}" cy="${f(yOf(v))}" r="3.5" fill="${fill}" class="cc-dot"/>`;
-      out += `<circle cx="${f(PAD - 7)}" cy="${f(yOf(v))}" r="3" fill="${fill}" class="cc-dot"/>`;
+      if (!folded) out += `<circle cx="${f(xOf(t))}" cy="${f(yOf(v))}" r="3.5" fill="${fill}" class="cc-dot"/>`;
+      out += `<circle cx="${f(folded ? W - PAD + 7 : PAD - 7)}" cy="${f(yOf(v))}" r="3" fill="${fill}" class="cc-dot"/>`;
     }
-
-    out += `<text x="${xOf(1)}" y="${H - 3}" class="cc-label" text-anchor="end">t</text>`;
-    out += `<text x="${PAD - 4}" y="${PAD - 5}" class="cc-label" text-anchor="end">L spread</text>`;
-    out += `<text x="${f(xOf(x1) + 9)}" y="${f(yOf(y1) - 8)}" class="cc-label">${f(x1)}, ${f(y1)}</text>`;
-    out += `<text x="${f(xOf(x2) - 9)}" y="${f(yOf(y2) + 14)}" class="cc-label" text-anchor="end">${f(x2)}, ${f(y2)}</text>`;
 
     out += handle(xOf(x1), yOf(y1), 'a');
     out += handle(xOf(x2), yOf(y2), 'b');

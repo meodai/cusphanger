@@ -274,6 +274,51 @@ button {
   display: none;
 }
 
+.curve-view {
+  display: flex;
+  margin-top: 0.5rem;
+}
+.curve-view__btn,
+.curve-view__reset {
+  font-family: var(--font-mono);
+  font-size: var(--s-font-small);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  padding: 0.45em 0.9em;
+  cursor: pointer;
+  transition:
+    background-color var(--dur) linear,
+    color var(--dur) linear,
+    border-color var(--dur) linear;
+}
+.curve-view__btn + .curve-view__btn {
+  margin-left: -1px;
+}
+.curve-view__btn:hover:not(:disabled),
+.curve-view__reset:hover {
+  position: relative;
+  border-color: var(--fg);
+}
+.curve-view__btn[aria-pressed='true'] {
+  background: var(--fg);
+  border-color: var(--fg);
+  color: var(--bg);
+}
+.curve-view__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.curve-view__btn[data-modified]::after {
+  content: ' •';
+}
+.curve-view__reset {
+  margin-left: auto;
+  border-color: transparent;
+}
+.curve-view__reset[hidden] {
+  display: none;
+}
+
 .hero {
   padding: clamp(2rem, 6vh, 4.5rem) var(--gutter) clamp(2.5rem, 6vh, 5rem);
 }

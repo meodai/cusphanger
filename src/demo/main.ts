@@ -16,6 +16,10 @@ type TabId = 'sequential' | 'diverging' | 'ramp';
 
 let lHandles: BezierHandles = [0, 0, 1, 1];
 const lEasingIsLinear = () => lHandles.every((v, i) => v === [0, 0, 1, 1][i]);
+const lEasingOpt = () => (lEasingIsLinear() ? {} : { lEasing: cubicBezier(...lHandles) });
+const usageImport = (fn: string) => `${fn}${lEasingIsLinear() ? '' : ',\n  cubicBezier'}`;
+const usageLEasing = () =>
+  lEasingIsLinear() ? '' : `\n  lEasing: cubicBezier(${lHandles.join(', ')}),`;
 
 interface Tab {
   id: TabId;
@@ -43,10 +47,10 @@ const TABS: Tab[] = [
     build: (v, _c, lut) =>
       sequential({
         hStart: v.hStart!, total: v.total!, saturation: v.s!,
-        brightness: v.b!, contrast: v.c!, coolWarm: v.w!, lut,
+        brightness: v.b!, contrast: v.c!, coolWarm: v.w!, ...lEasingOpt(), lut,
       }),
     usage: (v, _c, lutName) => `import {
-  sequential
+  ${usageImport('sequential')}
 } from 'cusphanger';
 import {
   ${lutName}
@@ -58,7 +62,7 @@ const palette = sequential({
   saturation: ${v.s},
   brightness: ${v.b},
   contrast: ${v.c},
-  coolWarm: ${v.w},
+  coolWarm: ${v.w},${usageLEasing()}
   lut: ${lutName},
 });`,
   },
@@ -78,10 +82,10 @@ const palette = sequential({
     build: (v, _c, lut) =>
       diverging({
         hStart: v.hStart!, hEnd: v.hEnd!, total: v.total!,
-        saturation: v.s!, brightness: v.b!, contrast: v.c!, coolWarm: v.w!, lut,
+        saturation: v.s!, brightness: v.b!, contrast: v.c!, coolWarm: v.w!, ...lEasingOpt(), lut,
       }),
     usage: (v, _c, lutName) => `import {
-  diverging
+  ${usageImport('diverging')}
 } from 'cusphanger';
 import {
   ${lutName}
@@ -94,7 +98,7 @@ const palette = diverging({
   saturation: ${v.s},
   brightness: ${v.b},
   contrast: ${v.c},
-  coolWarm: ${v.w},
+  coolWarm: ${v.w},${usageLEasing()}
   lut: ${lutName},
 });`,
   },
@@ -121,11 +125,11 @@ const palette = diverging({
         sRange: [v.sMin!, v.sMax!], lRange: [v.minLight!, v.maxLight!], coolWarm: v.w!,
         hCycles: v.hCycles!, hStartCenter: v.hStartCenter!,
         triangleMode: c.triangleMode as TriangleMode,
-        lEasing: cubicBezier(...lHandles),
+        ...lEasingOpt(),
         lut,
       }),
     usage: (v, c, lutName) => `import {
-  ramp${lEasingIsLinear() ? '' : ', cubicBezier'}
+  ${usageImport('ramp')}
 } from 'cusphanger';
 import {
   ${lutName}
@@ -139,8 +143,7 @@ const palette = ramp({
   sRange: [${v.sMin}, ${v.sMax}],
   lRange: [${v.minLight}, ${v.maxLight}],
   coolWarm: ${v.w},
-  triangleMode: '${c.triangleMode}',${lEasingIsLinear() ? '' : `
-  lEasing: cubicBezier(${lHandles.join(', ')}),`}
+  triangleMode: '${c.triangleMode}',${usageLEasing()}
   lut: ${lutName},
 });`,
   },
@@ -167,7 +170,23 @@ const renderCurveControl = initCurveControl($('.curve-pane'), (patch) =>
 );
 const renderLEasing = initLEasingEditor($('.l-easing-pane'), (h) => {
   lHandles = h;
-  renderAll();
+  if (match === null || !solveFrom()) renderAll();
+});
+// the side figure shows one of two editors: the curve through the gamut
+// triangle ('path', seq / div only) or the lightness easing ('spread')
+type FigureView = 'path' | 'spread';
+let figureView: FigureView = 'path';
+const viewButtons = [...document.querySelectorAll<HTMLButtonElement>('.curve-view__btn')];
+const viewReset = $('.curve-view__reset') as HTMLButtonElement;
+for (const b of viewButtons) {
+  b.addEventListener('click', () => {
+    figureView = b.dataset.view as FigureView;
+    renderAll();
+  });
+}
+viewReset.addEventListener('click', () => {
+  lHandles = [0, 0, 1, 1];
+  if (match === null || !solveFrom()) renderAll();
 });
 const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
 let lastValues: Record<string, number> = {};
@@ -193,9 +212,19 @@ function renderAll(): void {
     .map((c, i) => `<span style="--swatch: var(--pal-${i}, ${toCss(c)})"></span>`)
     .join('');
   renderSlice(sliceMiniHost, palette, lut, activeTab.forceMirror ?? false);
-  renderLEasing(activeTab.id === 'ramp' ? { handles: lHandles, palette } : null);
+  const hasPath = activeTab.id !== 'ramp';
+  const view: FigureView = hasPath ? figureView : 'spread';
+  for (const b of viewButtons) {
+    b.setAttribute('aria-pressed', String(b.dataset.view === view));
+    if (b.dataset.view === 'path') b.disabled = !hasPath;
+    else b.toggleAttribute('data-modified', !lEasingIsLinear());
+  }
+  viewReset.hidden = view !== 'spread' || lEasingIsLinear();
+  renderLEasing(
+    view === 'spread' ? { handles: lHandles, palette, mirror: activeTab.id === 'diverging' } : null,
+  );
   renderCurveControl(
-    activeTab.id === 'ramp'
+    view === 'spread'
       ? null
       : {
           hues:
@@ -258,7 +287,7 @@ const solveFrom = (): boolean => {
   if (activeTab.id !== 'sequential') selectTab(TABS[0]!);
   const res = fromColor(
     { mode: 'oklch', l: parsed.l, c: parsed.c ?? 0, h: parsed.h ?? 0 },
-    { total: lastValues.total ?? 9, lut },
+    { total: lastValues.total ?? 9, ...lEasingOpt(), lut },
   );
   if (res.clamped) fromWrap.setAttribute('data-clamped', '');
   const { b, c } = bcFromLRange(res.options.lRange!);

@@ -24,7 +24,8 @@ physical lightnesses the paper calibrated against the Brewer palettes.
 
 Diverging palettes sample the *joined* two-arm curve uniformly: odd N lands on the combined
 neutral exactly once; even N straddles it at half-step spacing, so the step across the join reads
-like every other step. The neutral is symmetric in the two arms (swapping `hStart`/`hEnd` mirrors
+like every other step (under the default spacing — a non-linear `lEasing` eases each arm from its
+dark end to the neutral, and trades that uniform join step for its own). The neutral is symmetric in the two arms (swapping `hStart`/`hEnd` mirrors
 the palette, including with `coolWarm`).
 
 The knobs are the paper's:
@@ -79,10 +80,12 @@ ramp({ hStart: 0, total: 9, hueList: [10, 120, 240], lut: oklchSrgb });
 fromColor({ mode: 'oklch', l: 0.58, c: 0.09, h: 155 }, { total: 9, lut: oklchSrgb });
 ```
 
-`sequential()` and `diverging()` are the paper's surface, nothing else. `ramp()` is the
-RampenSau-shaped entry point: `RampOptions` extends `SequentialOptions` with the hue trajectory
-(`hCycles`, `hStartCenter`, `hEasing`, `hueList`), ramped tension (`sRange`/`sEasing`), lightness
-redistribution (`lEasing`) and `triangleMode`; with none of them set it equals `sequential()` exactly. Option names follow
+`sequential()` and `diverging()` are the paper's surface plus a few opt-ins: `lEasing` on both
+(see [Lightness spread](#lightness-spread--leasing)) and `sRange`/`sEasing` per diverging arm.
+Leave them unset and you get the paper's model, exactly. `ramp()` is the RampenSau-shaped entry
+point: `RampOptions` extends `SequentialOptions` with the hue trajectory (`hCycles`,
+`hStartCenter`, `hEasing`, `hueList`), ramped tension (`sRange`/`sEasing`) and `triangleMode`;
+with none of them set it equals `sequential()` exactly. Option names follow
 RampenSau's conventions where they correspond (`total`, `hStart`/`hEnd`); the paper-specific knobs
 keep their own names. Defaults follow the paper: `saturation = 0.6`, `brightness = 0.75`,
 `contrast = min(0.88, 0.34 + 0.06·total)`, `coolWarm = 0`.
@@ -138,6 +141,10 @@ triangle edges, so that chroma only grows), and the lightness endpoints shift mi
   default-spacing lightness is closest, so the endpoints move least); pass a number to pin it.
 - **`lRange`** — hold the lightness endpoints, and only hue + tension are solved. The continuous
   curve still passes through the target; `index` then reports the nearest sample.
+- **`lEasing`** — hold a lightness easing. `index` and the endpoint solve are judged against the
+  eased spacing and the easing is handed back in `options`, so the target still lands on a sample.
+  Adding an `lEasing` to already-solved options instead moves the samples off the target (it stays
+  on the continuous curve) — pass it to `fromColor`, not after it.
 - **`clamped`** — reachability is the triangle (∩ the shell), not the full gamut. An unreachable
   target never throws: it is met at the same-lightness boundary point instead, returned as
   `color`, with `clamped: true`.
@@ -149,26 +156,55 @@ the library. A hex or CSS string is one [culori](https://culorijs.org) call away
 `converter('oklch')('#4a8a62')`. The demo's *from color* field is this solve, live: it snaps the
 sliders to the returned options and rings the sample that carries the color.
 
+## Lightness spread — lEasing
+
+`lEasing` (on `sequential()`, `diverging()` and `ramp()`) is deliberately *not* a free lightness
+curve. It eases `t` before the paper's `0.2^x` spacing, so the lightness curve and its endpoints
+(`lRange` / `brightness` / `contrast`) stay exactly as the model built them — only where the
+samples fall along that curve moves. A linear easing is the paper's spacing, exactly.
+
+```ts
+import { sequential, cubicBezier } from 'cusphanger';
+import { oklchSrgb } from 'nutelch';
+
+sequential({ hStart: 260, total: 9, lEasing: cubicBezier(0.4, 0, 0.8, 0.6), lut: oklchSrgb });
+```
+
+`cubicBezier(x1, y1, x2, y2)` is a CSS-style easing with the y handles clamped to `[0, 1]`, i.e.
+monotone by construction; it is what the demo's *spread* editor drives. Any `(t) => number` works,
+including RampenSau's easing helpers. What to know:
+
+- **It spends the paper's calibration.** The `0.2^x` spacing is the part fitted against Brewer so
+  neighboring classes stay distinguishable. Bunching steps is fine for a UI scale, less so for a
+  choropleth — leave `lEasing` unset for data classes.
+- **Ordered and in gamut, whatever you pass.** The output is clamped to `[0, 1]` and kept
+  non-decreasing, so a bad easing can never reorder the ramp or leave the gamut. It *can* bunch
+  steps, and a flat stretch repeats a color.
+- **Same path only while the hue holds still.** Hue and tension follow the un-eased `t`. In
+  `sequential()` and on each `diverging()` arm every eased color is a point on the paper's own
+  curve. Under a moving hue (`ramp()`'s `hCycles` / `hueList`) the axes ease independently, as in
+  RampenSau: the hue sequence is unchanged, but a given lightness now pairs with a different hue.
+- **Diverging eases per arm**, `t = 0` at each dark end and `1` at the neutral, mirrored. Even-`N`
+  palettes lose the uniform step across the join — it becomes whatever the easing leaves between
+  the two innermost samples.
+- **`fromColor`** takes the easing as a held knob (see above) so the target keeps its sample.
+
+Use `lRange` (or `brightness`/`contrast`) to shape the range itself.
+
 ## RampenSau interop, and what's left out on purpose
 
 The API is deliberately kept as close to [RampenSau](https://github.com/meodai/rampensau) as the
 paper allows: if you know one, you know the other. `ramp()` is the counterpart to RampenSau's
 `generateColorRamp` — everywhere the concepts correspond the options share RampenSau's names and
 semantics (`total`, `hStart`, `hCycles`, `hStartCenter`, `hEasing`, `sRange`/`sEasing`, `lRange`,
-`hueList`), and RampenSau's easing/curve helpers plug straight into `hEasing`/`sEasing`. Only the
+`lEasing`, `hueList`), and RampenSau's easing/curve helpers plug straight into `hEasing`/`sEasing`. Only the
 paper-specific knobs (`saturation`, `brightness`, `contrast`, `coolWarm`) have no RampenSau
 counterpart. One of them changes meaning inside `ramp()`: under a shared `triangleMode` there is no
 per-hue triangle to shift, so `coolWarm` instead nudges the light colors' hues toward the bright
-point — same visual intent, different mechanism. A few RampenSau options are omitted deliberately:
+point — same visual intent, different mechanism. `lEasing` differs too: RampenSau's eases lightness
+itself, this one eases the position along the paper's lightness curve (see above). A few RampenSau
+options are omitted deliberately:
 
-- **`lEasing`** (on `ramp()`/`diverging()` only) is deliberately *not* a free lightness curve: it
-  eases `t` before the paper's `0.2^x` spacing, so the lightness curve, its endpoints and the gamut
-  path stay exactly as the model built them — only where the samples fall along that curve moves.
-  The output is clamped to `[0, 1]` and kept non-decreasing, so a bad easing can bunch steps but never
-  reorder the ramp or leave the gamut. `cubicBezier(x1, y1, x2, y2)` is exported for it — a CSS-style
-  easing with the y handles clamped to `[0, 1]`, i.e. monotone by construction, which is what the
-  demo's curve editor drives. Leave `lEasing` unset for the paper's Brewer-calibrated spacing; use
-  `lRange` (or `brightness`/`contrast`) to shape the range itself.
 - **`transformFn`** — colors are plain objects; `.map()` the result.
 - **Random defaults** — `total` and `hStart` are required. The point of the model is an exact,
   reproducible specification, so nothing is randomized for you.

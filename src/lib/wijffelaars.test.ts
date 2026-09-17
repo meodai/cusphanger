@@ -202,7 +202,7 @@ describe('diverging option passthrough', () => {
   });
 });
 
-describe('lEasing (ramp / diverging)', () => {
+describe('lEasing (sequential / ramp / diverging)', () => {
   const base = { hStart: 260, total: 9, lRange: [0.2, 0.95] as [number, number], lut };
 
   it('linear easing is the paper spacing exactly', () => {
@@ -230,6 +230,19 @@ describe('lEasing (ramp / diverging)', () => {
     const p = ramp({ ...base, lEasing: (t) => 1.5 * Math.sin(t * Math.PI) });
     for (let i = 1; i < p.length; i++) expect(p[i]!.l).toBeGreaterThanOrEqual(p[i - 1]!.l);
     expect(Math.max(...p.map((c) => c.l))).toBeLessThanOrEqual(0.95 + 1e-9);
+  });
+
+  it('sequential(): same single-hue path, only the samples move', () => {
+    const o = { hStart: 260, total: 9, lut };
+    const a = sequential(o);
+    const b = sequential({ ...o, lEasing: (t) => t * t });
+    expect(b[0]!.l).toBeCloseTo(a[0]!.l, 12);
+    expect(b[8]!.l).toBeCloseTo(a[8]!.l, 12);
+    for (let i = 1; i < 8; i++) expect(b[i]!.l).toBeLessThan(a[i]!.l);
+    // t² at i = 4 of 9 is t = 0.25 — exactly the un-eased sample i = 2
+    expect(b[4]!.l).toBeCloseTo(a[2]!.l, 9);
+    expect(b[4]!.c).toBeCloseTo(a[2]!.c, 9);
+    expect(b.every(withinShell)).toBe(true);
   });
 
   it('applies symmetrically to both diverging arms', () => {
