@@ -29,6 +29,9 @@ const handle = (x: number, y: number, kind: 'a' | 'b'): string =>
      <circle class="cc-handle" cx="${f(x)}" cy="${f(y)}" r="5"/>
    </g>`;
 
+const diamond = (x: number, y: number, r: number, fill: string): string =>
+  `<polygon points="${f(x)},${f(y - r)} ${f(x + r)},${f(y)} ${f(x)},${f(y + r)} ${f(x - r)},${f(y)}" fill="${fill}" class="cc-dot"/>`;
+
 export function initLEasingEditor(
   host: HTMLElement,
   onInput: (handles: BezierHandles) => void,
@@ -57,8 +60,8 @@ export function initLEasingEditor(
       const folded = params.mirror === true && u > 0.5;
       const v = ease(t);
       const fill = cssOf(col);
-      if (!folded) out += `<circle cx="${f(xOf(t))}" cy="${f(yOf(v))}" r="3.5" fill="${fill}" class="cc-dot"/>`;
-      out += `<circle cx="${f(folded ? W - PAD + 7 : PAD - 7)}" cy="${f(yOf(v))}" r="3" fill="${fill}" class="cc-dot"/>`;
+      if (!folded) out += diamond(xOf(t), yOf(v), 4, fill);
+      out += diamond(folded ? W - PAD + 7 : PAD - 7, yOf(v), 3.5, fill);
     }
 
     out += handle(xOf(x1), yOf(y1), 'a');
