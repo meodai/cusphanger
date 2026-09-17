@@ -201,3 +201,40 @@ describe('diverging option passthrough', () => {
     expect(eased[1]!.c).not.toBeCloseTo(linear[1]!.c, 6);
   });
 });
+
+describe('lEasing (ramp / diverging)', () => {
+  const base = { hStart: 260, total: 9, lRange: [0.2, 0.95] as [number, number], lut };
+
+  it('linear easing is the paper spacing exactly', () => {
+    const a = ramp(base);
+    const b = ramp({ ...base, lEasing: (t) => t });
+    a.forEach((c, i) => expect(c.l).toBeCloseTo(b[i]!.l, 12));
+  });
+
+  it('keeps the lightness endpoints (only the spread between them moves)', () => {
+    const a = ramp(base);
+    const b = ramp({ ...base, lEasing: (t) => t * t });
+    expect(b[0]!.l).toBeCloseTo(a[0]!.l, 12);
+    expect(b[8]!.l).toBeCloseTo(a[8]!.l, 12);
+    // ease-in bunches samples at the dark end
+    for (let i = 1; i < 8; i++) expect(b[i]!.l).toBeLessThan(a[i]!.l);
+  });
+
+  it('stays ordered and in gamut under a monotone easing', () => {
+    const p = ramp({ ...base, saturation: 0.9, lEasing: (t) => 1 - Math.pow(1 - t, 3) });
+    for (let i = 1; i < p.length; i++) expect(p[i]!.l).toBeGreaterThan(p[i - 1]!.l);
+    expect(p.every(withinShell)).toBe(true);
+  });
+
+  it('a non-monotone / out-of-range easing cannot reverse the ramp', () => {
+    const p = ramp({ ...base, lEasing: (t) => 1.5 * Math.sin(t * Math.PI) });
+    for (let i = 1; i < p.length; i++) expect(p[i]!.l).toBeGreaterThanOrEqual(p[i - 1]!.l);
+    expect(Math.max(...p.map((c) => c.l))).toBeLessThanOrEqual(0.95 + 1e-9);
+  });
+
+  it('applies symmetrically to both diverging arms', () => {
+    const p = diverging({ hStart: 250, hEnd: 30, total: 9, lEasing: (t) => t * t, lut });
+    for (let i = 0; i < 4; i++) expect(p[i]!.l).toBeCloseTo(p[8 - i]!.l, 6);
+    for (let i = 1; i <= 4; i++) expect(p[i]!.l).toBeGreaterThan(p[i - 1]!.l);
+  });
+});

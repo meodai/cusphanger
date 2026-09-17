@@ -81,8 +81,8 @@ fromColor({ mode: 'oklch', l: 0.58, c: 0.09, h: 155 }, { total: 9, lut: oklchSrg
 
 `sequential()` and `diverging()` are the paper's surface, nothing else. `ramp()` is the
 RampenSau-shaped entry point: `RampOptions` extends `SequentialOptions` with the hue trajectory
-(`hCycles`, `hStartCenter`, `hEasing`, `hueList`), ramped tension (`sRange`/`sEasing`) and
-`triangleMode`; with none of them set it equals `sequential()` exactly. Option names follow
+(`hCycles`, `hStartCenter`, `hEasing`, `hueList`), ramped tension (`sRange`/`sEasing`), lightness
+redistribution (`lEasing`) and `triangleMode`; with none of them set it equals `sequential()` exactly. Option names follow
 RampenSau's conventions where they correspond (`total`, `hStart`/`hEnd`); the paper-specific knobs
 keep their own names. Defaults follow the paper: `saturation = 0.6`, `brightness = 0.75`,
 `contrast = min(0.88, 0.34 + 0.06·total)`, `coolWarm = 0`.
@@ -161,9 +161,14 @@ counterpart. One of them changes meaning inside `ramp()`: under a shared `triang
 per-hue triangle to shift, so `coolWarm` instead nudges the light colors' hues toward the bright
 point — same visual intent, different mechanism. A few RampenSau options are omitted deliberately:
 
-- **`lEasing`** — the paper's contribution *is* the fixed perceptual lightness sampling (the
-  `0.2^x` spacing, calibrated against Brewer). A free-form lightness easing would quietly undo the
-  model; use `lRange` (or `brightness`/`contrast`) to shape the range instead.
+- **`lEasing`** (on `ramp()`/`diverging()` only) is deliberately *not* a free lightness curve: it
+  eases `t` before the paper's `0.2^x` spacing, so the lightness curve, its endpoints and the gamut
+  path stay exactly as the model built them — only where the samples fall along that curve moves.
+  The output is clamped to `[0, 1]` and kept non-decreasing, so a bad easing can bunch steps but never
+  reorder the ramp or leave the gamut. `cubicBezier(x1, y1, x2, y2)` is exported for it — a CSS-style
+  easing with the y handles clamped to `[0, 1]`, i.e. monotone by construction, which is what the
+  demo's curve editor drives. Leave `lEasing` unset for the paper's Brewer-calibrated spacing; use
+  `lRange` (or `brightness`/`contrast`) to shape the range itself.
 - **`transformFn`** — colors are plain objects; `.map()` the result.
 - **Random defaults** — `total` and `hStart` are required. The point of the model is an exact,
   reproducible specification, so nothing is randomized for you.

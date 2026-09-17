@@ -204,6 +204,7 @@ function sample(o: RampOptions, ts: number[]): OklchColor[] {
     hEasing = (t) => t,
     hueList,
     sEasing = (t) => t,
+    lEasing = (t) => t,
     triangleMode = 'perHue',
     lut,
   } = o;
@@ -267,16 +268,21 @@ function sample(o: RampOptions, ts: number[]): OklchColor[] {
       ? buildTriangle(hStart, sBase, w, lut)
       : null;
 
+  // lEasing moves samples along the fixed lightness curve; clamped to [0, 1]
+  // and kept non-decreasing so ordering survives a bad easing.
+  let tLPrev = 0;
   const out: OklchColor[] = [];
   for (const [i, t] of ts.entries()) {
     const sI = sAt(t);
+    const tL = Math.max(tLPrev, Math.min(1, Math.max(0, lEasing(t))));
+    tLPrev = tL;
     const tri =
       sharedTri ??
       baseTri ??
       (isShared
         ? buildTriangleFromCusp(sharedCusp!.l, sharedCusp!.c, sI)
         : buildTriangle(hueAt(t, i), sI, w, lut));
-    const targetL = Math.min(tri.p2.l, Math.max(tri.p0.l, lightnessAt(t, b, c)));
+    const targetL = Math.min(tri.p2.l, Math.max(tri.p0.l, lightnessAt(tL, b, c)));
     const col = cSeq(tForLightness(targetL, tri), tri);
 
     let h: number;
@@ -315,6 +321,7 @@ export function diverging(o: DivergingOptions): OklchColor[] {
     saturation: o.saturation,
     sRange: o.sRange,
     sEasing: o.sEasing,
+    lEasing: o.lEasing,
     brightness: o.brightness,
     contrast: o.contrast,
     lRange: o.lRange,

@@ -1,9 +1,10 @@
-import { sequential, ramp, diverging, fromColor, type OklchColor, type TriangleMode } from '../lib/index';
+import { sequential, ramp, diverging, fromColor, cubicBezier, type OklchColor, type TriangleMode } from '../lib/index';
 import { bcFromLRange } from '../lib/wijffelaars';
 import { oklchSrgb, oklchP3, toCss, type Lut } from 'nutelch';
 import { converter, type Oklch } from 'culori';
 import { buildControls, type FieldSpec, type ChoiceSpec, type ControlsApi } from './controls';
 import { initCurveControl } from './curve-control';
+import { initLEasingEditor, type BezierHandles } from './l-easing-editor';
 import { applyTheme } from './theme';
 import { renderHanger } from './hanger';
 import { renderSlice } from './slice';
@@ -12,6 +13,9 @@ import { initExport } from './export';
 import { initCompositions } from './compositions';
 
 type TabId = 'sequential' | 'diverging' | 'ramp';
+
+let lHandles: BezierHandles = [0, 0, 1, 1];
+const lEasingIsLinear = () => lHandles.every((v, i) => v === [0, 0, 1, 1][i]);
 
 interface Tab {
   id: TabId;
@@ -117,10 +121,11 @@ const palette = diverging({
         sRange: [v.sMin!, v.sMax!], lRange: [v.minLight!, v.maxLight!], coolWarm: v.w!,
         hCycles: v.hCycles!, hStartCenter: v.hStartCenter!,
         triangleMode: c.triangleMode as TriangleMode,
+        lEasing: cubicBezier(...lHandles),
         lut,
       }),
     usage: (v, c, lutName) => `import {
-  ramp
+  ramp${lEasingIsLinear() ? '' : ', cubicBezier'}
 } from 'cusphanger';
 import {
   ${lutName}
@@ -134,7 +139,8 @@ const palette = ramp({
   sRange: [${v.sMin}, ${v.sMax}],
   lRange: [${v.minLight}, ${v.maxLight}],
   coolWarm: ${v.w},
-  triangleMode: '${c.triangleMode}',
+  triangleMode: '${c.triangleMode}',${lEasingIsLinear() ? '' : `
+  lEasing: cubicBezier(${lHandles.join(', ')}),`}
   lut: ${lutName},
 });`,
   },
@@ -156,10 +162,13 @@ const updateExport = initExport($('.export'), $('.export-tools'));
 let activeTab: Tab = TABS[0]!;
 let lut: Lut = oklchSrgb;
 let controlsApi: ControlsApi = { set: () => {} };
-const curveFigure = $('.side__curve');
 const renderCurveControl = initCurveControl($('.curve-pane'), (patch) =>
   controlsApi.set(patch),
 );
+const renderLEasing = initLEasingEditor($('.l-easing-pane'), (h) => {
+  lHandles = h;
+  renderAll();
+});
 const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
 let lastValues: Record<string, number> = {};
 let lastChoices: Record<string, string> = {};
@@ -184,7 +193,7 @@ function renderAll(): void {
     .map((c, i) => `<span style="--swatch: var(--pal-${i}, ${toCss(c)})"></span>`)
     .join('');
   renderSlice(sliceMiniHost, palette, lut, activeTab.forceMirror ?? false);
-  curveFigure.hidden = activeTab.id === 'ramp';
+  renderLEasing(activeTab.id === 'ramp' ? { handles: lHandles, palette } : null);
   renderCurveControl(
     activeTab.id === 'ramp'
       ? null

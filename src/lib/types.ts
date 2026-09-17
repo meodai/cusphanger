@@ -57,6 +57,13 @@ export interface RampOptions extends SequentialOptions {
   hCycles?: number; // hue rotations across the ramp. default 0
   hStartCenter?: number; // where hStart sits in the ramp (0..1). default 0.5
   hEasing?: (t: number) => number; // hue easing. default linear
+  // Redistribute the samples along the paper's lightness curve: t is eased
+  // BEFORE the 0.2^x spacing, so the curve, its endpoints (lRange / b / c)
+  // and the gamut path are untouched — only where the samples fall on it
+  // moves. Must be monotone and stay within [0, 1]; the output is clamped
+  // and kept non-decreasing so the palette stays ordered no matter what is
+  // passed. default linear (the paper's spacing)
+  lEasing?: (t: number) => number;
   // RampenSau-style hueList: an explicit hue per color. Overrides total (the
   // palette gets hueList.length colors) and the whole hue trajectory (hStart /
   // hCycles / hStartCenter / hEasing). Pairs with RampenSau's uniqueRandomHues
@@ -100,5 +107,6 @@ export interface DivergingOptions extends SequentialOptions {
   hEnd: number; // right-arm hue (hStart is the left arm)
   sRange?: [number, number]; // alternative to saturation, per arm (see RampOptions)
   sEasing?: (t: number) => number; // easing for sRange, per arm. default linear
+  lEasing?: (t: number) => number; // lightness redistribution, per arm (see RampOptions). default linear
 }
 
