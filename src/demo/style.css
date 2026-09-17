@@ -459,6 +459,17 @@ button {
   color: var(--accent);
 }
 
+.hanger-gray {
+  display: flex;
+  height: 1.5rem;
+  margin-top: 4px;
+}
+.hanger-gray span {
+  flex: 1;
+  background: var(--swatch);
+  transition: background-color var(--dur-theme) linear;
+}
+
 .curve-pane {
   padding: 0.25rem 0;
 }

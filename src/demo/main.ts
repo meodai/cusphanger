@@ -6,7 +6,7 @@ import { buildControls, type FieldSpec, type ChoiceSpec, type ControlsApi } from
 import { initCurveControl } from './curve-control';
 import { initLEasingEditor, type BezierHandles } from './l-easing-editor';
 import { applyTheme } from './theme';
-import { renderHanger } from './hanger';
+import { renderHanger, renderHangerGray } from './hanger';
 import { renderSlice } from './slice';
 import { renderWheel, type WheelAxis } from './wheel';
 import { initExport } from './export';
@@ -152,6 +152,7 @@ const palette = ramp({
 const $ = (sel: string) => document.querySelector(sel) as HTMLElement;
 
 const hangerHost = $('.hanger');
+const hangerGrayHost = $('.hanger-gray');
 const stripHost = $('.topbar__strip');
 const sliceMiniHost = $('#slice-mini');
 const wheelHosts: Record<WheelAxis, HTMLElement> = {
@@ -208,6 +209,7 @@ function renderAll(): void {
   palette = activeTab.build(lastValues, lastChoices, lut);
   applyTheme(document.documentElement, palette);
   renderHanger(hangerHost, palette);
+  renderHangerGray(hangerGrayHost, palette);
   stripHost.innerHTML = palette
     .map((c, i) => `<span style="--swatch: var(--pal-${i}, ${toCss(c)})"></span>`)
     .join('');
