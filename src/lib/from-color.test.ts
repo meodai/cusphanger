@@ -124,4 +124,20 @@ describe('fromColor (inverse solve)', () => {
       expectMeets(sequential(res.options)[res.index]!, target);
     }
   });
+
+  it('held lRange + lEasing: endpoints kept, index is the nearest eased sample', () => {
+    const lEasing = (t: number) => t * t;
+    const lRange: [number, number] = [0.2, 0.95];
+    const target = oklch(0.5, 0.05, 152);
+    const res = fromColor(target, { total: 9, lRange, lEasing, lut });
+    expect(res.options.lRange).toEqual(lRange);
+    const ls = sequential(res.options).map((c) => c.l);
+    const nearest = ls.reduce((best, l, i) => (Math.abs(l - 0.5) < Math.abs(ls[best]! - 0.5) ? i : best), 0);
+    expect(res.index).toBe(nearest);
+  });
+
+  it('without lEasing the returned options carry none', () => {
+    const res = fromColor(oklch(0.6, 0.08, 40), { total: 7, lut });
+    expect('lEasing' in res.options).toBe(false);
+  });
 });

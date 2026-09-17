@@ -250,4 +250,35 @@ describe('lEasing (sequential / ramp / diverging)', () => {
     for (let i = 0; i < 4; i++) expect(p[i]!.l).toBeCloseTo(p[8 - i]!.l, 6);
     for (let i = 1; i <= 4; i++) expect(p[i]!.l).toBeGreaterThan(p[i - 1]!.l);
   });
+
+  it('diverging, even N: stays mirrored and ordered per arm', () => {
+    const p = diverging({ hStart: 250, hEnd: 30, total: 8, lEasing: (t) => t * t, lut });
+    expect(p).toHaveLength(8);
+    for (let i = 0; i < 4; i++) expect(p[i]!.l).toBeCloseTo(p[7 - i]!.l, 6);
+    for (let i = 1; i < 4; i++) expect(p[i]!.l).toBeGreaterThan(p[i - 1]!.l);
+    expect(p.every(withinShell)).toBe(true);
+  });
+
+  it('diverging: the unset default is untouched by the option existing', () => {
+    const o = { hStart: 250, hEnd: 30, total: 9, lut };
+    const a = diverging(o);
+    const b = diverging({ ...o, lEasing: (t) => t });
+    a.forEach((c, i) => {
+      expect(b[i]!.l).toBeCloseTo(c.l, 12);
+      expect(b[i]!.c).toBeCloseTo(c.c, 12);
+    });
+  });
+
+  it('a flat easing repeats a color instead of reordering', () => {
+    const p = sequential({ hStart: 260, total: 5, lEasing: () => 0.5, lut });
+    for (let i = 1; i < p.length; i++) expect(p[i]!.l).toBeCloseTo(p[0]!.l, 12);
+  });
+
+  it('ramp with a moving hue: the hue sequence ignores lEasing', () => {
+    const o = { ...base, hCycles: 0.5, triangleMode: 'min' as const };
+    const a = ramp(o);
+    const b = ramp({ ...o, lEasing: (t) => t * t });
+    a.forEach((c, i) => expect(b[i]!.h).toBeCloseTo(c.h, 9));
+    expect(b[4]!.l).toBeLessThan(a[4]!.l);
+  });
 });
