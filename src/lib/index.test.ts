@@ -8,6 +8,10 @@ describe('public api', () => {
     expect(typeof api.diverging).toBe('function');
   });
 
+  it('exports the easing helper', () => {
+    expect(typeof api.cubicBezier).toBe('function');
+  });
+
   it('exports the gamut helpers', () => {
     expect(typeof api.maxChromaAt).toBe('function');
     expect(typeof api.cusp).toBe('function');

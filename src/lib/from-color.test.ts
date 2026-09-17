@@ -114,4 +114,30 @@ describe('fromColor (inverse solve)', () => {
       expect(col.c).toBeLessThanOrEqual(maxChromaAt(col.h, col.l, lut) + 1e-9);
     }
   });
+
+  it('a held lEasing still lands the target on the indexed sample', () => {
+    const lEasing = (t: number) => t * t;
+    for (const l of [0.3, 0.55, 0.8]) {
+      const target = oklch(l, 0.5 * reachAt(l, 152, lut), 152);
+      const res = fromColor(target, { total: 9, lEasing, lut });
+      expect(res.options.lEasing).toBe(lEasing);
+      expectMeets(sequential(res.options)[res.index]!, target);
+    }
+  });
+
+  it('held lRange + lEasing: endpoints kept, index is the nearest eased sample', () => {
+    const lEasing = (t: number) => t * t;
+    const lRange: [number, number] = [0.2, 0.95];
+    const target = oklch(0.5, 0.05, 152);
+    const res = fromColor(target, { total: 9, lRange, lEasing, lut });
+    expect(res.options.lRange).toEqual(lRange);
+    const ls = sequential(res.options).map((c) => c.l);
+    const nearest = ls.reduce((best, l, i) => (Math.abs(l - 0.5) < Math.abs(ls[best]! - 0.5) ? i : best), 0);
+    expect(res.index).toBe(nearest);
+  });
+
+  it('without lEasing the returned options carry none', () => {
+    const res = fromColor(oklch(0.6, 0.08, 40), { total: 7, lut });
+    expect('lEasing' in res.options).toBe(false);
+  });
 });

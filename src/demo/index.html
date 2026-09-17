@@ -70,6 +70,12 @@
         </div>
         <figure class="side__curve">
           <div class="curve-pane" aria-label="Bézier curve through the gamut triangle. Drag the endpoints to set the lightness range, the point on the median to set saturation."></div>
+          <div class="curve-pane l-easing-pane" aria-label="Lightness spread: a cubic-bezier easing that redistributes the samples along the lightness curve. Drag the two handles; the endpoints are fixed so the palette stays ordered." hidden></div>
+          <div class="curve-view" role="group" aria-label="Figure view">
+            <button type="button" class="curve-view__btn" data-view="path" aria-pressed="true" aria-label="show the curve through the gamut triangle">path</button>
+            <button type="button" class="curve-view__btn" data-view="spread" aria-pressed="false" aria-label="show the lightness easing editor">spread</button>
+            <button type="button" class="curve-view__reset" aria-label="reset the lightness easing to linear" hidden>reset</button>
+          </div>
         </figure>
         <form class="controls" aria-label="Palette parameters"></form>
         <label class="control control--from">
@@ -93,6 +99,8 @@
           <h2 class="sec__title">The Palette</h2>
         </header>
         <div class="hanger" aria-label="The palette. Click a color to copy its oklch value."></div>
+        <div class="hanger-gray" aria-hidden="true"></div>
+        <p class="sec__note">the gray strip is the same colors at zero chroma: lightness only</p>
       </section>
 
       <section class="sec sec--proj">

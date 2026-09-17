@@ -1,5 +1,5 @@
 import type { OklchColor } from '../lib/index';
-import { cssOf } from './color';
+import { css, cssOf } from './color';
 import { copyText } from './clipboard';
 
 const REACH_MIN = 0.34;
@@ -36,5 +36,13 @@ export function renderHanger(host: HTMLElement, palette: OklchColor[]): void {
     band.title = `${css} — click to copy`;
     band.setAttribute('aria-label', `color ${i + 1} of ${palette.length}, ${css}, copy`);
     (band.querySelector('.hanger__label') as HTMLElement).textContent = label(col);
+  });
+}
+
+export function renderHangerGray(host: HTMLElement, palette: OklchColor[]): void {
+  while (host.children.length > palette.length) host.lastElementChild!.remove();
+  while (host.children.length < palette.length) host.appendChild(document.createElement('span'));
+  palette.forEach((col, i) => {
+    (host.children[i] as HTMLElement).style.setProperty('--swatch', css(col.l, 0, 0));
   });
 }

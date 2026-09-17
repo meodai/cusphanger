@@ -170,7 +170,8 @@ export function tForLightness(l: number, tri: Tri): number {
 }
 
 // Single-hue (or cool/warm multi-hue) sequential palette, dark → light —
-// the paper's model, exactly. For hue trajectories / hueList / triangleMode
+// the paper's model, exactly (lEasing, the one opt-in, only moves the samples
+// along its lightness curve). For hue trajectories / hueList / triangleMode
 // (the RampenSau-style extensions) use ramp().
 export function sequential(o: SequentialOptions): OklchColor[] {
   const N = o.total;
@@ -191,6 +192,13 @@ export function ramp(o: RampOptions): OklchColor[] {
   return sample(N === o.total ? o : { ...o, total: N }, ts);
 }
 
+// lEasing applied to ascending curve-fractions: clamped to [0, 1] and kept
+// non-decreasing, so ordering survives a bad easing.
+function easeTs(ts: number[], lEasing: (t: number) => number): number[] {
+  let prev = 0;
+  return ts.map((t) => (prev = Math.max(prev, Math.min(1, Math.max(0, lEasing(t))))));
+}
+
 // The paper's P_seq sampled at arbitrary curve-fractions `ts` (each t ∈ [0,1]).
 // sequential()/ramp() use the uniform grid i/(N−1); diverging() samples each
 // arm at the joined-curve positions. Defaults still derive from o.total.
@@ -204,6 +212,7 @@ function sample(o: RampOptions, ts: number[]): OklchColor[] {
     hEasing = (t) => t,
     hueList,
     sEasing = (t) => t,
+    lEasing = (t) => t,
     triangleMode = 'perHue',
     lut,
   } = o;
@@ -267,6 +276,9 @@ function sample(o: RampOptions, ts: number[]): OklchColor[] {
       ? buildTriangle(hStart, sBase, w, lut)
       : null;
 
+  // lEasing moves samples along the fixed lightness curve; hue and tension
+  // keep the un-eased t.
+  const tLs = easeTs(ts, lEasing);
   const out: OklchColor[] = [];
   for (const [i, t] of ts.entries()) {
     const sI = sAt(t);
@@ -276,7 +288,7 @@ function sample(o: RampOptions, ts: number[]): OklchColor[] {
       (isShared
         ? buildTriangleFromCusp(sharedCusp!.l, sharedCusp!.c, sI)
         : buildTriangle(hueAt(t, i), sI, w, lut));
-    const targetL = Math.min(tri.p2.l, Math.max(tri.p0.l, lightnessAt(t, b, c)));
+    const targetL = Math.min(tri.p2.l, Math.max(tri.p0.l, lightnessAt(tLs[i]!, b, c)));
     const col = cSeq(tForLightness(targetL, tri), tri);
 
     let h: number;
@@ -305,7 +317,9 @@ const DEG = Math.PI / 180;
 // Diverging: two sequential arms joined through a combined neutral point (the
 // paper's construction). The joined curve is sampled at i/(N−1), i.e. each arm
 // at u = 2i/(N−1): odd N hits the neutral exactly once, even N straddles it at
-// half-step spacing (uniform steps across the join, per the thesis).
+// half-step spacing (uniform steps across the join, per the thesis). lEasing
+// eases each arm's u (0 = dark end, 1 = neutral), mirrored — so a non-linear
+// one trades that uniform step across the join for its own spacing.
 export function diverging(o: DivergingOptions): OklchColor[] {
   const { hStart, hEnd, total: N, lut } = o;
   const isOdd = N % 2 === 1;
@@ -315,6 +329,7 @@ export function diverging(o: DivergingOptions): OklchColor[] {
     saturation: o.saturation,
     sRange: o.sRange,
     sEasing: o.sEasing,
+    lEasing: o.lEasing,
     brightness: o.brightness,
     contrast: o.contrast,
     lRange: o.lRange,
@@ -414,7 +429,12 @@ export function fromColor(target: OklchColor, opts: FromColorOptions): FromColor
     b = 0.75;
     con = Math.min(0.88, 0.34 + 0.06 * N);
   }
-  const tOf = (i: number) => (N <= 1 ? 0 : i / (N - 1));
+  // a held lEasing moves the samples, so judge index / endpoints against it
+  const tLs = easeTs(
+    Array.from({ length: N }, (_, i) => (N <= 1 ? 0 : i / (N - 1))),
+    opts.lEasing ?? ((t) => t),
+  );
+  const tOf = (i: number) => tLs[i]!;
   let index: number;
   if (typeof opts.index === 'number') {
     index = Math.min(N - 1, Math.max(0, Math.round(opts.index)));
@@ -443,7 +463,11 @@ export function fromColor(target: OklchColor, opts: FromColorOptions): FromColor
   }
 
   return {
-    options: { total: N, hStart: h, saturation, lRange, lut },
+    options: {
+      total: N, hStart: h, saturation, lRange,
+      ...(opts.lEasing ? { lEasing: opts.lEasing } : {}),
+      lut,
+    },
     index,
     color: { mode: 'oklch', l, c, h },
     clamped,

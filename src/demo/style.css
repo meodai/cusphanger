@@ -274,6 +274,48 @@ button {
   display: none;
 }
 
+.curve-view {
+  display: flex;
+  margin-top: 0.5rem;
+}
+.curve-view__btn,
+.curve-view__reset {
+  font-family: var(--font-mono);
+  font-size: var(--s-font-small);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  padding: 0.45em 0.9em;
+  cursor: pointer;
+  transition:
+    background-color var(--dur) linear,
+    color var(--dur) linear,
+    border-color var(--dur) linear;
+}
+.curve-view__btn + .curve-view__btn {
+  margin-left: -1px;
+}
+.curve-view__btn:hover,
+.curve-view__reset:hover {
+  position: relative;
+  border-color: var(--fg);
+}
+.curve-view__btn[aria-pressed='true'] {
+  background: var(--fg);
+  border-color: var(--fg);
+  color: var(--bg);
+}
+.curve-view__btn[data-modified]::after {
+  content: ' •';
+}
+.curve-view__reset {
+  margin-left: auto;
+  border-color: transparent;
+}
+.curve-view__btn[hidden],
+.curve-view__reset[hidden] {
+  display: none;
+}
+
 .hero {
   padding: clamp(2rem, 6vh, 4.5rem) var(--gutter) clamp(2.5rem, 6vh, 5rem);
 }
@@ -412,6 +454,17 @@ button {
   translate: -50% 0;
   font-size: var(--s-font-small);
   color: var(--accent);
+}
+
+.hanger-gray {
+  display: flex;
+  height: 1.5rem;
+  margin-top: 4px;
+}
+.hanger-gray span {
+  flex: 1;
+  background: var(--swatch);
+  transition: background-color var(--dur-theme) linear;
 }
 
 .curve-pane {

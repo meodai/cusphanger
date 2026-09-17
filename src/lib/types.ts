@@ -24,9 +24,10 @@ export interface OklchColor {
 
 // Wijffelaars, Vliegen, van Wijk & van der Linden (2009), single-hue sequential
 // model (Table 1) plus the cool/warm multi-hue extension (Table 2). This is
-// the paper's surface, nothing else — the RampenSau-style extensions live on
-// RampOptions / ramp(). Option names follow RampenSau's conventions where they
-// correspond (total, hStart); the paper knobs (s/b/c/w) have no counterpart.
+// the paper's surface plus one opt-in, lEasing — left unset it is the paper's
+// model exactly. The RampenSau-style extensions live on RampOptions / ramp().
+// Option names follow RampenSau's conventions where they correspond (total,
+// hStart, lEasing); the paper knobs (s/b/c/w) have no counterpart.
 export interface SequentialOptions {
   total: number; // N — number of colors
   hStart: number; // h — base hue
@@ -39,6 +40,17 @@ export interface SequentialOptions {
   // is why it stays on the paper surface. [minLight, maxLight], 0..1.
   lRange?: [number, number];
   coolWarm?: number; // w — the paper's multi-hue shift of the light end toward yellow. default 0
+  // Redistribute the samples along the paper's lightness curve: t is eased
+  // BEFORE the 0.2^x spacing, so the lightness curve and its endpoints
+  // (lRange / b / c) are untouched — only where the samples fall on it moves.
+  // Hue and tension still follow the un-eased t, so on a fixed-hue palette
+  // every color stays on the paper's path; under a moving hue (ramp's hCycles
+  // / hueList) a given lightness pairs with a different hue. Must be monotone
+  // and stay within [0, 1]; the output is clamped and kept non-decreasing so
+  // the palette stays ordered no matter what is passed (a flat easing can
+  // still repeat a color). In diverging() it applies per arm (t = 0 at the
+  // dark end, 1 at the neutral). default linear (the paper's spacing)
+  lEasing?: (t: number) => number;
   lut: Lut; // a nutelch OKLCH LUT (oklchSrgb / oklchP3) — which gamut to target
 }
 
@@ -81,10 +93,14 @@ export interface FromColorOptions {
   // continuous curve still meets the target; `index` then reports the nearest
   // sample instead of an exact hit.
   lRange?: [number, number];
+  // hold a lightness easing (see SequentialOptions): `index` and the endpoint
+  // solve are judged against the eased spacing, and it is handed back in
+  // `options`, so the target still lands on a sample. default linear
+  lEasing?: (t: number) => number;
 }
 
 export interface FromColorResult {
-  options: SequentialOptions; // hStart, saturation, lRange — feed to sequential()
+  options: SequentialOptions; // hStart, saturation, lRange (+ a held lEasing) — feed to sequential()
   index: number; // the sample that carries the target
   color: OklchColor; // what was actually met — equals the target unless clamped
   // the target sat outside the triangle (or the gamut shell); it was met at

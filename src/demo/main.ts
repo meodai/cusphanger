@@ -1,17 +1,25 @@
-import { sequential, ramp, diverging, fromColor, type OklchColor, type TriangleMode } from '../lib/index';
+import { sequential, ramp, diverging, fromColor, cubicBezier, type OklchColor, type TriangleMode } from '../lib/index';
 import { bcFromLRange } from '../lib/wijffelaars';
 import { oklchSrgb, oklchP3, toCss, type Lut } from 'nutelch';
 import { converter, type Oklch } from 'culori';
 import { buildControls, type FieldSpec, type ChoiceSpec, type ControlsApi } from './controls';
 import { initCurveControl } from './curve-control';
+import { initLEasingEditor, type BezierHandles } from './l-easing-editor';
 import { applyTheme } from './theme';
-import { renderHanger } from './hanger';
+import { renderHanger, renderHangerGray } from './hanger';
 import { renderSlice } from './slice';
 import { renderWheel, type WheelAxis } from './wheel';
 import { initExport } from './export';
 import { initCompositions } from './compositions';
 
 type TabId = 'sequential' | 'diverging' | 'ramp';
+
+let lHandles: BezierHandles = [0, 0, 1, 1];
+const lEasingIsLinear = () => lHandles.every((v, i) => v === [0, 0, 1, 1][i]);
+const lEasingOpt = () => (lEasingIsLinear() ? {} : { lEasing: cubicBezier(...lHandles) });
+const usageImport = (fn: string) => `${fn}${lEasingIsLinear() ? '' : ',\n  cubicBezier'}`;
+const usageLEasing = () =>
+  lEasingIsLinear() ? '' : `\n  lEasing: cubicBezier(${lHandles.join(', ')}),`;
 
 interface Tab {
   id: TabId;
@@ -39,10 +47,10 @@ const TABS: Tab[] = [
     build: (v, _c, lut) =>
       sequential({
         hStart: v.hStart!, total: v.total!, saturation: v.s!,
-        brightness: v.b!, contrast: v.c!, coolWarm: v.w!, lut,
+        brightness: v.b!, contrast: v.c!, coolWarm: v.w!, ...lEasingOpt(), lut,
       }),
     usage: (v, _c, lutName) => `import {
-  sequential
+  ${usageImport('sequential')}
 } from 'cusphanger';
 import {
   ${lutName}
@@ -54,7 +62,7 @@ const palette = sequential({
   saturation: ${v.s},
   brightness: ${v.b},
   contrast: ${v.c},
-  coolWarm: ${v.w},
+  coolWarm: ${v.w},${usageLEasing()}
   lut: ${lutName},
 });`,
   },
@@ -74,10 +82,10 @@ const palette = sequential({
     build: (v, _c, lut) =>
       diverging({
         hStart: v.hStart!, hEnd: v.hEnd!, total: v.total!,
-        saturation: v.s!, brightness: v.b!, contrast: v.c!, coolWarm: v.w!, lut,
+        saturation: v.s!, brightness: v.b!, contrast: v.c!, coolWarm: v.w!, ...lEasingOpt(), lut,
       }),
     usage: (v, _c, lutName) => `import {
-  diverging
+  ${usageImport('diverging')}
 } from 'cusphanger';
 import {
   ${lutName}
@@ -90,7 +98,7 @@ const palette = diverging({
   saturation: ${v.s},
   brightness: ${v.b},
   contrast: ${v.c},
-  coolWarm: ${v.w},
+  coolWarm: ${v.w},${usageLEasing()}
   lut: ${lutName},
 });`,
   },
@@ -117,10 +125,11 @@ const palette = diverging({
         sRange: [v.sMin!, v.sMax!], lRange: [v.minLight!, v.maxLight!], coolWarm: v.w!,
         hCycles: v.hCycles!, hStartCenter: v.hStartCenter!,
         triangleMode: c.triangleMode as TriangleMode,
+        ...lEasingOpt(),
         lut,
       }),
     usage: (v, c, lutName) => `import {
-  ramp
+  ${usageImport('ramp')}
 } from 'cusphanger';
 import {
   ${lutName}
@@ -134,7 +143,7 @@ const palette = ramp({
   sRange: [${v.sMin}, ${v.sMax}],
   lRange: [${v.minLight}, ${v.maxLight}],
   coolWarm: ${v.w},
-  triangleMode: '${c.triangleMode}',
+  triangleMode: '${c.triangleMode}',${usageLEasing()}
   lut: ${lutName},
 });`,
   },
@@ -143,6 +152,7 @@ const palette = ramp({
 const $ = (sel: string) => document.querySelector(sel) as HTMLElement;
 
 const hangerHost = $('.hanger');
+const hangerGrayHost = $('.hanger-gray');
 const stripHost = $('.topbar__strip');
 const sliceMiniHost = $('#slice-mini');
 const wheelHosts: Record<WheelAxis, HTMLElement> = {
@@ -156,10 +166,29 @@ const updateExport = initExport($('.export'), $('.export-tools'));
 let activeTab: Tab = TABS[0]!;
 let lut: Lut = oklchSrgb;
 let controlsApi: ControlsApi = { set: () => {} };
-const curveFigure = $('.side__curve');
 const renderCurveControl = initCurveControl($('.curve-pane'), (patch) =>
   controlsApi.set(patch),
 );
+const renderLEasing = initLEasingEditor($('.l-easing-pane'), (h) => {
+  lHandles = h;
+  if (match === null || !solveFrom()) renderAll();
+});
+// the side figure shows one of two editors: the curve through the gamut
+// triangle ('path', seq / div only) or the lightness easing ('spread')
+type FigureView = 'path' | 'spread';
+let figureView: FigureView = 'path';
+const viewButtons = [...document.querySelectorAll<HTMLButtonElement>('.curve-view__btn')];
+const viewReset = $('.curve-view__reset') as HTMLButtonElement;
+for (const b of viewButtons) {
+  b.addEventListener('click', () => {
+    figureView = b.dataset.view as FigureView;
+    renderAll();
+  });
+}
+viewReset.addEventListener('click', () => {
+  lHandles = [0, 0, 1, 1];
+  if (match === null || !solveFrom()) renderAll();
+});
 const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
 let lastValues: Record<string, number> = {};
 let lastChoices: Record<string, string> = {};
@@ -180,13 +209,24 @@ function renderAll(): void {
   palette = activeTab.build(lastValues, lastChoices, lut);
   applyTheme(document.documentElement, palette);
   renderHanger(hangerHost, palette);
+  renderHangerGray(hangerGrayHost, palette);
   stripHost.innerHTML = palette
     .map((c, i) => `<span style="--swatch: var(--pal-${i}, ${toCss(c)})"></span>`)
     .join('');
   renderSlice(sliceMiniHost, palette, lut, activeTab.forceMirror ?? false);
-  curveFigure.hidden = activeTab.id === 'ramp';
+  const hasPath = activeTab.id !== 'ramp';
+  const view: FigureView = hasPath ? figureView : 'spread';
+  for (const b of viewButtons) {
+    b.setAttribute('aria-pressed', String(b.dataset.view === view));
+    b.hidden = !hasPath;
+    if (b.dataset.view === 'spread') b.toggleAttribute('data-modified', !lEasingIsLinear());
+  }
+  viewReset.hidden = view !== 'spread' || lEasingIsLinear();
+  renderLEasing(
+    view === 'spread' ? { handles: lHandles, palette, mirror: activeTab.id === 'diverging' } : null,
+  );
   renderCurveControl(
-    activeTab.id === 'ramp'
+    view === 'spread'
       ? null
       : {
           hues:
@@ -249,7 +289,7 @@ const solveFrom = (): boolean => {
   if (activeTab.id !== 'sequential') selectTab(TABS[0]!);
   const res = fromColor(
     { mode: 'oklch', l: parsed.l, c: parsed.c ?? 0, h: parsed.h ?? 0 },
-    { total: lastValues.total ?? 9, lut },
+    { total: lastValues.total ?? 9, ...lEasingOpt(), lut },
   );
   if (res.clamped) fromWrap.setAttribute('data-clamped', '');
   const { b, c } = bcFromLRange(res.options.lRange!);

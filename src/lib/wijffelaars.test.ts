@@ -201,3 +201,84 @@ describe('diverging option passthrough', () => {
     expect(eased[1]!.c).not.toBeCloseTo(linear[1]!.c, 6);
   });
 });
+
+describe('lEasing (sequential / ramp / diverging)', () => {
+  const base = { hStart: 260, total: 9, lRange: [0.2, 0.95] as [number, number], lut };
+
+  it('linear easing is the paper spacing exactly', () => {
+    const a = ramp(base);
+    const b = ramp({ ...base, lEasing: (t) => t });
+    a.forEach((c, i) => expect(c.l).toBeCloseTo(b[i]!.l, 12));
+  });
+
+  it('keeps the lightness endpoints (only the spread between them moves)', () => {
+    const a = ramp(base);
+    const b = ramp({ ...base, lEasing: (t) => t * t });
+    expect(b[0]!.l).toBeCloseTo(a[0]!.l, 12);
+    expect(b[8]!.l).toBeCloseTo(a[8]!.l, 12);
+    // ease-in bunches samples at the dark end
+    for (let i = 1; i < 8; i++) expect(b[i]!.l).toBeLessThan(a[i]!.l);
+  });
+
+  it('stays ordered and in gamut under a monotone easing', () => {
+    const p = ramp({ ...base, saturation: 0.9, lEasing: (t) => 1 - Math.pow(1 - t, 3) });
+    for (let i = 1; i < p.length; i++) expect(p[i]!.l).toBeGreaterThan(p[i - 1]!.l);
+    expect(p.every(withinShell)).toBe(true);
+  });
+
+  it('a non-monotone / out-of-range easing cannot reverse the ramp', () => {
+    const p = ramp({ ...base, lEasing: (t) => 1.5 * Math.sin(t * Math.PI) });
+    for (let i = 1; i < p.length; i++) expect(p[i]!.l).toBeGreaterThanOrEqual(p[i - 1]!.l);
+    expect(Math.max(...p.map((c) => c.l))).toBeLessThanOrEqual(0.95 + 1e-9);
+  });
+
+  it('sequential(): same single-hue path, only the samples move', () => {
+    const o = { hStart: 260, total: 9, lut };
+    const a = sequential(o);
+    const b = sequential({ ...o, lEasing: (t) => t * t });
+    expect(b[0]!.l).toBeCloseTo(a[0]!.l, 12);
+    expect(b[8]!.l).toBeCloseTo(a[8]!.l, 12);
+    for (let i = 1; i < 8; i++) expect(b[i]!.l).toBeLessThan(a[i]!.l);
+    // t² at i = 4 of 9 is t = 0.25 — exactly the un-eased sample i = 2
+    expect(b[4]!.l).toBeCloseTo(a[2]!.l, 9);
+    expect(b[4]!.c).toBeCloseTo(a[2]!.c, 9);
+    expect(b.every(withinShell)).toBe(true);
+  });
+
+  it('applies symmetrically to both diverging arms', () => {
+    const p = diverging({ hStart: 250, hEnd: 30, total: 9, lEasing: (t) => t * t, lut });
+    for (let i = 0; i < 4; i++) expect(p[i]!.l).toBeCloseTo(p[8 - i]!.l, 6);
+    for (let i = 1; i <= 4; i++) expect(p[i]!.l).toBeGreaterThan(p[i - 1]!.l);
+  });
+
+  it('diverging, even N: stays mirrored and ordered per arm', () => {
+    const p = diverging({ hStart: 250, hEnd: 30, total: 8, lEasing: (t) => t * t, lut });
+    expect(p).toHaveLength(8);
+    for (let i = 0; i < 4; i++) expect(p[i]!.l).toBeCloseTo(p[7 - i]!.l, 6);
+    for (let i = 1; i < 4; i++) expect(p[i]!.l).toBeGreaterThan(p[i - 1]!.l);
+    expect(p.every(withinShell)).toBe(true);
+  });
+
+  it('diverging: the unset default is untouched by the option existing', () => {
+    const o = { hStart: 250, hEnd: 30, total: 9, lut };
+    const a = diverging(o);
+    const b = diverging({ ...o, lEasing: (t) => t });
+    a.forEach((c, i) => {
+      expect(b[i]!.l).toBeCloseTo(c.l, 12);
+      expect(b[i]!.c).toBeCloseTo(c.c, 12);
+    });
+  });
+
+  it('a flat easing repeats a color instead of reordering', () => {
+    const p = sequential({ hStart: 260, total: 5, lEasing: () => 0.5, lut });
+    for (let i = 1; i < p.length; i++) expect(p[i]!.l).toBeCloseTo(p[0]!.l, 12);
+  });
+
+  it('ramp with a moving hue: the hue sequence ignores lEasing', () => {
+    const o = { ...base, hCycles: 0.5, triangleMode: 'min' as const };
+    const a = ramp(o);
+    const b = ramp({ ...o, lEasing: (t) => t * t });
+    a.forEach((c, i) => expect(b[i]!.h).toBeCloseTo(c.h, 9));
+    expect(b[4]!.l).toBeLessThan(a[4]!.l);
+  });
+});
