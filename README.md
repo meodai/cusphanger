@@ -25,8 +25,8 @@ physical lightnesses the paper calibrated against the Brewer palettes.
 Diverging palettes sample the *joined* two-arm curve uniformly: odd N lands on the combined
 neutral exactly once; even N straddles it at half-step spacing, so the step across the join reads
 like every other step (under the default spacing — a non-linear `lEasing` eases each arm from its
-dark end to the neutral, and trades that uniform join step for its own). The neutral is symmetric in the two arms (swapping `hStart`/`hEnd` mirrors
-the palette, including with `coolWarm`).
+dark end to the neutral, and trades that uniform join step for its own). The neutral is symmetric
+in the two arms (swapping `hStart`/`hEnd` mirrors the palette, including with `coolWarm`).
 
 The knobs are the paper's:
 
@@ -46,7 +46,7 @@ dependency-free), so you pass the gamut **LUT** in (just like nutelch) — `oklc
 ## Usage
 
 ```ts
-import { sequential, ramp, diverging, fromColor } from 'cusphanger';
+import { sequential, ramp, diverging, fromColor, cubicBezier } from 'cusphanger';
 import { oklchSrgb, oklchP3, toCss } from 'nutelch';
 
 // single-hue sequential (paper, Table 1)
@@ -63,6 +63,10 @@ sequential({ hStart: 260, total: 9, lut: oklchP3 });
 
 // lightness by endpoints instead of brightness/contrast (RampenSau-style lRange)
 sequential({ hStart: 260, total: 9, lRange: [0.25, 0.95], lut: oklchSrgb });
+
+// redistribute the samples along the lightness curve (see "Lightness spread");
+// works on sequential(), diverging() and ramp()
+sequential({ hStart: 260, total: 9, lEasing: cubicBezier(0.4, 0, 0.8, 0.6), lut: oklchSrgb });
 
 // ramp() — the RampenSau hybrid: a hue trajectory through the paper's model
 // (each color rides the paper's ramp for its own rotated hue)
