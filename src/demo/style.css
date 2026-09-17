@@ -294,7 +294,7 @@ button {
 .curve-view__btn + .curve-view__btn {
   margin-left: -1px;
 }
-.curve-view__btn:hover:not(:disabled),
+.curve-view__btn:hover,
 .curve-view__reset:hover {
   position: relative;
   border-color: var(--fg);
@@ -304,10 +304,6 @@ button {
   border-color: var(--fg);
   color: var(--bg);
 }
-.curve-view__btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
 .curve-view__btn[data-modified]::after {
   content: ' •';
 }
@@ -315,6 +311,7 @@ button {
   margin-left: auto;
   border-color: transparent;
 }
+.curve-view__btn[hidden],
 .curve-view__reset[hidden] {
   display: none;
 }

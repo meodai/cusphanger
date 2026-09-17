@@ -218,8 +218,8 @@ function renderAll(): void {
   const view: FigureView = hasPath ? figureView : 'spread';
   for (const b of viewButtons) {
     b.setAttribute('aria-pressed', String(b.dataset.view === view));
-    if (b.dataset.view === 'path') b.disabled = !hasPath;
-    else b.toggleAttribute('data-modified', !lEasingIsLinear());
+    b.hidden = !hasPath;
+    if (b.dataset.view === 'spread') b.toggleAttribute('data-modified', !lEasingIsLinear());
   }
   viewReset.hidden = view !== 'spread' || lEasingIsLinear();
   renderLEasing(
