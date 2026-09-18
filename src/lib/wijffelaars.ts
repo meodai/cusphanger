@@ -38,7 +38,7 @@ const bez = (b0: number, b1: number, b2: number, t: number) =>
 
 const bezInv = (b0: number, b1: number, b2: number, v: number): number => {
   const d = b0 - 2 * b1 + b2;
-  if (Math.abs(d) < 1e-12) return (v - b0) / (b2 - b0 || 1e-12); // degenerate -> linear
+  if (Math.abs(d) < 1e-12) return (v - b0) / (b2 - b0 || 1e-12);
   return (b0 - b1 + Math.sqrt(Math.max(0, b1 * b1 - b0 * b2 + d * v))) / d;
 };
 
@@ -51,8 +51,8 @@ const midP = (a: LCH, b: LCH): LCH => ({ l: (a.l + b.l) / 2, c: (a.c + b.c) / 2,
 
 // CIE L* <-> OKLab L, through luminance Y (both scales are pinned to Y for
 // neutrals: L* = 116·Y^(1/3) − 16 above the toe, OKLab L = Y^(1/3)).
-const KAPPA = 24389 / 27; // CIE κ
-const EPS = 216 / 24389; // CIE ε
+const KAPPA = 24389 / 27;
+const EPS = 216 / 24389;
 const cieLToOk = (lStar: number): number =>
   Math.cbrt(lStar > 8 ? Math.pow((lStar + 16) / 116, 3) : lStar / KAPPA);
 const okToCieL = (L: number): number => {
@@ -109,24 +109,24 @@ export interface Tri {
 
 export function buildTriangle(hue: number, s: number, w: number, lut: Lut): Tri {
   const peak = cusp(hue, lut);
-  const p0: LCH = { l: 0, c: 0, h: hue }; // black
-  const p1: LCH = { l: peak.l, c: peak.c, h: hue }; // MSC(h)
+  const p0: LCH = { l: 0, c: 0, h: hue };
+  const p1: LCH = { l: peak.l, c: peak.c, h: hue };
 
   // top point p2 — white, or shifted toward the bright point (yellow) for w > 0
   let p2: LCH;
   if (w > 0) {
-    const pb = BRIGHT_POINT; // bright point (yellow), Table 2 default
+    const pb = BRIGHT_POINT;
     const M = ((((180 + pb.h - hue) % 360) + 360) % 360) - 180; // shortest hue path
     const p2L = (1 - w) * 1 + w * pb.l;
     const p2H = hue + w * M;
     const p2C = Math.min(triangleChromaAt(p2L, ((p2H % 360) + 360) % 360, lut), w * s * pb.c);
     p2 = { l: p2L, c: p2C, h: p2H };
   } else {
-    p2 = { l: 1, c: 0, h: hue }; // white
+    p2 = { l: 1, c: 0, h: hue };
   }
 
-  const q0 = mixP(p0, p1, s); // (1-s)p0 + s·MSC
-  const q2 = mixP(p2, p1, s); // (1-s)p2 + s·MSC
+  const q0 = mixP(p0, p1, s);
+  const q2 = mixP(p2, p1, s);
   const q1 = midP(q0, q2);
   return { p0, p1, q0, q1, q2, p2 };
 }
@@ -216,8 +216,6 @@ function sample(o: RampOptions, ts: number[]): OklchColor[] {
     triangleMode = 'perHue',
     lut,
   } = o;
-  // lightness sampling: lRange (RampenSau-style endpoints) wins when given,
-  // otherwise the paper's brightness/contrast (b/c).
   let b: number;
   let c: number;
   if (o.lRange) {
@@ -226,8 +224,6 @@ function sample(o: RampOptions, ts: number[]): OklchColor[] {
     b = o.brightness ?? 0.75;
     c = o.contrast ?? Math.min(0.88, 0.34 + 0.06 * N);
   }
-  // saturation = Bézier tension. sRange varies it across the ramp (RampenSau-
-  // style); otherwise the single `saturation` is used for every color.
   const sBase = o.saturation ?? 0.6;
   const sConst = !o.sRange;
   const sAt = (t: number): number =>
@@ -276,8 +272,6 @@ function sample(o: RampOptions, ts: number[]): OklchColor[] {
       ? buildTriangle(hStart, sBase, w, lut)
       : null;
 
-  // lEasing moves samples along the fixed lightness curve; hue and tension
-  // keep the un-eased t.
   const tLs = easeTs(ts, lEasing);
   const out: OklchColor[] = [];
   for (const [i, t] of ts.entries()) {
@@ -405,7 +399,6 @@ export function fromColor(target: OklchColor, opts: FromColorOptions): FromColor
   const c = Math.min(Math.max(0, target.c), reach);
   const clamped = target.c - c > 1e-9 || l !== target.l;
 
-  // tension: bisect s on the curve's chroma at the target's lightness
   const chromaAt = (s: number): number => {
     const tri = buildTriangle(h, s, 0, lut);
     return cSeq(tForLightness(l, tri), tri).c;
@@ -419,8 +412,6 @@ export function fromColor(target: OklchColor, opts: FromColorOptions): FromColor
   }
   const saturation = (lo + hi) / 2;
 
-  // the lightness spacing 'nearest' is judged against: the held lRange, or
-  // the paper defaults
   let b: number;
   let con: number;
   if (opts.lRange) {
@@ -429,7 +420,6 @@ export function fromColor(target: OklchColor, opts: FromColorOptions): FromColor
     b = 0.75;
     con = Math.min(0.88, 0.34 + 0.06 * N);
   }
-  // a held lEasing moves the samples, so judge index / endpoints against it
   const tLs = easeTs(
     Array.from({ length: N }, (_, i) => (N <= 1 ? 0 : i / (N - 1))),
     opts.lEasing ?? ((t) => t),

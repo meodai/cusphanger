@@ -51,9 +51,6 @@ export function initLEasingEditor(
     out += `<line x1="${xOf(1)}" y1="${yOf(1)}" x2="${f(xOf(x2))}" y2="${f(yOf(y2))}" class="cc-median"/>`;
     out += `<path d="M ${xOf(0)} ${yOf(0)} C ${f(xOf(x1))} ${f(yOf(y1))} ${f(xOf(x2))} ${f(yOf(y2))} ${xOf(1)} ${yOf(1)}" class="cc-curve"/>`;
 
-    // where each sample lands: input t along the bottom, eased t on the side.
-    // mirrored (diverging): the easing runs per arm, dark end → neutral, so
-    // the right arm folds back onto the same curve and gets the right-hand axis
     for (const [i, col] of params.palette.entries()) {
       const u = N <= 1 ? 0 : i / (N - 1);
       const t = params.mirror ? 1 - Math.abs(1 - 2 * u) : u;
@@ -88,7 +85,6 @@ export function initLEasingEditor(
     const rect = svg.getBoundingClientRect();
     const x = ((e.clientX - rect.left) * W) / rect.width;
     const y = ((e.clientY - rect.top) * H) / rect.height;
-    // y clamped to [0, 1] keeps the easing monotone by construction
     const t = round2(clamp(tOf(x), 0, 1));
     const v = round2(clamp(vOf(y), 0, 1));
     const [x1, y1, x2, y2] = params.handles;

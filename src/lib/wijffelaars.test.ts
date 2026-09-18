@@ -216,7 +216,6 @@ describe('lEasing (sequential / ramp / diverging)', () => {
     const b = ramp({ ...base, lEasing: (t) => t * t });
     expect(b[0]!.l).toBeCloseTo(a[0]!.l, 12);
     expect(b[8]!.l).toBeCloseTo(a[8]!.l, 12);
-    // ease-in bunches samples at the dark end
     for (let i = 1; i < 8; i++) expect(b[i]!.l).toBeLessThan(a[i]!.l);
   });
 

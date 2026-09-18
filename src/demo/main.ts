@@ -173,8 +173,6 @@ const renderLEasing = initLEasingEditor($('.l-easing-pane'), (h) => {
   lHandles = h;
   if (match === null || !solveFrom()) renderAll();
 });
-// the side figure shows one of two editors: the curve through the gamut
-// triangle ('path', seq / div only) or the lightness easing ('spread')
 type FigureView = 'path' | 'spread';
 let figureView: FigureView = 'path';
 const viewButtons = [...document.querySelectorAll<HTMLButtonElement>('.curve-view__btn')];
