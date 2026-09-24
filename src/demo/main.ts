@@ -4,7 +4,7 @@ import {
 } from '../lib/index';
 import { bcFromLRange } from '../lib/wijffelaars';
 import type { Lut } from 'nutelch';
-import { toCss } from 'nutelch/hct'; // formats every mode, hct included
+import { toCss, rgbToHct } from 'nutelch/hct'; // toCss formats every mode, hct included
 import { converter } from 'culori';
 import { lutFor, lutName, lutModule, MODELS, MODEL_LABEL, PAPER_MODEL, type Model } from './space';
 import { buildControls, type FieldSpec, type ChoiceSpec, type ControlsApi } from './controls';
@@ -294,9 +294,16 @@ for (const tab of TABS) {
 }
 
 // parse any CSS color into the active model's space (fromColor meets it there).
-// culori has no HCT (and nutelch/hct no RGB → HCT yet), so HCT disables the field.
-const parseIn = (raw: string, mode: Model) =>
-  converter(mode)(raw) as unknown as { l: number; c?: number; h?: number } | undefined;
+// culori has no HCT: parse to (unclamped) sRGB and convert with nutelch's rgbToHct,
+// which also takes the out-of-range channels of wider-gamut colors.
+const toRgb = converter('rgb') as unknown as (raw: string) => { r: number; g: number; b: number } | undefined;
+const parseIn = (raw: string, mode: Model): { l: number; c?: number; h?: number } | undefined => {
+  if (mode !== 'hct') {
+    return converter(mode)(raw) as unknown as { l: number; c?: number; h?: number } | undefined;
+  }
+  const rgb = toRgb(raw);
+  return rgb ? rgbToHct(rgb) : undefined;
+};
 const fromWrap = $('.control--from');
 const fromInput = fromWrap.querySelector('input') as HTMLInputElement;
 
@@ -305,7 +312,7 @@ const solveFrom = (): boolean => {
   fromWrap.removeAttribute('data-invalid');
   fromWrap.removeAttribute('data-clamped');
   match = null;
-  if (!raw || model === 'hct') return false;
+  if (!raw) return false;
   const parsed = parseIn(raw, model);
   if (!parsed || !Number.isFinite(parsed.l)) {
     fromWrap.setAttribute('data-invalid', '');
@@ -355,8 +362,6 @@ spaceSelect.addEventListener('change', () => {
   p3 = g === 'p3';
   lut = lutFor(model, g);
   spaceValue.textContent = spaceLabel(model, p3);
-  fromInput.disabled = model === 'hct';
-  fromWrap.title = model === 'hct' ? 'not available in HCT (no RGB → HCT conversion yet)' : '';
   if (match === null || !solveFrom()) renderAll();
 });
 

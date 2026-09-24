@@ -227,10 +227,10 @@ triangle edges, so that chroma only grows), and the lightness endpoints shift mi
 The target is the same object the generators emit, in the LUT's space — an `oklch` target for
 an OKLCH LUT, `lchuv` for an LCHuv one, and so on; a mismatch throws. No color parsing or
 conversion ships in the library; a hex or CSS string is one [culori](https://culorijs.org) call
-away: `converter('oklch')('#4a8a62')` (or `'lchuv'` / `'lch'`). culori has no HCT, and nutelch
-has no RGB → HCT conversion yet, so there is no one-liner for an HCT target. The demo's *from
-color* field is this solve, live: it snaps the sliders to the returned options and rings the
-sample that carries the color (it is disabled in HCT, for the reason above).
+away: `converter('oklch')('#4a8a62')` (or `'lchuv'` / `'lch'`). culori has no HCT; for an
+HCT target use nutelch's `rgbToHct` (nutelch ≥ 0.4):
+`rgbToHct(converter('rgb')('#4a8a62'))`. The demo's *from color* field is this solve, live: it
+snaps the sliders to the returned options and rings the sample that carries the color.
 
 ## Lightness spread — lEasing
 
@@ -300,4 +300,4 @@ npm run build:lib  # build the library
 
 ## License
 
-MIT
+[MIT](./LICENSE) © David Aerne
