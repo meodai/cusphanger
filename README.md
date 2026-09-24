@@ -1,15 +1,15 @@
 # CuspHanger
 
-A faithful OKLCH implementation of Wijffelaars, Vliegen, van Wijk & van der Linden,
-*"Generating Color Palettes using Intuitive Parameters"*
-([Computer Graphics Forum 28:3, EuroVis 2009](https://web.archive.org/web/20240628033734/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=097749c130c1cf35b8b9c236916de3b0455ffce0)),
+A faithful OKLCH (and LCHuv, LCH, HCT) implementation of Wijffelaars, Vliegen, van Wijk &
+van der Linden, *"Generating Color Palettes using Intuitive Parameters"*
+([Computer Graphics Forum 27:3, EuroVis 2008](https://web.archive.org/web/20240628033734/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=097749c130c1cf35b8b9c236916de3b0455ffce0)),
 meant to cover more or less the same API as
 [RampenSau](https://github.com/meodai/rampensau).
 
 The paper generates **sequential** and **diverging** palettes from a few intuitive parameters by
 walking a quadratic-Bézier path through the gamut triangle (black · cusp · white) of a hue. It was
-written for CIELUV; this is that exact model re-expressed in **OKLCH**, so it can also target
-Display-P3.
+written for CIELUV; this is that exact model re-expressed in **OKLCH** — or run in the paper's own
+**CIELUV** (LCHuv), in **CIE LCH**, or in Material's **HCT** — targeting sRGB or Display-P3.
 
 ## How it works
 
@@ -18,9 +18,10 @@ corners at black, white, and the **cusp** — the most saturated color that hue 
 *MSC*). A palette is a quadratic-Bézier path through that triangle, sampled at perceptual lightness
 steps. The cusp / triangle being an inner approximation of the gamut keeps the result displayable.
 
-The paper's lightness curve is evaluated in its native CIE L\* units and converted to OKLab
-lightness through luminance Y (for neutrals OKLab L = Y^⅓ exactly), so the palettes hit the same
-physical lightnesses the paper calibrated against the Brewer palettes.
+The paper's lightness curve is evaluated in its native CIE L\* units. In OKLCH it is converted to
+OKLab lightness through luminance Y (for neutrals OKLab L = Y^⅓ exactly), so the palettes hit the
+same physical lightnesses the paper calibrated against the Brewer palettes. LCHuv, LCH and HCT
+all measure lightness as L\* (HCT calls it *tone*), so there it applies as-is.
 
 Diverging palettes sample the *joined* two-arm curve uniformly: odd N lands on the combined
 neutral exactly once; even N straddles it at half-step spacing, so the step across the join reads
@@ -40,14 +41,75 @@ The knobs are the paper's:
 npm install cusphanger nutelch
 ```
 
-Gamut math is delegated to [nutelch](https://github.com/meodai/nutelch) (LUT-backed, runtime
-dependency-free), so you pass the gamut **LUT** in (just like nutelch) — `oklchSrgb` or `oklchP3`.
+Gamut math is delegated to [nutelch](https://github.com/meodai/nutelch) (≥ 0.3, LUT-backed,
+runtime dependency-free), so you pass the gamut **LUT** in (just like nutelch). The LUT picks both
+the **space** and the **gamut**:
+
+| LUT         | space                          | gamut      | `l` range |
+| ----------- | ------------------------------ | ---------- | --------- |
+| `oklchSrgb` | OKLCH                          | sRGB       | 0..1      |
+| `oklchP3`   | OKLCH                          | Display-P3 | 0..1      |
+| `lchuvSrgb` | LCHuv (CIELUV, the paper's)    | sRGB       | 0..100    |
+| `lchuvP3`   | LCHuv (CIELUV, the paper's)    | Display-P3 | 0..100    |
+| `lchSrgb`   | CIE LCH (CIELAB)               | sRGB       | 0..100    |
+| `lchP3`     | CIE LCH (CIELAB)               | Display-P3 | 0..100    |
+| `hctSrgb`   | HCT (from `nutelch/hct`)       | sRGB       | 0..100 (tone) |
+| `hctP3`     | HCT (from `nutelch/hct`)       | Display-P3 | 0..100 (tone) |
+
+HCT LUTs come from nutelch's add-on entry: `import { hctSrgb } from 'nutelch/hct'`. The space
+support needs nutelch **0.3** or later (earlier versions ship only the OKLCH and LCH LUTs, and
+no LCHuv or HCT).
+
+In the demo, the *model | gamut* picker next to the tabs switches between all eight LUTs; the
+figures then draw that space's own gamut. The paper's space is marked *(paper)* in the list.
+
+### Which space?
+
+**What the paper says.** Wijffelaars et al. wanted a perceptually uniform space and chose CIELUV,
+noting that CIELUV is recommended for additive light (screens) and CIELAB for reflected light
+(print). They are frank that CIELUV is only approximately uniform: none of the CIE distance
+formulas gave satisfying results, so they fitted their own lightness function `L(t)` to the
+Brewer palettes, on calibrated CRT monitors.
+
+**What we recommend.**
+
+- **OKLCH (default)**: the best fit for the model, and the most practical. The triangle the
+  paper's model rests on (black · cusp · white) follows the OKLCH gamut as closely as it follows
+  CIELUV's (table below). OKLab was designed to keep hue steady as chroma and lightness change,
+  which is the known weak spot of CIELAB/CIELUV blues. And the output is native CSS `oklch()`.
+- **LCHuv**: when you want the paper as published. Same space, and `L(t)` is exactly the curve
+  they calibrated. The triangle fits as well as in OKLCH. CSS has no LUV syntax, so colors are
+  rendered as the equivalent `lch()`.
+- **LCH**: when your pipeline is CIELAB / CSS `lch()`. The triangle leaves about 15% of the
+  available chroma unused, so palettes come out a little less colorful than in OKLCH or LCHuv.
+- **HCT**: when you need Material's tone semantics, where a tone difference guarantees a
+  WCAG contrast ratio. It's the weakest fit for this model: HCT's gamut slices aren't
+  triangle-shaped, so the triangle leaves about a quarter of the chroma unused, and where it
+  overshoots, the clamp has to pull back hard. It also needs `nutelch/hct`.
+
+How closely the paper's triangle follows each gamut (sRGB LUTs, hue every 2°, lightness every
+1%). *Chroma reached* is the share of the available chroma the triangle gets to (after
+clamping). *Overshoot* is where the triangle pokes outside the gamut and gets clamped:
+
+| space | chroma reached | overshoot: how often | overshoot: by how much |
+| ----- | -------------: | -------------------: | ---------------------: |
+| OKLCH |          99.6% |                  21% |                   ~12% |
+| LCHuv |          99.2% |                  20% |                   ~11% |
+| LCH   |          85.4% |                  22% |                   ~13% |
+| HCT   |          77.1% |                  12% |                   ~39% |
+
+### Upgrading from 0.4
+
+Results are typed `PaletteColor` (`mode: 'oklch' | 'lchuv' | 'lch' | 'hct'`) instead of
+`OklchColor`, since the space now follows the LUT. With an OKLCH LUT nothing changes at runtime —
+the output is identical — but code that annotates results as `OklchColor[]` needs a cast or the
+wider type. `OklchColor` is still exported.
 
 ## Usage
 
 ```ts
 import { sequential, ramp, diverging, fromColor, cubicBezier } from 'cusphanger';
-import { oklchSrgb, oklchP3, toCss } from 'nutelch';
+import { oklchSrgb, oklchP3, lchuvSrgb, toCss } from 'nutelch';
 
 // single-hue sequential (paper, Table 1)
 sequential({ hStart: 260, total: 9, saturation: 0.6, brightness: 0.75, contrast: 0.88, lut: oklchSrgb });
@@ -63,6 +125,9 @@ sequential({ hStart: 260, total: 9, lut: oklchP3 });
 
 // lightness by endpoints instead of brightness/contrast (RampenSau-style lRange)
 sequential({ hStart: 260, total: 9, lRange: [0.25, 0.95], lut: oklchSrgb });
+
+// the paper's own space: LCHuv (CIELUV). Same options; lRange is in L* (0..100)
+sequential({ hStart: 260, total: 9, lRange: [25, 95], lut: lchuvSrgb });
 
 // redistribute the samples along the lightness curve (see "Lightness spread");
 // works on sequential(), diverging() and ramp()
@@ -95,21 +160,25 @@ keep their own names. Defaults follow the paper: `saturation = 0.6`, `brightness
 `contrast = min(0.88, 0.34 + 0.06·total)`, `coolWarm = 0`.
 
 **Lightness — two equivalent knobs.** `brightness`/`contrast` are the paper's `b`/`c`; `lRange:
-[minLight, maxLight]` sets the two endpoints directly (RampenSau-style) and wins when given. They're
+[minLight, maxLight]` sets the two endpoints directly (RampenSau-style), in the LUT's lightness
+units (0..1 OKLCH, 0..100 LCHuv / LCH / HCT tone), and wins when given. They're
 a bijection — the same lightness curve, with the paper's perceptual `0.2^x` spacing kept between the
 endpoints either way.
 
-Each color is the nutelch / culori-native OKLCH object:
+Each color is the nutelch / culori-native object in the LUT's space (`PaletteColor`):
 
 ```ts
-{ mode: 'oklch', l, c, h }
+{ mode: 'oklch', l, c, h }  // with an OKLCH LUT
+{ mode: 'lchuv', l, c, h }  // with an LCHuv LUT (likewise 'lch', and 'hct' with tone in l)
 ```
 
 It's in-gamut by construction (clamped to the LUT's shell). To render it, hand it to nutelch's
-`toCss` — the browser renders `oklch()` natively and gamut-maps to the display:
+`toCss` — the browser renders `oklch()` / `lch()` natively and gamut-maps to the display. CSS has
+no LUV or HCT syntax, so LCHuv comes out as the equivalent `lch()` and HCT (use the `toCss` from
+`nutelch/hct`, which handles every mode) as the equivalent `oklch()`:
 
 ```ts
-el.style.background = toCss(palette[0]); // 'oklch(0.44 0.13 260)'
+el.style.background = toCss(palette[0]); // 'oklch(0.44 0.13 260)' — or 'lch(…)' for LCHuv
 ```
 
 For a hex string or gamut flags (interchange, contrast math), use [culori](https://culorijs.org):
@@ -155,10 +224,13 @@ triangle edges, so that chroma only grows), and the lightness endpoints shift mi
 - **`coolWarm`** is deliberately absent — `w > 0` drifts hue along the curve, which breaks the hue
   decoupling. It is held at 0.
 
-The target is the same OKLCH object the generators emit — no color parsing or conversion ships in
-the library. A hex or CSS string is one [culori](https://culorijs.org) call away:
-`converter('oklch')('#4a8a62')`. The demo's *from color* field is this solve, live: it snaps the
-sliders to the returned options and rings the sample that carries the color.
+The target is the same object the generators emit, in the LUT's space — an `oklch` target for
+an OKLCH LUT, `lchuv` for an LCHuv one, and so on; a mismatch throws. No color parsing or
+conversion ships in the library; a hex or CSS string is one [culori](https://culorijs.org) call
+away: `converter('oklch')('#4a8a62')` (or `'lchuv'` / `'lch'`). culori has no HCT, and nutelch
+has no RGB → HCT conversion yet, so there is no one-liner for an HCT target. The demo's *from
+color* field is this solve, live: it snaps the sliders to the returned options and rings the
+sample that carries the color (it is disabled in HCT, for the reason above).
 
 ## Lightness spread — lEasing
 
@@ -214,7 +286,9 @@ options are omitted deliberately:
   reproducible specification, so nothing is randomized for you.
 
 The paper's bright point `p_b` (the yellow that `coolWarm` pulls toward) is canonically sRGB
-yellow in every gamut, so sRGB and Display-P3 palettes stay comparable.
+yellow in every gamut, so sRGB and Display-P3 palettes stay comparable. It is the same color in
+every space, expressed in that space's coordinates (e.g. OKLCH `0.968 0.211 109.8°`, LCHuv
+`97.6 84.7 84.6°`).
 
 ## Develop
 
