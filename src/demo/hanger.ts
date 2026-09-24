@@ -1,5 +1,5 @@
-import type { OklchColor } from '../lib/index';
-import { css, cssOf } from './color';
+import type { PaletteColor } from '../lib/index';
+import { css, cssOf, okOf } from './color';
 import { copyText } from './clipboard';
 
 const REACH_MIN = 0.34;
@@ -7,10 +7,13 @@ const REACH_MAX = 1;
 
 const LABEL_FLIP_L = 0.62;
 
-const label = (c: OklchColor) =>
-  `${c.l.toFixed(2)} ${c.c.toFixed(3)} ${(((c.h % 360) + 360) % 360).toFixed(0)}°`;
+// native values, on each space's own scale (OKLCH 0..1 L, LCHuv 0..100 L*)
+const label = (c: PaletteColor) =>
+  c.mode === 'oklch'
+    ? `${c.l.toFixed(2)} ${c.c.toFixed(3)} ${(((c.h % 360) + 360) % 360).toFixed(0)}°`
+    : `${c.l.toFixed(0)} ${c.c.toFixed(1)} ${(((c.h % 360) + 360) % 360).toFixed(0)}°`;
 
-export function renderHanger(host: HTMLElement, palette: OklchColor[]): void {
+export function renderHanger(host: HTMLElement, palette: PaletteColor[]): void {
 
   const bands = Array.from(host.children) as HTMLButtonElement[];
   while (bands.length > palette.length) bands.pop()!.remove();
@@ -28,10 +31,12 @@ export function renderHanger(host: HTMLElement, palette: OklchColor[]): void {
   palette.forEach((col, i) => {
     const band = bands[i]!;
     const css = cssOf(col);
-    const reach = REACH_MIN + (1 - col.l) * (REACH_MAX - REACH_MIN);
+    // reach + label contrast are tuned in OKLab lightness, whatever the model
+    const okL = okOf(col).l;
+    const reach = REACH_MIN + (1 - okL) * (REACH_MAX - REACH_MIN);
     band.style.setProperty('--swatch', `var(--pal-${i}, ${css})`);
     band.style.setProperty('--reach', reach.toFixed(4));
-    band.classList.toggle('hanger__band--light', col.l > LABEL_FLIP_L);
+    band.classList.toggle('hanger__band--light', okL > LABEL_FLIP_L);
     band.dataset.css = css;
     band.title = `${css} — click to copy`;
     band.setAttribute('aria-label', `color ${i + 1} of ${palette.length}, ${css}, copy`);
@@ -39,10 +44,10 @@ export function renderHanger(host: HTMLElement, palette: OklchColor[]): void {
   });
 }
 
-export function renderHangerGray(host: HTMLElement, palette: OklchColor[]): void {
+export function renderHangerGray(host: HTMLElement, palette: PaletteColor[]): void {
   while (host.children.length > palette.length) host.lastElementChild!.remove();
   while (host.children.length < palette.length) host.appendChild(document.createElement('span'));
   palette.forEach((col, i) => {
-    (host.children[i] as HTMLElement).style.setProperty('--swatch', css(col.l, 0, 0));
+    (host.children[i] as HTMLElement).style.setProperty('--swatch', css(col.l, 0, 0, col.mode));
   });
 }

@@ -136,7 +136,7 @@ button {
 .tabs__tab,
 .viz-flip,
 .compo-regen,
-.control--gamut {
+.control--space {
   font-family: var(--font-mono);
   font-size: var(--s-font-small);
   background: transparent;
@@ -152,12 +152,11 @@ button {
 .tabs__tab:hover,
 .viz-flip:hover,
 .compo-regen:hover,
-.control--gamut:hover {
+.control--space:hover {
   border-color: var(--fg);
 }
 
 .tabs__tab[aria-selected='true'],
-.control--gamut[data-active],
 .viz-flip[data-flipped] {
   background: var(--fg);
   border-color: var(--fg);
@@ -258,11 +257,11 @@ button {
 .side .tabs__tab {
   flex: 1;
 }
-.side__tabs .control--gamut {
+.side__tabs .control--space {
   flex: none;
   margin-left: -1px;
 }
-.side__tabs .control--gamut:hover {
+.side__tabs .control--space:hover {
   position: relative;
   z-index: 1;
 }
@@ -513,6 +512,29 @@ button {
 .control__value {
   font-variant-numeric: tabular-nums;
   color: var(--accent);
+}
+
+/* model × gamut picker: looks like the tab buttons, is a native <select>. The
+   select sits invisibly on top (opacity 0) so clicks and keys hit it; the label
+   underneath shows the current choice, and the focus ring moves to the wrapper. */
+.control--space {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.control--space select {
+  position: absolute;
+  inset: -1px; /* over the wrapper's 1px border too, so the whole box is clickable */
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  opacity: 0;
+  cursor: pointer;
+  font: inherit;
+}
+.control--space:has(select:focus-visible) {
+  outline: 1px dashed var(--accent);
+  outline-offset: 3px;
 }
 .control--range .control__value {
   padding: 0 0.25rem;

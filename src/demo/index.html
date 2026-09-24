@@ -6,7 +6,7 @@
     <title>CuspHanger — palettes from intuitive parameters</title>
     <meta
       name="description"
-      content="Sequential and diverging OKLCH palettes from a few intuitive parameters — the Wijffelaars et al. 2009 model, in-gamut by construction, for sRGB and Display-P3."
+      content="Sequential and diverging OKLCH, LCHuv, LCH or HCT palettes from a few intuitive parameters — the Wijffelaars et al. 2008 model, in-gamut by construction, for sRGB and Display-P3."
     />
     <link rel="canonical" href="https://meodai.github.io/cusphanger/" />
 
@@ -15,7 +15,7 @@
     <meta property="og:title" content="CuspHanger — palettes from intuitive parameters" />
     <meta
       property="og:description"
-      content="Sequential and diverging OKLCH palettes from a few intuitive parameters — the Wijffelaars et al. 2009 model, in-gamut by construction, for sRGB and Display-P3."
+      content="Sequential and diverging OKLCH, LCHuv, LCH or HCT palettes from a few intuitive parameters — the Wijffelaars et al. 2008 model, in-gamut by construction, for sRGB and Display-P3."
     />
     <meta property="og:url" content="https://meodai.github.io/cusphanger/" />
     <meta property="og:image" content="https://meodai.github.io/cusphanger/og.png" />
@@ -60,13 +60,10 @@
         <div class="side__in">
         <div class="side__tabs">
           <nav class="tabs" role="tablist" aria-label="Palette type"></nav>
-          <button
-            type="button"
-            class="control--gamut"
-            aria-label="toggle gamut (sRGB / Display P3)"
-          >
-            <span class="control__value">sRGB</span>
-          </button>
+          <label class="control--space">
+            <span class="control__value" aria-hidden="true">okLch | sRGB</span>
+            <select aria-label="color model and gamut"></select>
+          </label>
         </div>
         <figure class="side__curve">
           <div class="curve-pane" aria-label="Bézier curve through the gamut triangle. Drag the endpoints to set the lightness range, the point on the median to set saturation."></div>
@@ -147,11 +144,11 @@
 
     <footer class="colophon">
       <p class="cite">
-        An OKLCH implementation of Wijffelaars, Vliegen, van Wijk &amp; van der Linden,
+        An OKLCH (and LCHuv, LCH, HCT) implementation of Wijffelaars, Vliegen, van Wijk &amp; van der Linden,
         <a href="https://web.archive.org/web/20240628033734/https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=097749c130c1cf35b8b9c236916de3b0455ffce0" target="_blank" rel="noopener"
           >&ldquo;Generating Color Palettes using Intuitive Parameters&rdquo;</a
         >
-        (Computer Graphics Forum 28:3, EuroVis 2009), with the addition of Bezier-Ramps. Inspired by
+        (Computer Graphics Forum 27:3, EuroVis 2008), with the addition of Bezier-Ramps. Inspired by
         <a href="https://x.com/mattdesl/status/1815445668002988493" target="_blank" rel="noopener"
           >Matt DesLauriers&rsquo;s OKLCH take</a
         >

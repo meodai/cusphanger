@@ -1,5 +1,6 @@
-import { toCss } from 'nutelch';
-import type { OklchColor } from '../lib/index';
+import { toCss } from 'nutelch/hct'; // formats every mode, hct included
+import type { OklchColor, PaletteColor } from '../lib/index';
+import { okOf } from './color';
 
 export interface Theme {
   bg: OklchColor;
@@ -45,14 +46,15 @@ export function deriveTheme(palette: OklchColor[]): Theme {
   return { bg, ink, accent, peak };
 }
 
-export function applyTheme(root: HTMLElement, palette: OklchColor[]): void {
+export function applyTheme(root: HTMLElement, palette: PaletteColor[]): void {
   const s = root.style;
   const prev = Number(s.getPropertyValue('--pal-n')) || 0;
   for (let i = palette.length; i < prev; i++) s.removeProperty(`--pal-${i}`);
   palette.forEach((c, i) => s.setProperty(`--pal-${i}`, toCss(c)));
   s.setProperty('--pal-n', String(palette.length));
 
-  const t = deriveTheme(palette);
+  // the theme's lightness thresholds are OKLab, so derive it from an OKLCH view
+  const t = deriveTheme(palette.map(okOf));
   if (palette.length) {
     s.setProperty('--pal-first', toCss(palette[0]!));
     s.setProperty('--pal-last', toCss(palette[palette.length - 1]!));

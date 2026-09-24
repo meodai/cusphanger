@@ -1,9 +1,8 @@
-import { type OklchColor } from '../lib/index';
+import { type PaletteColor } from '../lib/index';
 import { cusp } from './gamut';
-import { oklchP3, type Lut } from 'nutelch';
+import type { Lut } from 'nutelch';
 import { css, cssOf } from './color';
-
-const gamutTag = (lut: Lut) => (lut === oklchP3 ? 'p3' : 'srgb');
+import { lutTag, isP3, MODEL_LABEL } from './space';
 
 export type WheelAxis = 'chroma' | 'lightness';
 
@@ -38,7 +37,9 @@ interface WheelBg {
 const bgCache = new Map<string, WheelBg>();
 
 function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
-  const key = `${gamutTag(lut)}:${axis}:${flip}`;
+  const key = `${lutTag(lut)}:${axis}:${flip}`;
+  const M = lut.lMax;
+  const mode = lut.mode as PaletteColor['mode'];
   const cached = bgCache.get(key);
   if (cached) return cached;
 
@@ -70,7 +71,7 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
       const [a1x, a1y] = pt(a.hue, rad(a.c / maxCusp));
       const [b1x, b1y] = pt(bHue(i), rad(b.c / maxCusp));
       const [b0x, b0y] = pt(bHue(i), r0);
-      const fill = css(a.l, a.c, a.hue);
+      const fill = css(a.l, a.c, a.hue, mode);
       wedges += `<path d="M ${f(a0x)},${f(a0y)} L ${f(a1x)},${f(a1y)} L ${f(b1x)},${f(b1y)} L ${f(b0x)},${f(b0y)} Z" fill="${fill}"/>`;
       boundary += `${i === 0 ? 'M' : 'L'} ${f(a1x)},${f(a1y)} `;
     }
@@ -89,17 +90,17 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
       <path d="${boundary}Z" class="wheel-boundary"/>`;
     legend = `boundary = per-hue cusp chroma (peaks &amp; valleys) · ${flip ? 'colorful center → neutral rim' : 'neutral center → colorful rim'} · dots = palette`;
   } else {
-    const tag = gamutTag(lut);
+    const tag = lutTag(lut);
     let defs = '';
     let wedges = '';
     let contour = '';
     for (let i = 0; i < peaks.length; i++) {
       const a = peaks[i]!;
       const id = `wl-${tag}-${flip ? 'f' : 'n'}-${a.hue}`;
-      const cLo = css(0.04, 0, a.hue);
-      const cCusp = css(a.l, a.c, a.hue);
-      const cHi = css(0.99, 0, a.hue);
-      const tCusp = 1 - a.l;
+      const cLo = css(0.04 * M, 0, a.hue, mode);
+      const cCusp = css(a.l, a.c, a.hue, mode);
+      const cHi = css(0.99 * M, 0, a.hue, mode);
+      const tCusp = 1 - a.l / M;
       const cuspOff = ((rad(tCusp) / R) * 100).toFixed(1);
       defs += `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${CT}" cy="${CT}" r="${R}">
         <stop offset="${f(INNER * 100)}%" stop-color="${flip ? cLo : cHi}"/>
@@ -133,7 +134,7 @@ function buildBg(lut: Lut, axis: WheelAxis, flip: boolean): WheelBg {
 
 export function renderWheel(
   host: HTMLElement,
-  palette: OklchColor[],
+  palette: PaletteColor[],
   lut: Lut,
   axis: WheelAxis = 'chroma',
   flip = false,
@@ -147,8 +148,8 @@ export function renderWheel(
   const rad = radial(flip);
   const radius =
     axis === 'chroma'
-      ? (col: OklchColor) => rad(col.c / bg.maxCusp)
-      : (col: OklchColor) => rad(1 - col.l);
+      ? (col: PaletteColor) => rad(col.c / bg.maxCusp)
+      : (col: PaletteColor) => rad(1 - col.l / lut.lMax);
   const pts: Array<[number, number]> = palette.map((col) => pt(col.h, radius(col)));
 
   let traj = '';
@@ -199,7 +200,7 @@ export function renderWheel(
     const maxC = Math.max(...cusps);
     const avgC = cusps.reduce((a, b) => a + b, 0) / cusps.length;
     const rings: Array<[string, number]> =
-      maxC - minC < 1e-3 ? [['cusp', minC]] : [
+      maxC - minC < 1e-3 * maxC ? [['cusp', minC]] : [
         ['min', minC],
         ['avg', avgC],
         ['max', maxC],
@@ -220,7 +221,7 @@ export function renderWheel(
 
   host.innerHTML = `
     <svg viewBox="0 0 ${SIZE} ${SIZE}" class="wheel-svg" role="img"
-         aria-label="Top view of all hues, ${axis} as radius, ${gamutTag(lut)}">
+         aria-label="Top view of all hues, ${axis} as radius, ${MODEL_LABEL[lut.mode as PaletteColor['mode']]} ${isP3(lut) ? 'P3' : 'sRGB'}">
       <defs>
         <pattern id="wheelDots" width="22" height="22" patternUnits="userSpaceOnUse">
           <circle cx="2" cy="2" r="1" class="wheel-grid-dot"/>

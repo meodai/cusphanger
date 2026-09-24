@@ -1,9 +1,8 @@
-import { type OklchColor } from '../lib/index';
+import { type PaletteColor } from '../lib/index';
 import { maxChromaAt, cusp } from './gamut';
-import { oklchP3, type Lut } from 'nutelch';
+import type { Lut } from 'nutelch';
 import { css } from './color';
-
-const gamutTag = (lut: Lut) => (lut === oklchP3 ? 'p3' : 'srgb');
+import { lutTag, niceStep, cDigits, lDigits, MODEL_LABEL } from './space';
 
 const W = 400;
 const H = 400;
@@ -24,16 +23,10 @@ const angDiff = (a: number, b: number): number => {
   return d > 180 ? 360 - d : d;
 };
 
-function representativeHue(palette: OklchColor[]): number {
+function representativeHue(palette: PaletteColor[]): number {
   let best = palette[0]!;
   for (const c of palette) if (c.c > best.c) best = c;
   return best.h;
-}
-
-function niceStep(max: number): number {
-  const raw = max / 4;
-  for (const s of [0.02, 0.05, 0.1, 0.15, 0.2]) if (raw <= s) return s;
-  return 0.25;
 }
 
 interface Side {
@@ -45,10 +38,14 @@ interface Side {
 
 export function renderSlice(
   host: HTMLElement,
-  palette: OklchColor[],
+  palette: PaletteColor[],
   lut: Lut,
   forceMirror = false,
 ): void {
+  // figures run on normalized lightness n = L / lMax; values are labelled natively
+  const M = lut.lMax;
+  const mode = lut.mode as PaletteColor['mode'];
+  const cFix = cDigits(lut);
   if (!palette.length) {
     host.innerHTML = '';
     return;
@@ -75,10 +72,10 @@ export function renderSlice(
     pointSide = palette.map(() => 0);
     const peak = cusp(hue, lut);
     const tx = cx + (peak.c / xMax) * halfW;
-    const ty = Y(peak.l);
+    const ty = Y(peak.l / M);
     triModel = `<path d="M ${f(cx)},${f(Y(0))} L ${f(tx)},${f(ty)} L ${f(cx)},${f(Y(1))} Z" class="tri-model"/>
       ${diamond(tx, ty, 5, 'cusp')}
-      <text x="${f(tx + 7)}" y="${f(ty - 6)}" class="label" text-anchor="start">cusp ${peak.c.toFixed(3)}</text>`;
+      <text x="${f(tx + 7)}" y="${f(ty - 6)}" class="label" text-anchor="start">cusp ${peak.c.toFixed(cFix)}</text>`;
   } else {
     const peakS = cusp(startHue, lut);
     const peakE = cusp(endHue, lut);
@@ -96,18 +93,18 @@ export function renderSlice(
 
   const background = (s: Side, drawTri: boolean): string => {
 
-    const key = `${gamutTag(lut)}|${mirror}|${drawTri}|${s.x0}|${s.sign}|${xMax.toFixed(4)}|${s.hue.toFixed(1)}`;
+    const key = `${lutTag(lut)}|${mirror}|${drawTri}|${s.x0}|${s.sign}|${xMax.toFixed(4)}|${s.hue.toFixed(1)}`;
     const hit = sliceBgCache.get(key);
     if (hit) return hit;
 
     const peak = cusp(s.hue, lut);
 
     const env: Array<[number, number]> = [];
-    for (let i = 0; i <= 96; i++) env.push([s.X(maxChromaAt(s.hue, i / 96, lut)), Y(i / 96)]);
+    for (let i = 0; i <= 96; i++) env.push([s.X(maxChromaAt(s.hue, (i / 96) * M, lut)), Y(i / 96)]);
     const envLine = `M ${fmtPts(env)}`;
 
     const ROWS = 64;
-    const idBase = `sl-${lut === oklchP3 ? "p" : "s"}-${Math.round(s.hue)}-${s.sign > 0 ? 'r' : 'l'}`;
+    const idBase = `sl-${lutTag(lut)}-${Math.round(s.hue)}-${s.sign > 0 ? 'r' : 'l'}`;
     const x0 = s.X(0);
     let grads = '';
     let polys = '';
@@ -115,27 +112,28 @@ export function renderSlice(
       const L0 = i / ROWS;
       const L1 = (i + 1) / ROWS;
       const Lm = (L0 + L1) / 2;
-      const maxC = maxChromaAt(s.hue, Lm, lut);
+      const maxC = maxChromaAt(s.hue, Lm * M, lut);
       if (maxC <= 0) continue;
-      const xE0 = s.X(maxChromaAt(s.hue, L0, lut));
-      const xE1 = s.X(maxChromaAt(s.hue, L1, lut));
-      const cNeut = css(Lm, 0, s.hue);
-      const cEdge = css(Lm, maxC, s.hue);
+      const xE0 = s.X(maxChromaAt(s.hue, L0 * M, lut));
+      const xE1 = s.X(maxChromaAt(s.hue, L1 * M, lut));
+      const cNeut = css(Lm * M, 0, s.hue, mode);
+      const cEdge = css(Lm * M, maxC, s.hue, mode);
       const gid = `${idBase}-${i}`;
       grads += `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${f(x0)}" y1="0" x2="${f((xE0 + xE1) / 2)}" y2="0"><stop offset="0%" stop-color="${cNeut}"/><stop offset="100%" stop-color="${cEdge}"/></linearGradient>`;
       polys += `<polygon points="${f(x0)},${f(Y(L0))} ${f(xE0)},${f(Y(L0))} ${f(xE1)},${f(Y(L1))} ${f(x0)},${f(Y(L1))}" fill="url(#${gid})"/>`;
     }
     const fill = `${grads}${polys}`;
-    const tri = `M ${f(s.X(0))},${f(Y(0))} L ${f(s.X(peak.c))},${f(Y(peak.l))} L ${f(s.X(0))},${f(Y(1))}`;
+    const tri = `M ${f(s.X(0))},${f(Y(0))} L ${f(s.X(peak.c))},${f(Y(peak.l / M))} L ${f(s.X(0))},${f(Y(1))}`;
 
     const anchor = s.sign > 0 ? 'end' : 'start';
-    const cuspMark = `${diamond(s.X(peak.c), Y(peak.l), 5, 'cusp')}
-      <text x="${f(s.X(peak.c) - s.sign * 8)}" y="${f(Y(peak.l) - 7)}" class="label" text-anchor="${anchor}">cusp ${peak.c.toFixed(3)}</text>`;
+    const cuspMark = `${diamond(s.X(peak.c), Y(peak.l / M), 5, 'cusp')}
+      <text x="${f(s.X(peak.c) - s.sign * 8)}" y="${f(Y(peak.l / M) - 7)}" class="label" text-anchor="${anchor}">cusp ${peak.c.toFixed(cFix)}</text>`;
 
     const cStep = niceStep(xMax);
+    const tickFix = M === 1 ? 2 : 0;
     let cTicks = '';
     for (let c = cStep; c <= xMax + 1e-9; c += cStep) {
-      cTicks += `<text x="${f(s.X(c))}" y="${f(H - PAD.b + 13)}" class="tick" text-anchor="middle">${c.toFixed(2)}</text>`;
+      cTicks += `<text x="${f(s.X(c))}" y="${f(H - PAD.b + 13)}" class="tick" text-anchor="middle">${c.toFixed(tickFix)}</text>`;
     }
 
     const triEl = drawTri ? `<path d="${tri}" class="tri"/>` : '';
@@ -154,10 +152,11 @@ export function renderSlice(
     const s = sides[pointSide[i]!]!;
     const { l, c } = col;
     const maxC = maxChromaAt(s.hue, l, lut);
-    guides += `<line x1="${f(s.x0)}" y1="${f(Y(l))}" x2="${f(s.X(maxC))}" y2="${f(Y(l))}" class="guide"/>`;
+    const y = Y(l / M);
+    guides += `<line x1="${f(s.x0)}" y1="${f(y)}" x2="${f(s.X(maxC))}" y2="${f(y)}" class="guide"/>`;
     const x = s.X(c);
-    path.push([x, Y(l)]);
-    dots += diamond(x, Y(l), 5, 'dot');
+    path.push([x, y]);
+    dots += diamond(x, y, 5, 'dot');
   });
   const trajectory = path.length > 1 ? `<polyline points="${fmtPts(path)}" class="traj"/>` : '';
 
@@ -165,7 +164,7 @@ export function renderSlice(
     .map((L) => {
       const y = Y(L);
       return `<line x1="${PAD.l}" y1="${f(y)}" x2="${f(W - PAD.r)}" y2="${f(y)}" class="grid"/>
-        <text x="${PAD.l - 8}" y="${f(y + 3)}" class="tick" text-anchor="end">${L}</text>`;
+        <text x="${PAD.l - 8}" y="${f(y + 3)}" class="tick" text-anchor="end">${+(L * M).toFixed(lDigits(lut))}</text>`;
     })
     .join('');
   const axisLine = `<line x1="${f(W / 2)}" y1="${PAD.t}" x2="${f(W / 2)}" y2="${f(H - PAD.b)}" class="axis-center"/>`;
@@ -182,7 +181,7 @@ export function renderSlice(
 
   host.innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" class="slice-svg" role="img"
-         aria-label="OKLCH chroma-lightness slice">
+         aria-label="${MODEL_LABEL[mode]} chroma-lightness slice">
       <defs>
         <pattern id="sliceDots" width="22" height="22" patternUnits="userSpaceOnUse">
           <circle cx="2" cy="2" r="1" class="wheel-grid-dot"/>

@@ -1,20 +1,21 @@
-import type { OklchColor } from '../lib/index';
+import type { PaletteColor } from '../lib/index';
 import { cssOf, hexOf } from './color';
 import { copyText } from './clipboard';
 
-type FormatId = 'usage' | 'oklch' | 'hex' | 'svg';
+type FormatId = 'usage' | 'css' | 'hex' | 'svg';
 
 export function initExport(
   host: HTMLElement,
   toolsHost: HTMLElement,
-): (palette: OklchColor[], usage: string) => void {
+): (palette: PaletteColor[], usage: string) => void {
   let active: FormatId = 'usage';
-  let palette: OklchColor[] = [];
+  let palette: PaletteColor[] = [];
   let usage = '';
 
   const FORMATS: Array<{ id: FormatId; label: string; print: () => string }> = [
     { id: 'usage', label: 'usage', print: () => usage },
-    { id: 'oklch', label: 'oklch', print: () => palette.map(cssOf).join('\n') },
+    // oklch() for OKLCH palettes, the equivalent lch() for LCHuv (CSS has no luv)
+    { id: 'css', label: 'css', print: () => palette.map(cssOf).join('\n') },
     { id: 'hex', label: 'hex', print: () => palette.map(hexOf).join('\n') },
     { id: 'svg', label: 'svg', print: () => svgOf(palette) },
   ];
@@ -67,7 +68,7 @@ export function initExport(
   };
 }
 
-function svgOf(palette: OklchColor[]): string {
+function svgOf(palette: PaletteColor[]): string {
   const w = 64;
   const h = 64;
   const rects = palette

@@ -1,4 +1,4 @@
-import type { OklchColor } from '../lib/index';
+import type { PaletteColor } from '../lib/index';
 import { cubicBezier } from '../lib/index';
 import { cssOf } from './color';
 
@@ -6,7 +6,7 @@ export type BezierHandles = [number, number, number, number];
 
 export interface LEasingParams {
   handles: BezierHandles;
-  palette: OklchColor[];
+  palette: PaletteColor[];
   mirror?: boolean;
 }
 

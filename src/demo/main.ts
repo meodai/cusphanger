@@ -1,7 +1,12 @@
-import { sequential, ramp, diverging, fromColor, cubicBezier, type OklchColor, type TriangleMode } from '../lib/index';
+import {
+  sequential, ramp, diverging, fromColor, cubicBezier, spaceOf,
+  type PaletteColor, type TriangleMode,
+} from '../lib/index';
 import { bcFromLRange } from '../lib/wijffelaars';
-import { oklchSrgb, oklchP3, toCss, type Lut } from 'nutelch';
-import { converter, type Oklch } from 'culori';
+import type { Lut } from 'nutelch';
+import { toCss } from 'nutelch/hct'; // formats every mode, hct included
+import { converter } from 'culori';
+import { lutFor, lutName, lutModule, MODELS, MODEL_LABEL, PAPER_MODEL, type Model } from './space';
 import { buildControls, type FieldSpec, type ChoiceSpec, type ControlsApi } from './controls';
 import { initCurveControl } from './curve-control';
 import { initLEasingEditor, type BezierHandles } from './l-easing-editor';
@@ -21,15 +26,23 @@ const usageImport = (fn: string) => `${fn}${lEasingIsLinear() ? '' : ',\n  cubic
 const usageLEasing = () =>
   lEasingIsLinear() ? '' : `\n  lEasing: cubicBezier(${lHandles.join(', ')}),`;
 
+// what the usage snippet needs about the active LUT: its export name, the module
+// it comes from, and its lightness scale (for options in lightness units, lRange)
+interface LutRef {
+  name: string;
+  module: string;
+  lMax: number;
+}
+
 interface Tab {
   id: TabId;
   label: string;
   fields: FieldSpec[];
   choices?: ChoiceSpec[];
   forceMirror?: boolean;
-  build: (v: Record<string, number>, c: Record<string, string>, lut: Lut) => OklchColor[];
+  build: (v: Record<string, number>, c: Record<string, string>, lut: Lut) => PaletteColor[];
 
-  usage: (v: Record<string, number>, c: Record<string, string>, lutName: string) => string;
+  usage: (v: Record<string, number>, c: Record<string, string>, lut: LutRef) => string;
 }
 
 const TABS: Tab[] = [
@@ -49,12 +62,12 @@ const TABS: Tab[] = [
         hStart: v.hStart!, total: v.total!, saturation: v.s!,
         brightness: v.b!, contrast: v.c!, coolWarm: v.w!, ...lEasingOpt(), lut,
       }),
-    usage: (v, _c, lutName) => `import {
+    usage: (v, _c, lut) => `import {
   ${usageImport('sequential')}
 } from 'cusphanger';
 import {
-  ${lutName}
-} from 'nutelch';
+  ${lut.name}
+} from '${lut.module}';
 
 const palette = sequential({
   hStart: ${v.hStart},
@@ -63,7 +76,7 @@ const palette = sequential({
   brightness: ${v.b},
   contrast: ${v.c},
   coolWarm: ${v.w},${usageLEasing()}
-  lut: ${lutName},
+  lut: ${lut.name},
 });`,
   },
   {
@@ -84,12 +97,12 @@ const palette = sequential({
         hStart: v.hStart!, hEnd: v.hEnd!, total: v.total!,
         saturation: v.s!, brightness: v.b!, contrast: v.c!, coolWarm: v.w!, ...lEasingOpt(), lut,
       }),
-    usage: (v, _c, lutName) => `import {
+    usage: (v, _c, lut) => `import {
   ${usageImport('diverging')}
 } from 'cusphanger';
 import {
-  ${lutName}
-} from 'nutelch';
+  ${lut.name}
+} from '${lut.module}';
 
 const palette = diverging({
   hStart: ${v.hStart},
@@ -99,7 +112,7 @@ const palette = diverging({
   brightness: ${v.b},
   contrast: ${v.c},
   coolWarm: ${v.w},${usageLEasing()}
-  lut: ${lutName},
+  lut: ${lut.name},
 });`,
   },
   {
@@ -119,21 +132,23 @@ const palette = diverging({
     choices: [
       { key: 'triangleMode', label: 'triangle', options: ['perHue', 'min', 'avg', 'max'], value: 'perHue' },
     ],
+    // the light min/max sliders are 0..1 of the way to white; lRange is in the
+    // LUT's lightness units (0..1 for OKLCH, 0..100 for LCHuv)
     build: (v, c, lut) =>
       ramp({
         hStart: v.hStart!, total: v.total!,
-        sRange: [v.sMin!, v.sMax!], lRange: [v.minLight!, v.maxLight!], coolWarm: v.w!,
+        sRange: [v.sMin!, v.sMax!], lRange: [v.minLight! * lut.lMax, v.maxLight! * lut.lMax], coolWarm: v.w!,
         hCycles: v.hCycles!, hStartCenter: v.hStartCenter!,
         triangleMode: c.triangleMode as TriangleMode,
         ...lEasingOpt(),
         lut,
       }),
-    usage: (v, c, lutName) => `import {
+    usage: (v, c, lut) => `import {
   ${usageImport('ramp')}
 } from 'cusphanger';
 import {
-  ${lutName}
-} from 'nutelch';
+  ${lut.name}
+} from '${lut.module}';
 
 const palette = ramp({
   hStart: ${v.hStart},
@@ -141,10 +156,10 @@ const palette = ramp({
   hCycles: ${v.hCycles},
   hStartCenter: ${v.hStartCenter},
   sRange: [${v.sMin}, ${v.sMax}],
-  lRange: [${v.minLight}, ${v.maxLight}],
+  lRange: [${+(v.minLight! * lut.lMax).toFixed(4)}, ${+(v.maxLight! * lut.lMax).toFixed(4)}],
   coolWarm: ${v.w},
   triangleMode: '${c.triangleMode}',${usageLEasing()}
-  lut: ${lutName},
+  lut: ${lut.name},
 });`,
   },
 ];
@@ -164,7 +179,9 @@ const controlsHost = $('.controls');
 const updateExport = initExport($('.export'), $('.export-tools'));
 
 let activeTab: Tab = TABS[0]!;
-let lut: Lut = oklchSrgb;
+let model: Model = 'oklch';
+let p3 = false;
+let lut: Lut = lutFor(model, 'srgb');
 let controlsApi: ControlsApi = { set: () => {} };
 const renderCurveControl = initCurveControl($('.curve-pane'), (patch) =>
   controlsApi.set(patch),
@@ -190,7 +207,7 @@ viewReset.addEventListener('click', () => {
 const wheelFlip: Record<WheelAxis, boolean> = { chroma: false, lightness: false };
 let lastValues: Record<string, number> = {};
 let lastChoices: Record<string, string> = {};
-let palette: OklchColor[] = [];
+let palette: PaletteColor[] = [];
 let match: number | null = null;
 let applyingMatch = false;
 
@@ -244,7 +261,14 @@ function renderAll(): void {
     renderWheel(wheelHosts[axis], palette, lut, axis, wheelFlip[axis]);
   }
   updateCompositions(palette.length);
-  updateExport(palette, activeTab.usage(lastValues, lastChoices, lut === oklchP3 ? 'oklchP3' : 'oklchSrgb'));
+  updateExport(
+    palette,
+    activeTab.usage(lastValues, lastChoices, {
+      name: lutName(model, p3 ? 'p3' : 'srgb'),
+      module: lutModule(model),
+      lMax: lut.lMax,
+    }),
+  );
 }
 
 const tabButtons: HTMLButtonElement[] = [];
@@ -269,7 +293,10 @@ for (const tab of TABS) {
   tabsNav.appendChild(b);
 }
 
-const parseAsOklch = converter('oklch') as unknown as (raw: string) => Oklch | undefined;
+// parse any CSS color into the active model's space (fromColor meets it there).
+// culori has no HCT (and nutelch/hct no RGB → HCT yet), so HCT disables the field.
+const parseIn = (raw: string, mode: Model) =>
+  converter(mode)(raw) as unknown as { l: number; c?: number; h?: number } | undefined;
 const fromWrap = $('.control--from');
 const fromInput = fromWrap.querySelector('input') as HTMLInputElement;
 
@@ -278,19 +305,19 @@ const solveFrom = (): boolean => {
   fromWrap.removeAttribute('data-invalid');
   fromWrap.removeAttribute('data-clamped');
   match = null;
-  if (!raw) return false;
-  const parsed = parseAsOklch(raw);
+  if (!raw || model === 'hct') return false;
+  const parsed = parseIn(raw, model);
   if (!parsed || !Number.isFinite(parsed.l)) {
     fromWrap.setAttribute('data-invalid', '');
     return false;
   }
   if (activeTab.id !== 'sequential') selectTab(TABS[0]!);
   const res = fromColor(
-    { mode: 'oklch', l: parsed.l, c: parsed.c ?? 0, h: parsed.h ?? 0 },
+    { mode: model, l: parsed.l, c: parsed.c ?? 0, h: parsed.h ?? 0 },
     { total: lastValues.total ?? 9, ...lEasingOpt(), lut },
   );
   if (res.clamped) fromWrap.setAttribute('data-clamped', '');
-  const { b, c } = bcFromLRange(res.options.lRange!);
+  const { b, c } = bcFromLRange(res.options.lRange!, spaceOf(lut));
   match = res.index;
   applyingMatch = true;
   const r4 = (v: number) => Math.round(v * 1e4) / 1e4;
@@ -310,14 +337,26 @@ fromInput.addEventListener('change', () => {
 });
 fromInput.addEventListener('input', () => fromWrap.removeAttribute('data-invalid'));
 
-const vizGamut = $('.control--gamut') as HTMLButtonElement;
-const vizGamutValue = vizGamut.querySelector('.control__value') as HTMLElement;
-let p3 = false;
-vizGamut.addEventListener('click', () => {
-  p3 = !p3;
-  lut = p3 ? oklchP3 : oklchSrgb;
-  vizGamutValue.textContent = p3 ? 'P3' : 'sRGB';
-  vizGamut.toggleAttribute('data-active', p3);
+// model × gamut in one picker: a native <select> laid invisibly over its label
+// (see .control--space); on change the label shows e.g. "okLch | P3".
+const spacePicker = $('.control--space');
+const spaceSelect = spacePicker.querySelector('select') as HTMLSelectElement;
+const spaceValue = spacePicker.querySelector('.control__value') as HTMLElement;
+const spaceLabel = (m: Model, isP3: boolean) => `${MODEL_LABEL[m]} | ${isP3 ? 'P3' : 'sRGB'}`;
+// the open list marks the paper's own space (CIELUV); the closed label stays short
+const optionLabel = (m: Model, isP3: boolean) =>
+  `${MODEL_LABEL[m]}${m === PAPER_MODEL ? ' (paper)' : ''} | ${isP3 ? 'P3' : 'sRGB'}`;
+spaceSelect.innerHTML = MODELS.flatMap((m) =>
+  [false, true].map((g) => `<option value="${m}:${g ? 'p3' : 'srgb'}">${optionLabel(m, g)}</option>`),
+).join('');
+spaceSelect.addEventListener('change', () => {
+  const [m, g] = spaceSelect.value.split(':') as [Model, 'srgb' | 'p3'];
+  model = m;
+  p3 = g === 'p3';
+  lut = lutFor(model, g);
+  spaceValue.textContent = spaceLabel(model, p3);
+  fromInput.disabled = model === 'hct';
+  fromWrap.title = model === 'hct' ? 'not available in HCT (no RGB → HCT conversion yet)' : '';
   if (match === null || !solveFrom()) renderAll();
 });
 
