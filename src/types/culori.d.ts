@@ -1,8 +1,9 @@
 declare module 'culori' {
   export interface Oklch { mode: 'oklch'; l: number; c: number; h?: number; alpha?: number }
+  export interface Lchuv { mode: 'lchuv'; l: number; c: number; h?: number; alpha?: number }
   export interface P3 { mode: 'p3'; r: number; g: number; b: number; alpha?: number }
   export interface Rgb { mode: 'rgb'; r: number; g: number; b: number; alpha?: number }
-  export type Color = Oklch | P3 | Rgb | { mode: string; [k: string]: unknown };
+  export type Color = Oklch | Lchuv | P3 | Rgb | { mode: string; [k: string]: unknown };
 
   export function clampChroma(color: Color | string, mode?: string, rgbGamut?: string): Oklch;
   export function inGamut(mode?: string): (color: Color | string) => boolean;

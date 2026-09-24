@@ -1,7 +1,8 @@
 import { cusp, maxChromaAt } from './gamut';
+import { spaceOf, type Space } from './space';
 import type {
   Lut,
-  OklchColor,
+  PaletteColor,
   SequentialOptions,
   RampOptions,
   DivergingOptions,
@@ -9,22 +10,20 @@ import type {
   FromColorResult,
 } from './types';
 
-// OKLCH of the paper's 'bright point' (sRGB yellow #ffff00) — Table 2 default.
-const BRIGHT_POINT = { l: 0.968, c: 0.211, h: 109.77 };
-
-// Faithful port of Wijffelaars, Vliegen, van Wijk & van der Linden (2009),
+// Faithful port of Wijffelaars, Vliegen, van Wijk & van der Linden (2008),
 // "Generating Color Palettes using Intuitive Parameters" (Computer Graphics
-// Forum 28:3, EuroVis 2009, doi:10.1111/j.1467-8659.2009.01342.x),
-// Tables 1 (single-hue sequential) and 2 (multi-hue), re-expressed
-// in OKLCH. The paper works in CIELUV; MSC(h) — the Most Saturated Color of a
-// hue — is exactly the OKLCH cusp. The triangle (black, MSC, white) is an inner
-// approximation of the gamut, so the Bézier path through it stays in gamut.
+// Forum 27:3, EuroVis 2008, doi:10.1111/j.1467-8659.2008.01203.x),
+// Tables 1 (single-hue sequential) and 2 (multi-hue), run in the space of the
+// caller's nutelch LUT (see ./space). MSC(h) — the Most Saturated Color of a
+// hue — is exactly that space's cusp. The triangle (black, MSC, white) is an
+// inner approximation of the gamut, so the Bézier path through it stays in gamut.
 //
-// Deviations from the paper (all intentional, documented):
-// - OKLCH instead of CIELUV (so it can target Display-P3); L is [0,1] not [0,100].
-// - L(t) keeps the paper's exact form in CIE L* units; the result is converted
-//   to OKLab L through Y (for neutrals OKLab L = Y^(1/3) exactly), so the
-//   palette hits the same physical lightnesses the paper calibrated on Brewer.
+// - LCHuv LUTs: the paper's own space (CIELUV), so the model is the paper's.
+// - OKLCH LUTs (a deliberate deviation): L is [0,1] not [0,100], and L(t) keeps
+//   the paper's exact form in CIE L* units, converted to OKLab L through Y (for
+//   neutrals OKLab L = Y^(1/3) exactly), so the palette hits the same physical
+//   lightnesses the paper calibrated on Brewer.
+// Either space targets sRGB or Display-P3, whichever the LUT is for.
 
 export interface LCH {
   l: number;
@@ -49,42 +48,31 @@ const mixP = (a: LCH, b: LCH, s: number): LCH => ({
 });
 const midP = (a: LCH, b: LCH): LCH => ({ l: (a.l + b.l) / 2, c: (a.c + b.c) / 2, h: (a.h + b.h) / 2 });
 
-// CIE L* <-> OKLab L, through luminance Y (both scales are pinned to Y for
-// neutrals: L* = 116·Y^(1/3) − 16 above the toe, OKLab L = Y^(1/3)).
-const KAPPA = 24389 / 27;
-const EPS = 216 / 24389;
-const cieLToOk = (lStar: number): number =>
-  Math.cbrt(lStar > 8 ? Math.pow((lStar + 16) / 116, 3) : lStar / KAPPA);
-const okToCieL = (L: number): number => {
-  const y = L * L * L;
-  return y > EPS ? 116 * Math.cbrt(y) - 16 : KAPPA * y;
-};
-
 // L(x): the lightness the paper's curve yields for exponent x. L(t) below is
 // L(x) on the affine exponent x(t) = (1−c)·b + t·c; x lives in [0, 1] (x = 0
 // is black, x = 1 is white), which is what fromColor's endpoint solve rides on.
-const lightnessFromX = (x: number): number => {
+const lightnessFromX = (x: number, sp: Space): number => {
   const lStar = 125 - 125 * Math.pow(0.2, x);
-  return Math.min(1, Math.max(0, cieLToOk(lStar)));
+  return Math.min(sp.lMax, Math.max(0, sp.fromLstar(lStar)));
 };
 
 // L(t): the paper's lightness sampling (its '0.2^…' contrast curve, in CIE L*
-// units), converted to OKLab lightness.
-export const lightnessAt = (t: number, b: number, c: number): number =>
-  lightnessFromX((1 - c) * b + t * c);
+// units), in the space's native lightness.
+export const lightnessAt = (t: number, b: number, c: number, sp: Space): number =>
+  lightnessFromX((1 - c) * b + t * c, sp);
 
-// Inverse of L(t)'s curve: the exponent x that yields a given OKLCH lightness.
-const lightnessToX = (L: number): number => {
-  const lStar = okToCieL(Math.min(1, Math.max(0, L)));
+// Inverse of L(t)'s curve: the exponent x that yields a given native lightness.
+const lightnessToX = (L: number, sp: Space): number => {
+  const lStar = sp.toLstar(Math.min(sp.lMax, Math.max(0, L)));
   return Math.log(1 - lStar / 125) / Math.log(0.2);
 };
 
 // Convert an [minLight, maxLight] range into the paper's (b, c), so lRange and
 // brightness/contrast are two views of the same lightness curve (the 0.2^x
 // perceptual spacing between the endpoints is identical either way).
-export function bcFromLRange([a, z]: [number, number]): { b: number; c: number } {
-  const xMin = lightnessToX(Math.min(a, z));
-  const xMax = lightnessToX(Math.max(a, z));
+export function bcFromLRange([a, z]: [number, number], sp: Space): { b: number; c: number } {
+  const xMin = lightnessToX(Math.min(a, z), sp);
+  const xMax = lightnessToX(Math.max(a, z), sp);
   const c = Math.max(0, Math.min(1, xMax - xMin));
   const b = c >= 1 ? 0 : xMin / (1 - c);
   return { b, c };
@@ -94,8 +82,9 @@ export function bcFromLRange([a, z]: [number, number]): { b: number; c: number }
 // for hue h' — the chroma along the black→MSC or MSC→white edge (Table 2).
 function triangleChromaAt(l: number, hue: number, lut: Lut): number {
   const peak = cusp(hue, lut);
+  const top = lut.lMax;
   if (l <= peak.l) return peak.l <= 0 ? 0 : (l / peak.l) * peak.c;
-  return peak.l >= 1 ? 0 : ((1 - l) / (1 - peak.l)) * peak.c;
+  return peak.l >= top ? 0 : ((top - l) / (top - peak.l)) * peak.c;
 }
 
 export interface Tri {
@@ -108,6 +97,7 @@ export interface Tri {
 }
 
 export function buildTriangle(hue: number, s: number, w: number, lut: Lut): Tri {
+  const { lMax, brightPoint: pb } = spaceOf(lut);
   const peak = cusp(hue, lut);
   const p0: LCH = { l: 0, c: 0, h: hue };
   const p1: LCH = { l: peak.l, c: peak.c, h: hue };
@@ -115,14 +105,13 @@ export function buildTriangle(hue: number, s: number, w: number, lut: Lut): Tri 
   // top point p2 — white, or shifted toward the bright point (yellow) for w > 0
   let p2: LCH;
   if (w > 0) {
-    const pb = BRIGHT_POINT;
     const M = ((((180 + pb.h - hue) % 360) + 360) % 360) - 180; // shortest hue path
-    const p2L = (1 - w) * 1 + w * pb.l;
+    const p2L = (1 - w) * lMax + w * pb.l;
     const p2H = hue + w * M;
     const p2C = Math.min(triangleChromaAt(p2L, ((p2H % 360) + 360) % 360, lut), w * s * pb.c);
     p2 = { l: p2L, c: p2C, h: p2H };
   } else {
-    p2 = { l: 1, c: 0, h: hue };
+    p2 = { l: lMax, c: 0, h: hue };
   }
 
   const q0 = mixP(p0, p1, s);
@@ -133,10 +122,10 @@ export function buildTriangle(hue: number, s: number, w: number, lut: Lut): Tri 
 
 // A hue-agnostic triangle from a given cusp (L, C) — used by the shared
 // triangleMode where every color rides the same (min/avg/max) triangle.
-function buildTriangleFromCusp(cuspL: number, cuspC: number, s: number): Tri {
+function buildTriangleFromCusp(cuspL: number, cuspC: number, s: number, lMax: number): Tri {
   const p0: LCH = { l: 0, c: 0, h: 0 };
   const p1: LCH = { l: cuspL, c: cuspC, h: 0 };
-  const p2: LCH = { l: 1, c: 0, h: 0 };
+  const p2: LCH = { l: lMax, c: 0, h: 0 };
   const q0 = mixP(p0, p1, s);
   const q2 = mixP(p2, p1, s);
   const q1 = midP(q0, q2);
@@ -173,7 +162,7 @@ export function tForLightness(l: number, tri: Tri): number {
 // the paper's model, exactly (lEasing, the one opt-in, only moves the samples
 // along its lightness curve). For hue trajectories / hueList / triangleMode
 // (the RampenSau-style extensions) use ramp().
-export function sequential(o: SequentialOptions): OklchColor[] {
+export function sequential(o: SequentialOptions): PaletteColor[] {
   const N = o.total;
   const ts = Array.from({ length: N }, (_, i) => (N <= 1 ? 0 : i / (N - 1)));
   return sample(o, ts);
@@ -184,7 +173,7 @@ export function sequential(o: SequentialOptions): OklchColor[] {
 // explicit hueList), optionally with ramped tension (sRange) and a shared
 // chroma envelope (triangleMode). With none of the extensions set this is
 // sequential() exactly.
-export function ramp(o: RampOptions): OklchColor[] {
+export function ramp(o: RampOptions): PaletteColor[] {
   // hueList overrides total (RampenSau semantics); defaults derive from the
   // effective palette size.
   const N = o.hueList && o.hueList.length > 0 ? o.hueList.length : o.total;
@@ -202,7 +191,7 @@ function easeTs(ts: number[], lEasing: (t: number) => number): number[] {
 // The paper's P_seq sampled at arbitrary curve-fractions `ts` (each t ∈ [0,1]).
 // sequential()/ramp() use the uniform grid i/(N−1); diverging() samples each
 // arm at the joined-curve positions. Defaults still derive from o.total.
-function sample(o: RampOptions, ts: number[]): OklchColor[] {
+function sample(o: RampOptions, ts: number[]): PaletteColor[] {
   const {
     hStart,
     total: N,
@@ -216,10 +205,11 @@ function sample(o: RampOptions, ts: number[]): OklchColor[] {
     triangleMode = 'perHue',
     lut,
   } = o;
+  const sp = spaceOf(lut);
   let b: number;
   let c: number;
   if (o.lRange) {
-    ({ b, c } = bcFromLRange(o.lRange));
+    ({ b, c } = bcFromLRange(o.lRange, sp));
   } else {
     b = o.brightness ?? 0.75;
     c = o.contrast ?? Math.min(0.88, 0.34 + 0.06 * N);
@@ -261,28 +251,28 @@ function sample(o: RampOptions, ts: number[]): OklchColor[] {
   // shared modes overlay each color's own hue, so cool/warm can't shift the
   // triangle toward yellow. Instead it nudges the light colors' hues toward the
   // bright point — the same "only the light end warms" behaviour as the paper.
-  const warmHue = isShared && w > 0 ? BRIGHT_POINT.h : null;
+  const warmHue = isShared && w > 0 ? sp.brightPoint.h : null;
 
   // build the triangle once when nothing varies it (constant s + single hue);
   // otherwise it is rebuilt per color (sRange and/or hCycles).
   const sharedTri =
-    isShared && sConst ? buildTriangleFromCusp(sharedCusp!.l, sharedCusp!.c, sBase) : null;
+    isShared && sConst ? buildTriangleFromCusp(sharedCusp!.l, sharedCusp!.c, sBase, sp.lMax) : null;
   const baseTri =
     !isShared && hCycles === 0 && !hasHueList && sConst
       ? buildTriangle(hStart, sBase, w, lut)
       : null;
 
   const tLs = easeTs(ts, lEasing);
-  const out: OklchColor[] = [];
+  const out: PaletteColor[] = [];
   for (const [i, t] of ts.entries()) {
     const sI = sAt(t);
     const tri =
       sharedTri ??
       baseTri ??
       (isShared
-        ? buildTriangleFromCusp(sharedCusp!.l, sharedCusp!.c, sI)
+        ? buildTriangleFromCusp(sharedCusp!.l, sharedCusp!.c, sI, sp.lMax)
         : buildTriangle(hueAt(t, i), sI, w, lut));
-    const targetL = Math.min(tri.p2.l, Math.max(tri.p0.l, lightnessAt(tLs[i]!, b, c)));
+    const targetL = Math.min(tri.p2.l, Math.max(tri.p0.l, lightnessAt(tLs[i]!, b, c, sp)));
     const col = cSeq(tForLightness(targetL, tri), tri);
 
     let h: number;
@@ -290,7 +280,7 @@ function sample(o: RampOptions, ts: number[]): OklchColor[] {
       h = ((hueAt(t, i) % 360) + 360) % 360;
       if (warmHue !== null) {
         // weight 0 below the shared cusp, ramping to 1 at white (the top point)
-        const warmW = Math.max(0, Math.min(1, (col.l - sharedCuspL) / (1 - sharedCuspL || 1)));
+        const warmW = Math.max(0, Math.min(1, (col.l - sharedCuspL) / (sp.lMax - sharedCuspL || 1)));
         const M = ((((warmHue - h) % 360) + 540) % 360) - 180; // shortest signed delta to yellow
         h = (((h + w * warmW * M) % 360) + 360) % 360;
       }
@@ -298,10 +288,10 @@ function sample(o: RampOptions, ts: number[]): OklchColor[] {
       h = ((col.h % 360) + 360) % 360; // perHue: the curve already carries the warm shift
     }
 
-    // the straight triangle edges can poke just outside the real OKLCH gamut;
-    // clamp chroma to the boundary (the paper's "little clamping").
+    // the straight triangle edges can poke just outside the real gamut; clamp
+    // chroma to the boundary (the paper's "little clamping").
     const c2 = Math.min(Math.max(0, col.c), maxChromaAt(h, col.l, lut));
-    out.push({ mode: 'oklch', l: col.l, c: c2, h });
+    out.push({ mode: sp.mode, l: col.l, c: c2, h });
   }
   return out;
 }
@@ -314,8 +304,9 @@ const DEG = Math.PI / 180;
 // half-step spacing (uniform steps across the join, per the thesis). lEasing
 // eases each arm's u (0 = dark end, 1 = neutral), mirrored — so a non-linear
 // one trades that uniform step across the join for its own spacing.
-export function diverging(o: DivergingOptions): OklchColor[] {
+export function diverging(o: DivergingOptions): PaletteColor[] {
   const { hStart, hEnd, total: N, lut } = o;
+  const { mode } = spaceOf(lut);
   const isOdd = N % 2 === 1;
   const side = Math.floor(N / 2); // saturated colors per arm (excluding the center)
   const common = {
@@ -339,7 +330,7 @@ export function diverging(o: DivergingOptions): OklchColor[] {
   // Combined neutral (odd N): the Cartesian mean of the two arms' endpoints, so
   // it is symmetric in the arms — near-achromatic at w = 0 (the arms' residual
   // opposite-hue tints cancel), converging on the bright point as w → 1.
-  let center: OklchColor[] = [];
+  let center: PaletteColor[] = [];
   if (isOdd) {
     const a = left[side]!;
     const b = right[side]!;
@@ -348,7 +339,7 @@ export function diverging(o: DivergingOptions): OklchColor[] {
     const h = ((Math.atan2(y, x) / DEG) % 360 + 360) % 360;
     const l = (a.l + b.l) / 2;
     const c = Math.min(Math.hypot(x, y), maxChromaAt(h, l, lut));
-    center = [{ mode: 'oklch', l, c, h }];
+    center = [{ mode, l, c, h }];
   }
 
   return [...left.slice(0, side), ...center, ...right.slice(0, side).reverse()];
@@ -388,10 +379,17 @@ function solveXEnds(x0: number, x1: number, t: number, xT: number): [number, num
   return a >= 0 ? [a, x1] : [0, xT / t];
 }
 
-export function fromColor(target: OklchColor, opts: FromColorOptions): FromColorResult {
+export function fromColor(target: PaletteColor, opts: FromColorOptions): FromColorResult {
   const { total: N, lut } = opts;
+  const sp = spaceOf(lut);
+  if (target.mode !== sp.mode) {
+    throw new Error(
+      `cusphanger: fromColor target is '${target.mode}' but the LUT is '${sp.mode}' — ` +
+        `convert the color to the LUT's space first (e.g. culori's converter('${sp.mode}'))`,
+    );
+  }
   const h = ((target.h % 360) + 360) % 360;
-  const l = Math.min(1, Math.max(0, target.l));
+  const l = Math.min(sp.lMax, Math.max(0, target.l));
   // reachable chroma at (l, h): under the triangle edge (the curve's own
   // ceiling) AND the real shell (sample()'s "little clamping" would take back
   // anything past it) — the sliver between edge and shell is out of reach.
@@ -415,7 +413,7 @@ export function fromColor(target: OklchColor, opts: FromColorOptions): FromColor
   let b: number;
   let con: number;
   if (opts.lRange) {
-    ({ b, c: con } = bcFromLRange(opts.lRange));
+    ({ b, c: con } = bcFromLRange(opts.lRange, sp));
   } else {
     b = 0.75;
     con = Math.min(0.88, 0.34 + 0.06 * N);
@@ -432,7 +430,7 @@ export function fromColor(target: OklchColor, opts: FromColorOptions): FromColor
     index = 0;
     let best = Infinity;
     for (let i = 0; i < N; i++) {
-      const d = Math.abs(lightnessAt(tOf(i), b, con) - l);
+      const d = Math.abs(lightnessAt(tOf(i), b, con, sp) - l);
       if (d < best) {
         best = d;
         index = i;
@@ -448,8 +446,8 @@ export function fromColor(target: OklchColor, opts: FromColorOptions): FromColor
     lRange = opts.lRange;
   } else {
     const x0 = (1 - con) * b;
-    const [a, z] = solveXEnds(x0, x0 + con, tOf(index), lightnessToX(l));
-    lRange = [lightnessFromX(a), lightnessFromX(z)];
+    const [a, z] = solveXEnds(x0, x0 + con, tOf(index), lightnessToX(l, sp));
+    lRange = [lightnessFromX(a, sp), lightnessFromX(z, sp)];
   }
 
   return {
@@ -459,7 +457,7 @@ export function fromColor(target: OklchColor, opts: FromColorOptions): FromColor
       lut,
     },
     index,
-    color: { mode: 'oklch', l, c, h },
+    color: { mode: sp.mode, l, c, h },
     clamped,
   };
 }

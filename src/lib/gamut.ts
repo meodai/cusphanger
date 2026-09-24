@@ -3,7 +3,7 @@ import type { Lut } from 'nutelch';
 
 // Max in-gamut chroma at (hue, l) — the gamut shell, from the caller's nutelch LUT.
 export function maxChromaAt(hue: number, l: number, lut: Lut): number {
-  if (l <= 0 || l >= 1) return 0;
+  if (l <= 0 || l >= lut.lMax) return 0;
   const h = ((hue % 360) + 360) % 360;
   return shell({ lut, l, h }).c;
 }

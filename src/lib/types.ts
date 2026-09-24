@@ -1,8 +1,11 @@
 import type { Lut } from 'nutelch';
+import type { PaletteMode } from './space';
 
-// Re-exported so callers can type the LUT they pass (import the VALUES —
-// `oklchSrgb` / `oklchP3` — from 'nutelch' directly).
+// Re-exported so callers can type the LUT they pass (import the VALUES from
+// nutelch directly: `oklch*`, `lchuv*`, `lch*` from 'nutelch', `hct*` from
+// 'nutelch/hct').
 export type { Lut } from 'nutelch';
+export type { PaletteMode } from './space';
 
 // For multi-hue ramps (hCycles): which gamut triangle each color rides toward.
 // - 'perHue': each color uses its own hue's cusp (faithful; chroma peaks).
@@ -11,18 +14,31 @@ export type { Lut } from 'nutelch';
 //   paper's open "equal colorfulness" idea.
 export type TriangleMode = 'perHue' | 'min' | 'avg' | 'max';
 
-// A color is the culori / nutelch-native OKLCH object. Hand it to `toCss()` (or
-// any culori formatter) for a string — the browser renders `oklch()` natively
-// and gamut-maps to the display. Palette colors are in-gamut by construction
+// A color is the nutelch-native object in the LUT's space (oklch, lchuv, lch or
+// hct). Hand it to nutelch's `toCss()` for a string — oklch() / lch() natively,
+// lchuv as the equivalent lch(); hct colors need the toCss from 'nutelch/hct'
+// (→ oklch()), which also handles every other mode. Palette colors are in-gamut by construction
 // (clamped to the target gamut's shell during generation).
-export interface OklchColor {
-  mode: 'oklch';
-  l: number; // 0..1
-  c: number; // >= 0
+export interface PaletteColor {
+  mode: PaletteMode;
+  l: number; // 0..lMax: 0..1 (oklch) or 0..100 (lchuv, lch; hct tone)
+  c: number; // >= 0, in the space's chroma units
   h: number; // 0..360
 }
+export interface OklchColor extends PaletteColor {
+  mode: 'oklch';
+}
+export interface LchuvColor extends PaletteColor {
+  mode: 'lchuv';
+}
+export interface LchColor extends PaletteColor {
+  mode: 'lch';
+}
+export interface HctColor extends PaletteColor {
+  mode: 'hct'; // l is the tone
+}
 
-// Wijffelaars, Vliegen, van Wijk & van der Linden (2009), single-hue sequential
+// Wijffelaars, Vliegen, van Wijk & van der Linden (2008), single-hue sequential
 // model (Table 1) plus the cool/warm multi-hue extension (Table 2). This is
 // the paper's surface plus one opt-in, lEasing — left unset it is the paper's
 // model exactly. The RampenSau-style extensions live on RampOptions / ramp().
@@ -37,7 +53,8 @@ export interface SequentialOptions {
   // Alternative to brightness/contrast: set the lightness endpoints directly
   // (RampenSau-style lRange). Wins when given; the paper's perceptual 0.2^x
   // spacing is kept between the endpoints — a pure re-parameterization, which
-  // is why it stays on the paper surface. [minLight, maxLight], 0..1.
+  // is why it stays on the paper surface. [minLight, maxLight] in the LUT's
+  // lightness units: 0..1 (oklch) or 0..100 (lchuv, lch, hct).
   lRange?: [number, number];
   coolWarm?: number; // w — the paper's multi-hue shift of the light end toward yellow. default 0
   // Redistribute the samples along the paper's lightness curve: t is eased
@@ -51,7 +68,7 @@ export interface SequentialOptions {
   // still repeat a color). In diverging() it applies per arm (t = 0 at the
   // dark end, 1 at the neutral). default linear (the paper's spacing)
   lEasing?: (t: number) => number;
-  lut: Lut; // a nutelch OKLCH LUT (oklchSrgb / oklchP3) — which gamut to target
+  lut: Lut; // a nutelch LUT (oklch / lchuv / lch / hct) — picks the space AND the gamut
 }
 
 // ramp(): the RampenSau hybrid — each color rides the paper's ramp for its own
@@ -77,14 +94,14 @@ export interface RampOptions extends SequentialOptions {
   triangleMode?: TriangleMode; // chroma envelope for multi-hue ramps. default 'perHue'
 }
 
-// fromColor(): meet a given OKLCH color with the sequential model (the
+// fromColor(): meet a given color with the sequential model (the
 // inverse problem). Everything beyond total/lut is a knob you HOLD — whatever
 // you don't pass gets solved. coolWarm is deliberately absent: w > 0 drifts
 // hue along the curve, so meeting a color under it would be a 2D solve; it is
 // held at 0.
 export interface FromColorOptions {
   total: number; // N — number of colors
-  lut: Lut; // a nutelch OKLCH LUT (oklchSrgb / oklchP3) — which gamut to target
+  lut: Lut; // a nutelch LUT (oklch / lchuv / lch / hct) — picks the space AND the gamut
   // which palette entry lands on the target. 'nearest' picks the sample whose
   // default-spacing lightness is closest, so the endpoints move the least.
   // default 'nearest'
@@ -102,7 +119,7 @@ export interface FromColorOptions {
 export interface FromColorResult {
   options: SequentialOptions; // hStart, saturation, lRange (+ a held lEasing) — feed to sequential()
   index: number; // the sample that carries the target
-  color: OklchColor; // what was actually met — equals the target unless clamped
+  color: PaletteColor; // what was actually met — equals the target unless clamped
   // the target sat outside the triangle (or the gamut shell); it was met at
   // the same-lightness boundary point instead — never a throw
   clamped: boolean;

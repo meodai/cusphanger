@@ -36,6 +36,6 @@
     "vitest": "^2.1.0"
   },
   "dependencies": {
-    "nutelch": "^0.2.0"
+    "nutelch": "^0.3.0"
   }
 }

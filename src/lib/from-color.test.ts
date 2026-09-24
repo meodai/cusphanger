@@ -3,7 +3,7 @@ import { oklchSrgb, oklchP3 } from 'nutelch';
 import type { Lut } from 'nutelch';
 import { fromColor, sequential, buildTriangle, cSeq, tForLightness } from './wijffelaars';
 import { cusp, maxChromaAt } from './gamut';
-import type { OklchColor } from './types';
+import type { OklchColor, PaletteColor } from './types';
 
 const lut = oklchSrgb;
 const oklch = (l: number, c: number, h: number): OklchColor => ({ mode: 'oklch', l, c, h });
@@ -16,7 +16,7 @@ const reachAt = (l: number, h: number, target: Lut): number => {
   return Math.min(edge, maxChromaAt(h, l, target));
 };
 
-const expectMeets = (got: OklchColor, want: OklchColor) => {
+const expectMeets = (got: PaletteColor, want: PaletteColor) => {
   expect(got.l).toBeCloseTo(want.l, 6);
   expect(got.c).toBeCloseTo(want.c, 6);
   expect(got.h).toBeCloseTo(((want.h % 360) + 360) % 360, 6);
