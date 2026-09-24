@@ -911,6 +911,23 @@ button {
   max-height: 380px;
   overflow: auto;
 }
+.export__svg {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: none;
+  cursor: pointer;
+}
+.export__svg[hidden],
+.export__code[hidden] {
+  display: none;
+}
+.export__svg svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 
 .colophon {
   display: flex;
